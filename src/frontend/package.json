@@ -1,0 +1,28 @@
+{
+  "name": "sddp-frontend",
+  "private": true,
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @sddp/web",
+    "build:packages": "npm run build -w @sddp/ui && npm run build -w @sddp/shell && npm run build -w @sddp/activities",
+    "build": "npm run build:packages && npm run build -w @sddp/web",
+    "preview": "npm run preview -w @sddp/web",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e -w @sddp/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,svelte,css,html}\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.{ts,svelte,css,html}\"",
+    "type-check": "npm run type-check --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "jsdom": "^28.1.0",
+    "prettier": "^3.8.0",
+    "prettier-plugin-svelte": "^3.4.1"
+  }
+}

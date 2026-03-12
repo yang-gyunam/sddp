@@ -1,0 +1,108 @@
+{
+  "name": "@sddp/shell",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./components": {
+      "svelte": "./src/components/index.ts",
+      "types": "./dist/components/index.d.ts",
+      "default": "./dist/components/index.js"
+    },
+    "./stores": {
+      "svelte": "./src/stores/index.ts",
+      "types": "./dist/stores/index.d.ts",
+      "default": "./dist/stores/index.js"
+    },
+    "./types": {
+      "svelte": "./src/types/index.ts",
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./utils": {
+      "svelte": "./src/utils/index.ts",
+      "types": "./dist/utils/index.d.ts",
+      "default": "./dist/utils/index.js"
+    },
+    "./core": {
+      "svelte": "./src/core/index.ts",
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./core/services": {
+      "svelte": "./src/core/services/index.ts",
+      "types": "./dist/core/services/index.d.ts",
+      "default": "./dist/core/services/index.js"
+    },
+    "./core/types": {
+      "svelte": "./src/core/types/index.ts",
+      "types": "./dist/core/types/index.d.ts",
+      "default": "./dist/core/types/index.js"
+    },
+    "./auth": {
+      "svelte": "./src/auth/index.ts",
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    },
+    "./auth/stores": {
+      "svelte": "./src/auth/stores/index.ts",
+      "types": "./dist/auth/stores/index.d.ts",
+      "default": "./dist/auth/stores/index.js"
+    },
+    "./auth/pages": {
+      "svelte": "./src/auth/pages/index.ts",
+      "types": "./dist/auth/pages/index.d.ts",
+      "default": "./dist/auth/pages/index.js"
+    },
+    "./auth/types": {
+      "svelte": "./src/auth/types/index.ts",
+      "types": "./dist/auth/types/index.d.ts",
+      "default": "./dist/auth/types/index.js"
+    },
+    "./auth/components": {
+      "svelte": "./src/auth/components/index.ts",
+      "types": "./dist/auth/components/index.d.ts",
+      "default": "./dist/auth/components/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "svelte-package -i src -o dist",
+    "type-check": "svelte-check --tsconfig ./tsconfig.json",
+    "lint": "eslint src --ext .ts,.svelte",
+    "lint:fix": "eslint src --ext .ts,.svelte --fix",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.0",
+    "@sddp/ui": "*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@sveltejs/package": "^2.5.7",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^9.39.2",
+    "eslint-plugin-svelte": "^3.14.0",
+    "globals": "^17.0.0",
+    "svelte-check": "^4.3.4",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.32.1",
+    "vitest": "^4.0.17"
+  }
+}

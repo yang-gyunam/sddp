@@ -1,0 +1,95 @@
+{
+  "name": "@sddp/activities",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./projects": {
+      "svelte": "./src/projects/index.ts",
+      "types": "./dist/projects/index.d.ts",
+      "default": "./dist/projects/index.js"
+    },
+    "./conversations": {
+      "svelte": "./src/conversations/index.ts",
+      "types": "./dist/conversations/index.d.ts",
+      "default": "./dist/conversations/index.js"
+    },
+    "./search": {
+      "svelte": "./src/search/index.ts",
+      "types": "./dist/search/index.d.ts",
+      "default": "./dist/search/index.js"
+    },
+    "./tasks": {
+      "svelte": "./src/tasks/index.ts",
+      "types": "./dist/tasks/index.d.ts",
+      "default": "./dist/tasks/index.js"
+    },
+    "./dashboard": {
+      "svelte": "./src/dashboard/index.ts",
+      "types": "./dist/dashboard/index.d.ts",
+      "default": "./dist/dashboard/index.js"
+    },
+    "./settings": {
+      "svelte": "./src/settings/index.ts",
+      "types": "./dist/settings/index.d.ts",
+      "default": "./dist/settings/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "svelte-package -i src -o dist",
+    "type-check": "svelte-check --tsconfig ./tsconfig.json",
+    "lint": "eslint src --ext .ts,.svelte",
+    "lint:fix": "eslint src --ext .ts,.svelte --fix",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@sddp/shell": "*",
+    "@sddp/ui": "*",
+    "@tiptap/core": "^3.18.0",
+    "@tiptap/extension-placeholder": "^3.18.0",
+    "@tiptap/extension-table": "^3.18.0",
+    "@tiptap/extension-table-cell": "^3.18.0",
+    "@tiptap/extension-table-header": "^3.18.0",
+    "@tiptap/extension-table-row": "^3.18.0",
+    "@tiptap/pm": "^3.18.0",
+    "@tiptap/starter-kit": "^3.18.0",
+    "@tiptap/suggestion": "^3.18.0",
+    "d3-force": "^3.0.0",
+    "d3-hierarchy": "^3.1.2",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@sveltejs/package": "^2.5.7",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-hierarchy": "^3.1.7",
+    "@types/d3-selection": "^3.0.11",
+    "@types/d3-zoom": "^3.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^9.39.2",
+    "eslint-plugin-svelte": "^3.14.0",
+    "globals": "^17.0.0",
+    "svelte-check": "^4.3.4",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.32.1",
+    "vitest": "^4.0.17"
+  }
+}

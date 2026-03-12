@@ -1,0 +1,165 @@
+name: sddp-public
+
+services:
+  sddp-db:
+    image: pgvector/pgvector:pg16
+    container_name: sddp-public-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sddp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sddp_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sddp}
+      SDDP_STORAGE_TABLESPACE_NAME: ${SDDP_STORAGE_TABLESPACE_NAME:-sddp_data_ts}
+      SDDP_STORAGE_TABLESPACE_PATH: ${SDDP_STORAGE_TABLESPACE_PATH:-/var/lib/postgresql/tablespaces/sddp_data}
+      SDDP_STORAGE_QUOTA_GB: ${SDDP_STORAGE_QUOTA_GB:-20}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_tablespace:/var/lib/postgresql/tablespaces
+      - ./scripts:/scripts:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sddp} -d ${POSTGRES_DB:-sddp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  sddp-redis:
+    image: redis:7-alpine
+    container_name: sddp-public-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  sddp-api:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: sddp-public-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5001
+      - ConnectionStrings__DefaultConnection=Host=sddp-db;Port=5432;Database=${POSTGRES_DB:-sddp};Username=${POSTGRES_USER:-sddp};Password=${POSTGRES_PASSWORD:-sddp_password}
+      - Redis__ConnectionString=sddp-redis:6379
+      - Ollama__Url=http://sddp-ollama:11434
+      - Ollama__ChatModel=phi4-mini
+      - Ollama__EmbedModel=nomic-embed-text
+      - Ollama__TimeoutSeconds=300
+      - Ollama__MaxConcurrent=2
+      - Git__Token=${SDDP_GIT__TOKEN:-}
+      - Git__Username=${SDDP_GIT__USERNAME:-oauth2}
+      - Git__RepoRoot=${SDDP_GIT__REPOROOT:-data/git-repos}
+      - Git__ServerUrl=http://sddp-gitea:3100
+      - OpenTelemetry__Endpoint=http://sddp-aspire:18889
+    ports:
+      - "5001:5001"
+    depends_on:
+      sddp-db:
+        condition: service_healthy
+      sddp-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  sddp-ollama:
+    image: ollama/ollama:0.17.6
+    container_name: sddp-public-ollama
+    entrypoint: ["/bin/sh", "/ollama-entrypoint.sh"]
+    environment:
+      OLLAMA_CHAT_MODEL: phi4-mini
+      OLLAMA_EMBED_MODEL: nomic-embed-text
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./docker/ollama-entrypoint.sh:/ollama-entrypoint.sh:ro
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-8G}
+          cpus: "${OLLAMA_CPU_LIMIT:-4}"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  sddp-aspire:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.2.0
+    container_name: sddp-public-aspire
+    environment:
+      DASHBOARD__FRONTEND__AUTHMODE: ${ASPIRE_AUTH_MODE:-Unsecured}
+    ports:
+      - "18888:18888"
+      - "4317:18889"
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  sddp-gitea:
+    image: gitea/gitea:1.25.0
+    container_name: sddp-public-gitea
+    profiles: ["tools"]
+    ports:
+      - "3100:3000"
+      - "2222:22"
+    volumes:
+      - gitea_data:/data
+      - gitea_config:/config
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  sddp-front:
+    build:
+      context: ./src/frontend
+      dockerfile: packages/web/Dockerfile
+    container_name: sddp-public-front
+    # CSP defaults to http://localhost:5001 (set in Dockerfile).
+    # Override API_ORIGIN / WS_ORIGIN for remote access, e.g.:
+    #   API_ORIGIN=http://192.168.1.10:5001
+    #   WS_ORIGIN=ws://192.168.1.10:5001
+    ports:
+      - "9010:8080"
+    depends_on:
+      sddp-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+volumes:
+  postgres_data:
+  postgres_tablespace:
+  redis_data:
+  ollama_data:
+  gitea_data:
+  gitea_config:
+
+networks:
+  sddp-network:
+    driver: bridge

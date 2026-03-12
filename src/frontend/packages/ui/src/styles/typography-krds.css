@@ -1,0 +1,86 @@
+/* =================================================================
+   KRDS Typography System
+   Based on: https://www.krds.go.kr/html/site/style/style_03.html
+
+   Activate by adding .typography-krds class to <html> element
+   ================================================================= */
+
+.typography-krds {
+  /* =================================================================
+     Font Family - Pretendard GOV
+     ================================================================= */
+  --font-sans: 'Pretendard GOV', 'Pretendard', 'Noto Sans KR', system-ui,
+    -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* =================================================================
+     Font Weights - KRDS uses only Regular(400) and Bold(700)
+     ================================================================= */
+  --font-normal: 400;
+  --font-medium: 400; /* Map to regular for compatibility */
+  --font-semibold: 700; /* Map to bold for compatibility */
+  --font-bold: 700;
+
+  /* =================================================================
+     Line Height - KRDS recommends 150% uniformly
+     ================================================================= */
+  --leading-none: 1;
+  --leading-tight: 1.5;
+  --leading-snug: 1.5;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.5;
+
+  /* =================================================================
+     Display Scale (PC)
+     ================================================================= */
+  --display-lg: 3.75rem; /* 60px */
+  --display-md: 2.75rem; /* 44px */
+  --display-sm: 2.25rem; /* 36px */
+
+  /* =================================================================
+     Heading Scale (PC)
+     ================================================================= */
+  --heading-xl: 2.5rem; /* 40px */
+  --heading-lg: 2rem; /* 32px */
+  --heading-md: 1.5rem; /* 24px */
+  --heading-sm: 1.1875rem; /* 19px */
+  --heading-xs: 1.0625rem; /* 17px */
+  --heading-xxs: 0.9375rem; /* 15px */
+
+  /* =================================================================
+     Body Scale - Same for PC and Mobile
+     ================================================================= */
+  --body-lg: 1.1875rem; /* 19px */
+  --body-md: 1.0625rem; /* 17px - KRDS default body size */
+  --body-sm: 0.9375rem; /* 15px */
+  --body-xs: 0.8125rem; /* 13px */
+
+  /* =================================================================
+     Font Sizes - Override default scale to match KRDS
+     ================================================================= */
+  --text-xs: 0.8125rem; /* 13px */
+  --text-sm: 0.9375rem; /* 15px */
+  --text-base: 1.0625rem; /* 17px - KRDS default */
+  --text-lg: 1.1875rem; /* 19px */
+  --text-xl: 1.5rem; /* 24px */
+  --text-2xl: 2rem; /* 32px */
+  --text-3xl: 2.5rem; /* 40px */
+  --text-4xl: 2.75rem; /* 44px */
+}
+
+/* =================================================================
+   Mobile Overrides (max-width: 767px)
+   ================================================================= */
+@media (max-width: 767px) {
+  .typography-krds {
+    /* Display Scale (Mobile) */
+    --display-lg: 2.75rem; /* 44px */
+    --display-md: 2rem; /* 32px */
+    --display-sm: 1.75rem; /* 28px */
+
+    /* Heading Scale (Mobile) */
+    --heading-xl: 1.75rem; /* 28px */
+    --heading-lg: 1.5rem; /* 24px */
+    --heading-md: 1.375rem; /* 22px */
+    /* heading-sm, xs, xxs remain same */
+  }
+}

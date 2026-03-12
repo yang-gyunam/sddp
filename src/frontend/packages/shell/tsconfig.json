@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "$components": ["./src/components"],
+      "$components/*": ["./src/components/*"],
+      "$stores": ["./src/stores"],
+      "$stores/*": ["./src/stores/*"],
+      "$types": ["./src/types"],
+      "$types/*": ["./src/types/*"],
+      "$utils": ["./src/utils"],
+      "$utils/*": ["./src/utils/*"],
+      "@sddp/ui": ["../ui/src"],
+      "@sddp/ui/*": ["../ui/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.svelte.d.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**"
+  ]
+}

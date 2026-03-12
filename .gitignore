@@ -1,0 +1,84 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*.tmp
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Env (keep examples)
+.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+dist/
+build/
+coverage/
+.eslintcache
+.vite/
+.svelte-kit/
+
+# Playwright
+playwright-report/
+test-results/
+
+# .NET / C#
+bin/
+obj/
+**/bin\\*
+**/obj\\*
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.pdb
+
+# Databases / local state
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Docker overrides
+**/docker-compose.override.yml
+
+# Generated artifacts (project-specific)
+src/backend/Sddp.Generator/Generated/
+src/frontend/**/dist/
+
+# svelte-package generated type declarations (in src/)
+src/frontend/packages/*/src/**/*.d.ts
+src/frontend/packages/*/src/**/*.d.ts.map
+src/frontend/packages/web/src/**/*.d.ts
+src/frontend/packages/web/src/**/*.d.ts.map
+
+references/
+
+# SonarQube
+.sonarqube/
+.scannerwork/
+
+# Local development
+capture/
+
+# Test coverage visualization (generated)
+scripts/test-coverage-viz/test-catalog.json
+scripts/test-coverage-viz/visualize-standalone.html
+
+# Upgrade rehearsal artifacts
+backups/
+
+# Generated public staging
+/publish/

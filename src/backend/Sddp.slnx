@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Sddp.Abstractions/Sddp.Abstractions.csproj" />
+  <Project Path="Sddp.Api/Sddp.Api.csproj" />
+  <Project Path="Sddp.Application/Sddp.Application.csproj" />
+  <Project Path="Sddp.Domain/Sddp.Domain.csproj" />
+  <Project Path="Sddp.Infrastructure/Sddp.Infrastructure.csproj" />
+</Solution>

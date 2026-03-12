@@ -1,0 +1,110 @@
+Spec-Driven Design Platform (SDDP)
+Copyright 2026 yang-gyunam
+
+This product includes software developed by third parties.
+
+=========================================================================
+Third-Party Software Notices
+=========================================================================
+
+-- Backend Dependencies --
+
+Quartz.NET (Quartz, Quartz.Extensions.Hosting)
+  License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+  Copyright: (c) Marko Lahma
+
+MediatR
+  License: Apache-2.0 (v12.4.1)
+  Copyright: (c) Jimmy Bogard
+  Note: Versions >= 12.5 changed to RPL-1.5 + Commercial.
+        This project uses v12.4.1 (Apache-2.0).
+
+Dapper / Dapper.Contrib
+  License: Apache-2.0
+  Copyright: (c) .NET Foundation and Contributors
+
+FluentValidation
+  License: Apache-2.0
+  Copyright: (c) Jeremy Skinner
+
+Serilog (Serilog.AspNetCore, Serilog.Sinks.Console, Serilog.Sinks.File, Serilog.Sinks.OpenTelemetry)
+  License: Apache-2.0
+  Copyright: (c) Serilog Contributors
+
+Scriban
+  License: BSD-2-Clause
+  Copyright: (c) Alexandre Mutel
+
+Markdig
+  License: BSD-2-Clause
+  Copyright: (c) Alexandre Mutel
+
+BCrypt.Net-Next
+  License: MIT
+  Copyright: (c) Chris McKee and contributors
+
+Npgsql / Npgsql.EntityFrameworkCore.PostgreSQL
+  License: PostgreSQL License
+  Copyright: (c) Npgsql Contributors
+
+Scalar.AspNetCore
+  License: MIT
+  Copyright: (c) Scalar
+
+StackExchange.Redis
+  License: MIT
+  Copyright: (c) Stack Exchange, Inc.
+
+Microsoft.AspNetCore.*, Microsoft.EntityFrameworkCore.*, Microsoft.Extensions.*
+  License: MIT
+  Copyright: (c) .NET Foundation and Contributors
+
+-- Frontend Dependencies --
+
+Svelte
+  License: MIT
+  Copyright: (c) Svelte Contributors
+
+TipTap (all @tiptap/* packages)
+  License: MIT
+  Copyright: (c) Tiptap GmbH
+
+ProseMirror (all prosemirror-* packages)
+  License: MIT
+  Copyright: (c) Marijn Haverbeke
+
+D3 (d3-force, d3-hierarchy, d3-selection, d3-zoom and sub-modules)
+  License: ISC
+  Copyright: (c) Mike Bostock
+
+bits-ui
+  License: MIT
+  Copyright: (c) bits-ui Contributors
+
+@microsoft/signalr
+  License: MIT
+  Copyright: (c) .NET Foundation and Contributors
+
+markdown-it
+  License: MIT
+  Copyright: (c) Vitaly Puzrin, Alex Kocharin
+
+-- Icons --
+
+Lucide Icons (SVG paths embedded in Icon.svelte)
+  License: ISC (https://lucide.dev/license)
+  Copyright: (c) Lucide Contributors
+
+VS Code Codicons (SVG paths embedded in Icon.svelte)
+  License: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)
+  Copyright: (c) Microsoft Corporation
+
+-- Infrastructure (not bundled, user-provided) --
+
+.NET Aspire Dashboard (mcr.microsoft.com/dotnet/aspire-dashboard)
+  License: MIT
+  Copyright: (c) .NET Foundation and Contributors
+
+Ollama
+  License: MIT
+  Copyright: (c) Ollama

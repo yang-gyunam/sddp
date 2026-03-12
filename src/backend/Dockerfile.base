@@ -1,0 +1,15 @@
+# SDDP Runtime Base Image
+# Base image with apt-get packages preinstalled
+# Build: make docker-build-base
+# Usage: legacy/optional (not required for the default Dockerfile build)
+
+ARG DOTNET_VERSION=10.0
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
+
+# Install runtime native deps needed by Npgsql (GSSAPI)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+EXPOSE 5001
