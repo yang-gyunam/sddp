@@ -22,6 +22,8 @@ export interface ApiResponse<T> {
 export interface FetchOptions {
   method?: string;
   body?: unknown;
+  /** Multipart upload body. When set, Content-Type is left to the browser (boundary) and `body` is ignored. */
+  formData?: FormData;
   /** Optional: If not provided, will be auto-resolved from auth state */
   tenantId?: string;
   projectId?: string;
@@ -75,13 +77,14 @@ function doFetch(
   endpoint: string,
   method: string,
   headers: Record<string, string>,
-  body: unknown | undefined
+  body: unknown | undefined,
+  formData?: FormData
 ): Promise<Response> {
   return fetch(`${config.getBaseApiUrl()}${endpoint}`, {
     method,
     headers,
     credentials: 'include',
-    body: body ? JSON.stringify(body) : undefined,
+    body: formData ?? (body ? JSON.stringify(body) : undefined),
   });
 }
 
@@ -100,10 +103,14 @@ function buildHeaders(options: FetchOptions): Record<string, string> {
   }
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Authorization: `Bearer ${accessToken}`,
     'X-Tenant-Id': tenantId,
   };
+
+  // For multipart uploads the browser must set Content-Type (with boundary) itself
+  if (!options.formData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (options.projectId) {
     headers['X-Project-Id'] = options.projectId;
@@ -134,10 +141,10 @@ export async function fetchWithAuth<T>(
   endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { method = 'GET', body } = options;
+  const { method = 'GET', body, formData } = options;
   const headers = buildHeaders(options);
 
-  const response = await doFetch(endpoint, method, headers, body);
+  const response = await doFetch(endpoint, method, headers, body, formData);
 
   // 401 Unauthorized → attempt token refresh and retry once
   if (response.status === 401) {
@@ -145,7 +152,7 @@ export async function fetchWithAuth<T>(
     if (refreshed) {
       // Retry with fresh token
       const retryHeaders = buildHeaders(options);
-      const retryResponse = await doFetch(endpoint, method, retryHeaders, body);
+      const retryResponse = await doFetch(endpoint, method, retryHeaders, body, formData);
       return handleResponse<T>(retryResponse);
     }
     // Refresh failed — session is expired

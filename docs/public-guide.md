@@ -30,6 +30,13 @@ docker compose up -d sddp-api sddp-front
 
 Host-side `npm install` is not required when you use the frontend container only.
 
+Optional — speech-to-text for conversation messages (local Whisper, no cloud calls):
+
+```bash
+docker compose up -d sddp-whisper
+make whisper-warmup    # one-time model download (~460MB)
+```
+
 For local frontend development:
 
 ```bash
@@ -48,6 +55,7 @@ npm run dev
 - API: `http://localhost:5001`
 - API docs: `http://localhost:5001/scalar/v1`
 - Aspire Dashboard: `http://localhost:18888`
+- Whisper STT (optional): `http://localhost:9020`
 
 ## Database Commands
 

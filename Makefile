@@ -2,7 +2,7 @@
 # SDDP Makefile - Public Development Commands
 # =============================================================================
 
-.PHONY: help infra api web start stop status build test lint db-provision db-seed-test db-reset db-reset-full demo-onbrick security-scan security-scan-staged sbom
+.PHONY: help infra api web start stop status build test lint db-provision db-seed-test db-reset db-reset-full demo-onbrick whisper-warmup security-scan security-scan-staged sbom
 
 POSTGRES_USER ?= sddp
 POSTGRES_DB   ?= sddp
@@ -68,6 +68,17 @@ status:
 	@echo "  API:      http://localhost:5001"
 	@echo "  Scalar:   http://localhost:5001/scalar/v1"
 	@echo "  Aspire:   http://localhost:18888"
+
+whisper-warmup:
+	@echo "Installing Whisper model (Systran/faster-whisper-small, ~460MB on first run)..."
+	@curl -sf -X POST "http://localhost:9020/v1/models/Systran/faster-whisper-small" >/dev/null \
+		|| { echo "Model install failed — is sddp-whisper running? (docker compose up -d sddp-whisper)"; exit 1; }
+	@python3 -c "import wave,struct; w=wave.open('/tmp/sddp-warmup.wav','w'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(struct.pack('<h',0)*16000); w.close()"
+	@curl -sf http://localhost:9020/v1/audio/transcriptions \
+		-F file=@/tmp/sddp-warmup.wav \
+		-F model=Systran/faster-whisper-small \
+		-F response_format=json >/dev/null && echo "Whisper model ready." || echo "Warmup transcription failed — check 'docker logs sddp-whisper'"
+	@rm -f /tmp/sddp-warmup.wav
 
 build:
 	dotnet build src/backend/Sddp.Api/Sddp.Api.csproj --configuration Release

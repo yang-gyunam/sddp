@@ -22,6 +22,7 @@ using Sddp.Infrastructure.Persistence.Outbox;
 using Sddp.Infrastructure.Persistence.Projections;
 using Sddp.Infrastructure.Persistence.Repositories;
 using Sddp.Infrastructure.Services;
+using Sddp.Infrastructure.Speech;
 
 namespace Sddp.Api.Extensions;
 
@@ -281,6 +282,26 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IJobScheduler, QuartzJobScheduler>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddSpeechServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<SpeechToTextSettings>(
+            configuration.GetSection(SpeechToTextSettings.SectionName));
+
+        var speechSettings = configuration
+            .GetSection(SpeechToTextSettings.SectionName)
+            .Get<SpeechToTextSettings>() ?? new SpeechToTextSettings();
+
+        services.AddHttpClient<ISpeechToTextService, WhisperSpeechToTextService>(client =>
+        {
+            client.BaseAddress = new Uri(speechSettings.Url);
+            client.Timeout = TimeSpan.FromSeconds(speechSettings.TimeoutSeconds);
+        });
 
         return services;
     }

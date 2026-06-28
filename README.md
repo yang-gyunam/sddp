@@ -15,6 +15,7 @@ If you open code written six months ago and can no longer explain why it looks t
 - Preserve decision context through **Conversation -> Requirement -> Spec -> Code**
 - Treat approved specs as locked and evolve them through versioned updates
 - Detect implementation drift when code moves away from the approved spec
+- Dictate conversation messages with local speech-to-text (Whisper, no cloud calls)
 
 Public setup and evaluation notes are in [docs/public-guide.md](docs/public-guide.md).
 
@@ -51,6 +52,13 @@ docker compose up -d sddp-api sddp-front
 
 Host-side `npm install` is not required when you use the frontend container only.
 
+Optional — speech-to-text for conversation messages (local Whisper):
+
+```bash
+docker compose up -d sddp-whisper
+make whisper-warmup    # one-time model download (~460MB)
+```
+
 ### Local Frontend Development (Optional)
 
 Use this path only if you want Vite HMR or local frontend test commands.
@@ -75,6 +83,7 @@ npm run dev
 | API | http://localhost:5001 |
 | API Docs (Scalar) | http://localhost:5001/scalar/v1 |
 | Aspire Dashboard | http://localhost:18888 |
+| Whisper STT (optional) | http://localhost:9020 |
 
 ## Project Structure
 

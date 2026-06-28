@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.0] - 2026-06-28
+
+### Added
+- Speech-to-text message dictation in conversations (local Whisper via `sddp-whisper`, max 60s recording with countdown, Korean/English auto-detect)
+- `sddp-whisper` service in `docker-compose.yml` for on-premise transcription
+
+### Fixed
+- Windows compatibility: shell scripts now enforce LF line endings to prevent container crash loops on CRLF checkout
+- Microphone access allowed for same-origin requests via `Permissions-Policy` header (required for dictation)
+
 ## [v0.1.0] - 2026-03-12
 
 ### Added

@@ -4,12 +4,14 @@
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { Icon, Button, Textarea } from '@sddp/ui';
-  import { ContextMenu, renderMarkdown } from '@sddp/shell';
+  import { Icon, Button, IconButton, Spinner, Textarea } from '@sddp/ui';
+  import { ContextMenu, renderMarkdown, toast } from '@sddp/shell';
   import type { ContextMenuItem } from '@sddp/shell';
   import MessageTypeIcon from './MessageTypeIcon.svelte';
   import { HUMAN_MESSAGE_TYPES, type MessageType, type Message, type CreateMessageRequest } from '../../types';
   import { getConversationDraft, setConversationDraft, clearConversationDraft } from '../../stores';
+  import { startAudioRecorder, type AudioRecorderHandle } from '../../services/audioRecorder';
+  import { transcribeAudio, isSpeechToTextAvailable } from '../../services/SpeechService';
 
   interface Props {
     disabled?: boolean;
@@ -92,6 +94,123 @@
     lastDraftKey = draftKey;
     untrack(() => loadDraft());
   });
+
+  // --- Speech-to-text recording ---
+
+  const MAX_RECORDING_MS = 60_000;
+  const LEVEL_BAR_COUNT = 24;
+
+  type RecordingState = 'idle' | 'recording' | 'transcribing';
+  let recState = $state<RecordingState>('idle');
+  let remainingSec = $state(60);
+  let micAvailable = $state(false);
+  let micChecked = $state(false);
+  let recorderHandle: AudioRecorderHandle | null = null;
+  // Rolling window of recent input levels (0..1), newest last — rendered as a scrolling meter
+  let levelBars = $state<number[]>(Array.from({ length: LEVEL_BAR_COUNT }, () => 0));
+
+  // Mount-only availability check (result is cached in SpeechService)
+  $effect(() => {
+    if (micChecked) return;
+    micChecked = true;
+    untrack(() => {
+      void isSpeechToTextAvailable().then((available) => {
+        micAvailable = available;
+      });
+    });
+  });
+
+  function formatCountdown(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  async function startRecording(): Promise<void> {
+    if (recState !== 'idle' || disabled) return;
+    try {
+      const handle = await startAudioRecorder({
+        maxDurationMs: MAX_RECORDING_MS,
+        onTick: (remainingMs) => {
+          remainingSec = Math.ceil(remainingMs / 1000);
+        },
+        onLevel: (level) => {
+          levelBars = [...levelBars.slice(1), level];
+        },
+        onStop: (blob, mimeType) => {
+          void handleRecorded(blob, mimeType);
+        },
+      });
+      recorderHandle = handle;
+      remainingSec = Math.ceil(MAX_RECORDING_MS / 1000);
+      levelBars = Array.from({ length: LEVEL_BAR_COUNT }, () => 0);
+      recState = 'recording';
+    } catch (err) {
+      const errorName = err instanceof Error ? err.name : '';
+      if (errorName === 'NotAllowedError') {
+        toast.error('Microphone access denied. Enable it in your browser site settings.');
+      } else if (errorName === 'NotFoundError') {
+        toast.error('No microphone found. Connect a microphone and try again.');
+      } else {
+        toast.error('Could not access microphone.');
+      }
+    }
+  }
+
+  function stopRecording(): void {
+    recorderHandle?.stop();
+  }
+
+  function cancelRecording(): void {
+    recorderHandle?.cancel();
+    recorderHandle = null;
+    recState = 'idle';
+  }
+
+  async function handleRecorded(blob: Blob, mimeType: string): Promise<void> {
+    recState = 'transcribing';
+    try {
+      const text = await transcribeAudio(blob, mimeType);
+      if (text) {
+        insertTranscript(text);
+      } else {
+        toast.info('No speech detected.');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Transcription failed');
+    } finally {
+      recState = 'idle';
+      recorderHandle = null;
+    }
+  }
+
+  /** Insert transcript at the cursor position (or append when no cursor). */
+  function insertTranscript(text: string): void {
+    const start = textareaEl?.selectionStart ?? content.length;
+    const end = textareaEl?.selectionEnd ?? content.length;
+    const before = content.slice(0, start);
+    const after = content.slice(end);
+    const needsSpace = before.length > 0 && !/\s$/.test(before);
+    const inserted = (needsSpace ? ' ' : '') + text;
+    content = before + inserted + after;
+    persistDraft();
+
+    requestAnimationFrame(() => {
+      if (!textareaEl) return;
+      textareaEl.focus();
+      const cursor = start + inserted.length;
+      textareaEl.selectionStart = cursor;
+      textareaEl.selectionEnd = cursor;
+      autoResize();
+    });
+  }
+
+  function handleRecordingKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Escape' && recState === 'recording') {
+      e.preventDefault();
+      cancelRecording();
+    }
+  }
 
   function handleInput(): void {
     if (!isTyping) {
@@ -356,6 +475,45 @@
       </div>
     {/if}
 
+    <!-- Recording / transcribing bar (speech-to-text) -->
+    {#if recState !== 'idle'}
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-t-[11px] border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]">
+        {#if recState === 'recording'}
+          <span class="rec-dot flex-shrink-0" aria-hidden="true"></span>
+          <span class="text-xs font-medium text-[var(--color-text-secondary)]">Recording</span>
+          <span class="text-xs tabular-nums text-[var(--color-text-muted)]" role="timer" aria-label="Recording time remaining">
+            {formatCountdown(remainingSec)}
+          </span>
+          <!-- Live input level meter — scrolls left as new samples arrive -->
+          <div class="rec-meter flex-1 min-w-0" aria-hidden="true">
+            {#each levelBars as level, i (i)}
+              <span class="rec-meter__bar" style="height: {Math.max(12, Math.round(level * 100))}%"></span>
+            {/each}
+          </div>
+          <IconButton
+            icon="square"
+            size="xs"
+            variant="primary"
+            title="Stop and transcribe"
+            onclick={stopRecording}
+          />
+          <IconButton
+            icon="x"
+            size="xs"
+            variant="ghost"
+            title="Cancel recording (Esc)"
+            onclick={cancelRecording}
+          />
+        {:else}
+          <Spinner size="sm" />
+          <span class="text-xs font-medium text-[var(--color-text-secondary)]" aria-live="polite">
+            Transcribing&hellip;
+          </span>
+          <span class="flex-1"></span>
+        {/if}
+      </div>
+    {/if}
+
     <!-- Markdown formatting toolbar (topic mode only) -->
     {#if showToolbar && inputMode === 'write'}
       <div class="md-toolbar flex items-center gap-0.5 px-2 pt-1.5 pb-0.5 border-b border-[var(--color-border-secondary)]">
@@ -505,6 +663,19 @@
         </Button>
       </div>
 
+      <!-- Speech-to-text mic button -->
+      {#if micAvailable}
+        <IconButton
+          icon="mic"
+          size="sm"
+          variant="ghost"
+          loading={recState === 'transcribing'}
+          disabled={disabled || recState !== 'idle'}
+          title="Dictate message (max 60s)"
+          onclick={() => void startRecording()}
+        />
+      {/if}
+
       <!-- Spacer + keyboard hint -->
       <span class="ml-auto text-[0.625rem] text-[var(--color-text-muted)] select-none">
         Enter &middot; Shift+Enter
@@ -512,6 +683,9 @@
     </div>
   </div>
 </div>
+
+<!-- Esc cancels an active recording -->
+<svelte:window onkeydown={handleRecordingKeydown} />
 
 <!-- Click outside to close type selector -->
 {#if showTypeSelector}
@@ -567,6 +741,38 @@
     margin: 0 4px;
     background: var(--color-border-secondary);
     flex-shrink: 0;
+  }
+
+  /* Recording indicator dot */
+  .rec-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--color-error, #ef4444);
+    animation: rec-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes rec-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .rec-meter {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 16px;
+    overflow: hidden;
+  }
+
+  .rec-meter__bar {
+    flex: 1;
+    max-width: 4px;
+    min-height: 2px;
+    border-radius: 9999px;
+    background: var(--color-error, #ef4444);
+    opacity: 0.75;
+    transition: height 0.1s ease-out;
   }
 
   /* Compact markdown preview styling for message input */

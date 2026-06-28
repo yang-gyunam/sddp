@@ -445,9 +445,9 @@ export async function navigateToProjectNode(
 
 export async function openSpecsTab(
   page: Page,
-  _projectName = 'E2E Test Project',
+  projectName = 'E2E Test Project',
 ): Promise<Locator> {
-  await page.goto(`/project/${TEST_PROJECT_ID}/specs`);
+  await navigateToProjectNode(page, 'Specs', projectName);
 
   const tabPanel = page.getByRole('tabpanel').first();
   await expect(tabPanel).toBeVisible({ timeout: 5000 });

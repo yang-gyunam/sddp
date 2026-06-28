@@ -9,6 +9,7 @@ export interface AppConfig {
   enableDebug: boolean;
   enableAnalytics: boolean;
   enableAiFeatures: boolean;
+  enableSpeechToText: boolean;
   enableArtifactMaintenance: boolean;
   enableProjectIntegrations: boolean;
   enableSpecSupplementaryTabs: boolean;
@@ -222,6 +223,7 @@ export class ConfigurationManager {
       enableDebug: this.getEnvBoolean('VITE_ENABLE_DEBUG', false),
       enableAnalytics: this.getEnvBoolean('VITE_ENABLE_ANALYTICS', false),
       enableAiFeatures: this.getEnvBoolean('VITE_ENABLE_AI_FEATURES', false),
+      enableSpeechToText: this.getEnvBoolean('VITE_ENABLE_SPEECH_TO_TEXT', false),
       enableArtifactMaintenance: this.getEnvBoolean('VITE_ENABLE_ARTIFACT_MAINTENANCE', false),
       enableProjectIntegrations: this.getEnvBoolean('VITE_ENABLE_PROJECT_INTEGRATIONS', false),
       enableSpecSupplementaryTabs: this.getEnvBoolean('VITE_ENABLE_SPEC_SUPPLEMENTARY_TABS', false),

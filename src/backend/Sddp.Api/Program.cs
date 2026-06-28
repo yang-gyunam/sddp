@@ -110,6 +110,9 @@ try
         builder.Services.AddQuartzServices();
     }
 
+    // Speech-to-text services (Whisper client)
+    builder.Services.AddSpeechServices(builder.Configuration);
+
     builder.Services.AddMemoryCache();
 
     var healthChecks = builder.Services.AddHealthChecks();

@@ -59,6 +59,10 @@ services:
       - Ollama__EmbedModel=nomic-embed-text
       - Ollama__TimeoutSeconds=300
       - Ollama__MaxConcurrent=2
+      - SpeechToText__Url=http://sddp-whisper:8000
+      - SpeechToText__Model=Systran/faster-whisper-small
+      - SpeechToText__TimeoutSeconds=120
+      - FeatureFlags__Speech__Enabled=true
       - Git__Token=${SDDP_GIT__TOKEN:-}
       - Git__Username=${SDDP_GIT__USERNAME:-oauth2}
       - Git__RepoRoot=${SDDP_GIT__REPOROOT:-data/git-repos}
@@ -100,6 +104,30 @@ services:
           cpus: "${OLLAMA_CPU_LIMIT:-4}"
     healthcheck:
       test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - sddp-network
+
+  # Whisper STT (speech-to-text, OpenAI-compatible /v1/audio/transcriptions)
+  # Model downloads lazily on first request (~460MB); run `make whisper-warmup` to preload.
+  sddp-whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu
+    container_name: sddp-public-whisper
+    ports:
+      - "9020:8000"
+    volumes:
+      - whisper_data:/home/ubuntu/.cache/huggingface/hub
+    deploy:
+      resources:
+        limits:
+          memory: ${WHISPER_MEMORY_LIMIT:-3G}
+          cpus: "${WHISPER_CPU_LIMIT:-2}"
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/health')\" || curl -f http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -157,6 +185,7 @@ volumes:
   postgres_tablespace:
   redis_data:
   ollama_data:
+  whisper_data:
   gitea_data:
   gitea_config:
 
