@@ -45,10 +45,7 @@ export interface TenantMember {
 /**
  * Get tenant members for DM candidate selection (no admin permission required)
  */
-export async function getTenantMembers(
-  tenantId: string,
-  search?: string
-): Promise<TenantMember[]> {
+export async function getTenantMembers(tenantId: string, search?: string): Promise<TenantMember[]> {
   const searchParams = new URLSearchParams();
   if (search) searchParams.set('search', search);
 
@@ -111,10 +108,7 @@ export async function getSystemUsers(
 /**
  * Get system user by ID (admin only)
  */
-export async function getSystemUserById(
-  tenantId: string,
-  userId: string
-): Promise<SystemUser> {
+export async function getSystemUserById(tenantId: string, userId: string): Promise<SystemUser> {
   return fetchWithAuth<SystemUser>(`/users/system/${userId}`, { tenantId });
 }
 
@@ -150,10 +144,7 @@ export async function updateSystemUser(
 /**
  * Deactivate a user (admin only)
  */
-export async function deactivateUser(
-  tenantId: string,
-  userId: string
-): Promise<void> {
+export async function deactivateUser(tenantId: string, userId: string): Promise<void> {
   await fetchWithAuth(`/users/${userId}/deactivate`, {
     tenantId,
     method: 'PUT',
@@ -176,10 +167,7 @@ export async function resetUserPassword(
 /**
  * Activate a user (admin only)
  */
-export async function activateUser(
-  tenantId: string,
-  userId: string
-): Promise<void> {
+export async function activateUser(tenantId: string, userId: string): Promise<void> {
   await fetchWithAuth(`/users/${userId}/activate`, {
     tenantId,
     method: 'PUT',
@@ -192,6 +180,10 @@ export async function activateUser(
 
 export class UserManagementService {
   private tenantId = '';
+
+  constructor(tenantId: string = '') {
+    this.tenantId = tenantId;
+  }
 
   setContext(tenantId: string): void {
     this.tenantId = tenantId;
@@ -209,7 +201,10 @@ export class UserManagementService {
     return createSystemUser(this.tenantId, params);
   }
 
-  updateUser(userId: string, params: { displayName: string; email: string; globalRole?: string }): Promise<SystemUser> {
+  updateUser(
+    userId: string,
+    params: { displayName: string; email: string; globalRole?: string }
+  ): Promise<SystemUser> {
     return updateSystemUser(this.tenantId, userId, params);
   }
 
@@ -224,6 +219,10 @@ export class UserManagementService {
   resetPassword(userId: string): Promise<{ temporaryPassword: string }> {
     return resetUserPassword(this.tenantId, userId);
   }
+}
+
+export function createUserManagementService(tenantId: string): UserManagementService {
+  return new UserManagementService(tenantId);
 }
 
 // ============================================

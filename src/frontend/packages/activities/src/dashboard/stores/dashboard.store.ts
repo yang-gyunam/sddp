@@ -4,7 +4,14 @@
  */
 
 import { createStore } from '@sddp/shell/core';
-import type { MyDashboard, SystemDashboard, ProjectDashboard, ActivityLogEntry, DashboardWidgets, NotificationItem } from '../types';
+import type {
+  MyDashboard,
+  SystemDashboard,
+  ProjectDashboard,
+  ActivityLogEntry,
+  DashboardWidgets,
+  NotificationItem,
+} from '../types';
 
 interface DashboardState {
   myDashboard: MyDashboard | null;

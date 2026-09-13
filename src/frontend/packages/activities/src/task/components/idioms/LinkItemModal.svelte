@@ -35,14 +35,7 @@
     onLink: (type: LinkedItemType, entityId: string, entityTitle: string) => void;
   }
 
-  let {
-    open,
-    tenantId,
-    projectId,
-    existingLinkedIds = [],
-    onClose,
-    onLink,
-  }: Props = $props();
+  let { open, tenantId, projectId, existingLinkedIds = [], onClose, onLink }: Props = $props();
 
   // State
   let selectedType = $state<LinkedItemType>('conversation');
@@ -245,11 +238,7 @@
     <!-- Actions -->
     <div class="modal-actions">
       <Button variant="secondary" onclick={handleClose}>Cancel</Button>
-      <Button
-        variant="primary"
-        onclick={handleConfirm}
-        disabled={!selectedItemId}
-      >
+      <Button variant="primary" onclick={handleConfirm} disabled={!selectedItemId}>
         Link Item
       </Button>
     </div>
@@ -328,7 +317,6 @@
     border-color: var(--accent-color);
   }
 
-
   .items-list {
     min-height: 200px;
     max-height: 320px;
@@ -400,7 +388,6 @@
     color: var(--text-tertiary);
   }
 
-
   .item-content {
     flex: 1;
     min-width: 0;
@@ -431,12 +418,10 @@
     color: var(--accent-color);
   }
 
-
   .modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 0.5rem;
   }
-
 </style>

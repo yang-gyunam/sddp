@@ -44,6 +44,10 @@ export async function getRoleById(tenantId: string, roleId: string): Promise<Rol
 export class RoleService {
   private tenantId = '';
 
+  constructor(tenantId: string = '') {
+    this.tenantId = tenantId;
+  }
+
   setContext(tenantId: string): void {
     this.tenantId = tenantId;
   }
@@ -55,6 +59,10 @@ export class RoleService {
   getRoleById(roleId: string): Promise<Role> {
     return getRoleById(this.tenantId, roleId);
   }
+}
+
+export function createRoleService(tenantId: string): RoleService {
+  return new RoleService(tenantId);
 }
 
 // ============================================

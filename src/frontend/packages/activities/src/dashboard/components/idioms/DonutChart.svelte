@@ -131,7 +131,9 @@
             >
               <span class="legend-color" style="background: {segment.color}"></span>
               <span class="legend-label">{segment.label}</span>
-              <span class="legend-value">{segment.value} ({(segment.percent * 100).toFixed(0)}%)</span>
+              <span class="legend-value"
+                >{segment.value} ({(segment.percent * 100).toFixed(0)}%)</span
+              >
             </Button>
           {/each}
         </div>

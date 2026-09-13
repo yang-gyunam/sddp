@@ -9,17 +9,11 @@
     bottomItems?: ActivityBarItem[];
   }
 
-  let {
-    items = [],
-    activeItem = '',
-    onItemClick,
-    bottomItems = [],
-  }: Props = $props();
+  let { items = [], activeItem = '', onItemClick, bottomItems = [] }: Props = $props();
 
   function handleClick(id: string) {
     onItemClick?.(id);
   }
-
 </script>
 
 <div

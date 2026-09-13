@@ -120,8 +120,8 @@
   <div
     class="menu-item group flex items-center h-7 px-2 cursor-pointer select-none transition-colors rounded-sm mx-1
       {isSelected
-        ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
-        : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
+      ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
+      : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
       {item.isActive ? 'font-medium' : ''}"
     style="padding-left: {8 + indent}px"
     role="treeitem"
@@ -138,7 +138,9 @@
         icon="chevron-right"
         size="sm"
         title={isExpanded ? 'Collapse' : 'Expand'}
-        class="chevron-trigger !w-4 !h-4 !p-0 mr-1 transition-transform duration-150 {isExpanded ? 'rotate-90' : ''}"
+        class="chevron-trigger !w-4 !h-4 !p-0 mr-1 transition-transform duration-150 {isExpanded
+          ? 'rotate-90'
+          : ''}"
       />
     {:else}
       <div class="w-4 h-4 mr-1 flex-shrink-0"></div>
@@ -163,7 +165,9 @@
 
     <!-- Active indicator -->
     {#if item.isActive}
-      <div class="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-primary)] ml-2 flex-shrink-0"></div>
+      <div
+        class="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-primary)] ml-2 flex-shrink-0"
+      ></div>
     {/if}
   </div>
 
@@ -178,15 +182,9 @@
 {/snippet}
 
 <!-- Main tree container -->
-<div
-  class="sidebar-menu-tree py-1 {className}"
-  role="tree"
-  aria-label="Sidebar navigation"
->
+<div class="sidebar-menu-tree py-1 {className}" role="tree" aria-label="Sidebar navigation">
   {#if items.length === 0}
-    <div class="text-center py-4 px-3 text-[var(--color-text-tertiary)] text-sm">
-      No items
-    </div>
+    <div class="text-center py-4 px-3 text-[var(--color-text-tertiary)] text-sm">No items</div>
   {:else}
     {#each items.sort((a, b) => a.order - b.order) as item (item.id)}
       {@render menuItem(item, 0)}

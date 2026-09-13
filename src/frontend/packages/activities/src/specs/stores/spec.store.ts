@@ -10,33 +10,33 @@ import type { Spec, SpecDetail, SpecState, SpecStatus, SpecPage } from '../types
 // Initial State
 // ============================================
 
-const initialState: SpecState = {
-  // Specs list
-  specs: [],
-  totalCount: 0,
-  page: 1,
-  pageSize: 20,
-  totalPages: 0,
-  specsLoading: false,
-  specsError: null,
+function createInitialState(): SpecState {
+  return {
+    specs: [],
+    totalCount: 0,
+    page: 1,
+    pageSize: 20,
+    totalPages: 0,
+    specsLoading: false,
+    specsError: null,
+    statusFilter: null,
+    codeSearch: null,
+    currentSpec: null,
+    currentSpecLoading: false,
+    currentSpecError: null,
+    specVersions: [],
+    versionsLoading: false,
+    versionsError: null,
+  };
+}
 
-  // Filters
-  statusFilter: null,
-  codeSearch: null,
+/** Create an isolated store for a single editor tab. */
+export function createSpecStoreInstance(): Store<SpecState> {
+  return createStore<SpecState>(createInitialState());
+}
 
-  // Current spec
-  currentSpec: null,
-  currentSpecLoading: false,
-  currentSpecError: null,
-
-  // Version history
-  specVersions: [],
-  versionsLoading: false,
-  versionsError: null,
-};
-
-// Create the store
-const specStore: Store<SpecState> = createStore<SpecState>(initialState);
+// Backward-compatible application store. Editor tabs use createSpecStoreScope().
+const specStore: Store<SpecState> = createSpecStoreInstance();
 
 // ============================================
 // Specs List Actions
@@ -45,8 +45,8 @@ const specStore: Store<SpecState> = createStore<SpecState>(initialState);
 /**
  * Set specs page data
  */
-export function setSpecsPage(page: SpecPage): void {
-  specStore.update((state) => ({
+export function setSpecsPage(page: SpecPage, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     specs: page.items,
     totalCount: page.totalCount,
@@ -61,8 +61,8 @@ export function setSpecsPage(page: SpecPage): void {
 /**
  * Set specs loading state
  */
-export function setSpecsLoading(loading: boolean): void {
-  specStore.update((state) => ({
+export function setSpecsLoading(loading: boolean, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     specsLoading: loading,
   }));
@@ -71,8 +71,8 @@ export function setSpecsLoading(loading: boolean): void {
 /**
  * Set specs error
  */
-export function setSpecsError(error: string | null): void {
-  specStore.update((state) => ({
+export function setSpecsError(error: string | null, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     specsError: error,
     specsLoading: false,
@@ -82,8 +82,8 @@ export function setSpecsError(error: string | null): void {
 /**
  * Add a new spec to the list
  */
-export function addSpec(spec: Spec): void {
-  specStore.update((state) => ({
+export function addSpec(spec: Spec, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     specs: [spec, ...state.specs],
     totalCount: state.totalCount + 1,
@@ -93,8 +93,12 @@ export function addSpec(spec: Spec): void {
 /**
  * Update a spec in the list
  */
-export function updateSpecInList(specId: string, updates: Partial<Spec>): void {
-  specStore.update((state) => ({
+export function updateSpecInList(
+  specId: string,
+  updates: Partial<Spec>,
+  target: Store<SpecState> = specStore
+): void {
+  target.update((state) => ({
     ...state,
     specs: state.specs.map((s) => (s.id === specId ? { ...s, ...updates } : s)),
   }));
@@ -103,8 +107,8 @@ export function updateSpecInList(specId: string, updates: Partial<Spec>): void {
 /**
  * Remove a spec from the list
  */
-export function removeSpec(specId: string): void {
-  specStore.update((state) => ({
+export function removeSpec(specId: string, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     specs: state.specs.filter((s) => s.id !== specId),
     totalCount: Math.max(0, state.totalCount - 1),
@@ -118,8 +122,11 @@ export function removeSpec(specId: string): void {
 /**
  * Set status filter
  */
-export function setStatusFilter(status: SpecStatus | null): void {
-  specStore.update((state) => ({
+export function setStatusFilter(
+  status: SpecStatus | null,
+  target: Store<SpecState> = specStore
+): void {
+  target.update((state) => ({
     ...state,
     statusFilter: status,
     page: 1, // Reset to first page on filter change
@@ -152,8 +159,8 @@ export function clearFilters(): void {
 /**
  * Set page number
  */
-export function setPage(page: number): void {
-  specStore.update((state) => ({
+export function setPage(page: number, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     page,
   }));
@@ -177,8 +184,11 @@ export function setPageSize(pageSize: number): void {
 /**
  * Set current spec (detail view)
  */
-export function setCurrentSpec(spec: SpecDetail | null): void {
-  specStore.update((state) => ({
+export function setCurrentSpec(
+  spec: SpecDetail | null,
+  target: Store<SpecState> = specStore
+): void {
+  target.update((state) => ({
     ...state,
     currentSpec: spec,
     currentSpecLoading: false,
@@ -189,8 +199,11 @@ export function setCurrentSpec(spec: SpecDetail | null): void {
 /**
  * Set current spec loading state
  */
-export function setCurrentSpecLoading(loading: boolean): void {
-  specStore.update((state) => ({
+export function setCurrentSpecLoading(
+  loading: boolean,
+  target: Store<SpecState> = specStore
+): void {
+  target.update((state) => ({
     ...state,
     currentSpecLoading: loading,
   }));
@@ -199,8 +212,11 @@ export function setCurrentSpecLoading(loading: boolean): void {
 /**
  * Set current spec error
  */
-export function setCurrentSpecError(error: string | null): void {
-  specStore.update((state) => ({
+export function setCurrentSpecError(
+  error: string | null,
+  target: Store<SpecState> = specStore
+): void {
+  target.update((state) => ({
     ...state,
     currentSpecError: error,
     currentSpecLoading: false,
@@ -210,8 +226,8 @@ export function setCurrentSpecError(error: string | null): void {
 /**
  * Clear current spec
  */
-export function clearCurrentSpec(): void {
-  specStore.update((state) => ({
+export function clearCurrentSpec(target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     currentSpec: null,
     currentSpecLoading: false,
@@ -239,8 +255,8 @@ export function updateCurrentSpec(updates: Partial<SpecDetail>): void {
 /**
  * Set version history
  */
-export function setVersionHistory(versions: Spec[]): void {
-  specStore.update((state) => ({
+export function setVersionHistory(versions: Spec[], target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     specVersions: versions,
     versionsLoading: false,
@@ -251,8 +267,8 @@ export function setVersionHistory(versions: Spec[]): void {
 /**
  * Set versions loading state
  */
-export function setVersionsLoading(loading: boolean): void {
-  specStore.update((state) => ({
+export function setVersionsLoading(loading: boolean, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     versionsLoading: loading,
   }));
@@ -261,8 +277,8 @@ export function setVersionsLoading(loading: boolean): void {
 /**
  * Set versions error
  */
-export function setVersionsError(error: string | null): void {
-  specStore.update((state) => ({
+export function setVersionsError(error: string | null, target: Store<SpecState> = specStore): void {
+  target.update((state) => ({
     ...state,
     versionsError: error,
     versionsLoading: false,
@@ -379,6 +395,35 @@ export function subscribeSpec(
  */
 export function resetSpecStore(): void {
   specStore.reset();
+}
+
+/**
+ * Actions bound to one store instance. Each Split Editor tab creates its own scope.
+ */
+export function createSpecStoreScope() {
+  const store = createSpecStoreInstance();
+
+  return {
+    getState: () => store.get(),
+    subscribe: (listener: (state: SpecState, prevState: SpecState) => void) =>
+      store.subscribe(listener),
+    setSpecsPage: (page: SpecPage) => setSpecsPage(page, store),
+    setSpecsLoading: (loading: boolean) => setSpecsLoading(loading, store),
+    setSpecsError: (error: string | null) => setSpecsError(error, store),
+    addSpec: (spec: Spec) => addSpec(spec, store),
+    updateSpecInList: (specId: string, updates: Partial<Spec>) =>
+      updateSpecInList(specId, updates, store),
+    removeSpec: (specId: string) => removeSpec(specId, store),
+    setStatusFilter: (status: SpecStatus | null) => setStatusFilter(status, store),
+    setPage: (page: number) => setPage(page, store),
+    setCurrentSpec: (spec: SpecDetail | null) => setCurrentSpec(spec, store),
+    setCurrentSpecLoading: (loading: boolean) => setCurrentSpecLoading(loading, store),
+    setCurrentSpecError: (error: string | null) => setCurrentSpecError(error, store),
+    clearCurrentSpec: () => clearCurrentSpec(store),
+    setVersionHistory: (versions: Spec[]) => setVersionHistory(versions, store),
+    setVersionsLoading: (loading: boolean) => setVersionsLoading(loading, store),
+    setVersionsError: (error: string | null) => setVersionsError(error, store),
+  };
 }
 
 // Export the store for direct access

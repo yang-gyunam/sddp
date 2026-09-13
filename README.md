@@ -8,6 +8,12 @@ Code explains what changed. SDDP keeps the why.
 
 This public repository contains the application runtime, public tests, and the OnBrick showcase assets needed to evaluate the product.
 
+## One Decision, End to End
+
+A partial-refund decision moves from the design discussion into an explicit requirement, a reviewed spec, and the implementation artifact that proves it.
+
+![SDDP following a partial-refund decision from conversation through requirement and spec to the implementation artifact](docs/assets/readme/01-decision-trail.gif)
+
 ## Why SDDP?
 
 If you open code written six months ago and can no longer explain why it looks that way, SDDP is the problem space we care about.
@@ -18,6 +24,12 @@ If you open code written six months ago and can no longer explain why it looks t
 - Dictate conversation messages with local speech-to-text (Whisper, no cloud calls)
 
 Public setup and evaluation notes are in [docs/public-guide.md](docs/public-guide.md).
+
+## Explore the Whole Project Context
+
+Move through the vocabulary, implementation artifacts, work, and effort behind a project, then inspect the Traceability graph that connects a spec back to its requirement and code.
+
+![SDDP project views moving from glossary and artifacts through tasks and effort to the traceability graph](docs/assets/readme/02-project-knowledge.gif)
 
 ## Tech Stack
 

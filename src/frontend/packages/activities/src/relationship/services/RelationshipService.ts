@@ -314,6 +314,11 @@ export class RelationshipService {
   private tenantId: string = '';
   private projectId: string = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   /**
    * Set tenant context
    */
@@ -391,6 +396,13 @@ export class RelationshipService {
   async compareSpecVersions(specId: string, compareToId: string): Promise<SpecDiffResult> {
     return compareSpecVersions(this.tenantId, this.projectId, specId, compareToId);
   }
+}
+
+export function createRelationshipService(
+  tenantId: string,
+  projectId: string
+): RelationshipService {
+  return new RelationshipService(tenantId, projectId);
 }
 
 // Singleton instance

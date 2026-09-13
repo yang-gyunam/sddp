@@ -21,14 +21,18 @@
   // Calculate max value for scaling
   const maxValue = $derived(() => {
     if (!data || data.length === 0) return 10;
-    return Math.max(
-      ...data.map(d => Math.max(
-        d.tasksCompleted ?? 0,
-        d.specsCreated ?? 0,
-        d.comments ?? 0,
-        d.conversations ?? 0
-      ))
-    ) || 10;
+    return (
+      Math.max(
+        ...data.map((d) =>
+          Math.max(
+            d.tasksCompleted ?? 0,
+            d.specsCreated ?? 0,
+            d.comments ?? 0,
+            d.conversations ?? 0
+          )
+        )
+      ) || 10
+    );
   });
 
   // Get display data (last 14 days for better visibility)
@@ -41,7 +45,12 @@
     <div class="chart-container">
       <div class="chart-bars">
         {#each displayData as point, i (i)}
-          {@const value = point.tasksCompleted ?? point.specsCreated ?? point.comments ?? point.conversations ?? 0}
+          {@const value =
+            point.tasksCompleted ??
+            point.specsCreated ??
+            point.comments ??
+            point.conversations ??
+            0}
           {@const height = Math.max(4, (value / maxValue()) * 100)}
           <div class="bar-wrapper" title="{point.date}: {value}">
             <div class="bar" style="height: {height}%"></div>
@@ -100,7 +109,9 @@
     width: 100%;
     background: linear-gradient(to top, var(--color-accent-primary), var(--color-accent-primary));
     border-radius: 2px 2px 0 0;
-    transition: height 0.3s ease, opacity 0.2s;
+    transition:
+      height 0.3s ease,
+      opacity 0.2s;
     min-height: 4px;
   }
 

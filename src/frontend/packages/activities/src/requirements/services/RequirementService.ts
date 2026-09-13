@@ -207,15 +207,12 @@ export async function linkConversation(
   requirementId: string,
   request: LinkConversationRequest
 ): Promise<Requirement> {
-  return fetchWithAuth<Requirement>(
-    `/requirements/${requirementId}/link-conversation`,
-    {
-      method: 'POST',
-      body: request,
-      tenantId,
-      projectId,
-    }
-  );
+  return fetchWithAuth<Requirement>(`/requirements/${requirementId}/link-conversation`, {
+    method: 'POST',
+    body: request,
+    tenantId,
+    projectId,
+  });
 }
 
 /**
@@ -226,14 +223,11 @@ export async function unlinkConversation(
   projectId: string,
   requirementId: string
 ): Promise<Requirement> {
-  return fetchWithAuth<Requirement>(
-    `/requirements/${requirementId}/link-conversation`,
-    {
-      method: 'DELETE',
-      tenantId,
-      projectId,
-    }
-  );
+  return fetchWithAuth<Requirement>(`/requirements/${requirementId}/link-conversation`, {
+    method: 'DELETE',
+    tenantId,
+    projectId,
+  });
 }
 
 /**
@@ -260,6 +254,11 @@ export async function getFieldAuthors(
 export class RequirementService {
   private tenantId: string = '';
   private projectId: string = '';
+
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
 
   /**
    * Set tenant context
@@ -313,9 +312,7 @@ export class RequirementService {
     return getRequirementChildren(this.tenantId, this.projectId, parentId);
   }
 
-  async createRequirement(
-    request: CreateRequirementRequest
-  ): Promise<RequirementDetail> {
+  async createRequirement(request: CreateRequirementRequest): Promise<RequirementDetail> {
     return createRequirement(this.tenantId, this.projectId, request);
   }
 
@@ -323,24 +320,14 @@ export class RequirementService {
     requirementId: string,
     request: UpdateRequirementRequest
   ): Promise<RequirementDetail> {
-    return updateRequirement(
-      this.tenantId,
-      this.projectId,
-      requirementId,
-      request
-    );
+    return updateRequirement(this.tenantId, this.projectId, requirementId, request);
   }
 
   async transitionStatus(
     requirementId: string,
     request: TransitionStatusRequest
   ): Promise<Requirement> {
-    return transitionRequirementStatus(
-      this.tenantId,
-      this.projectId,
-      requirementId,
-      request
-    );
+    return transitionRequirementStatus(this.tenantId, this.projectId, requirementId, request);
   }
 
   async deleteRequirement(requirementId: string): Promise<void> {
@@ -355,17 +342,17 @@ export class RequirementService {
     requirementId: string,
     request: LinkConversationRequest
   ): Promise<Requirement> {
-    return linkConversation(
-      this.tenantId,
-      this.projectId,
-      requirementId,
-      request
-    );
+    return linkConversation(this.tenantId, this.projectId, requirementId, request);
   }
 
   async unlinkConversation(requirementId: string): Promise<Requirement> {
     return unlinkConversation(this.tenantId, this.projectId, requirementId);
   }
+}
+
+/** Create a context-bound service for a single tab or request flow. */
+export function createRequirementService(tenantId: string, projectId: string): RequirementService {
+  return new RequirementService(tenantId, projectId);
 }
 
 // Singleton instance

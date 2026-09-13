@@ -53,17 +53,16 @@
   <span class="member-card__num">{formatHours(member.totalSpent)}</span>
 
   <!-- Remaining -->
-  <span class="member-card__num member-card__num--remaining" class:member-card__num--negative={remaining < 0}>
+  <span
+    class="member-card__num member-card__num--remaining"
+    class:member-card__num--negative={remaining < 0}
+  >
     {formatHours(remaining)}
   </span>
 
   <!-- Progress -->
   <div class="member-card__progress" title={utilizationLabel}>
-    <RadialProgress
-      value={member.utilizationRate}
-      size="xs"
-      variant={utilizationVariant}
-    />
+    <RadialProgress value={member.utilizationRate} size="xs" variant={utilizationVariant} />
   </div>
 </Button>
 

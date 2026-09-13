@@ -24,11 +24,7 @@
     PrimaryFlowNodeDto,
     RelationshipListData,
   } from '../../types';
-  import {
-    ENTITY_TYPE_STYLES,
-    RELATION_TYPE_STYLES,
-    getInverseRelationType,
-  } from '../../types';
+  import { ENTITY_TYPE_STYLES, RELATION_TYPE_STYLES, getInverseRelationType } from '../../types';
 
   import type { Snippet } from 'svelte';
 
@@ -65,7 +61,6 @@
   let error = $state<string | null>(null);
   let prevEntityId = $state<string | null>(null);
 
-
   // Use self-loaded data; fall back to prop if provided
   const resolvedPrimaryFlow = $derived(
     selfLoadedPrimaryFlow.length > 0 ? selfLoadedPrimaryFlow : primaryFlow
@@ -100,12 +95,12 @@
         getPrimaryFlow(tenantId, projectId, entityType, entityId),
       ]);
       relationships = relResult.status === 'fulfilled' ? relResult.value : null;
-      selfLoadedPrimaryFlow = flowResult.status === 'fulfilled' ? flowResult.value.map(dtoToNode) : [];
+      selfLoadedPrimaryFlow =
+        flowResult.status === 'fulfilled' ? flowResult.value.map(dtoToNode) : [];
       const failures = [relResult, flowResult].filter((r) => r.status === 'rejected');
       if (failures.length > 0) {
-        error = failures.length === 2
-          ? 'Failed to load trace data'
-          : 'Some trace data failed to load';
+        error =
+          failures.length === 2 ? 'Failed to load trace data' : 'Some trace data failed to load';
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load trace data';
@@ -150,9 +145,7 @@
 
   // Filter deprecated if needed
   const filteredRelationships = $derived(
-    showDeprecated
-      ? allRelationships
-      : allRelationships.filter((r) => r.validTo === null)
+    showDeprecated ? allRelationships : allRelationships.filter((r) => r.validTo === null)
   );
 
   function navigateByEntityType(type: string, id: string, label?: string): void {
@@ -189,7 +182,11 @@
     }
   }
 
-  function handleRelationshipItemClick(targetType: EntityType, targetId: string, targetLabel?: string): void {
+  function handleRelationshipItemClick(
+    targetType: EntityType,
+    targetId: string,
+    targetLabel?: string
+  ): void {
     navigateByEntityType(targetType, targetId, targetLabel);
   }
 
@@ -209,14 +206,18 @@
   <div class="relative flex-1 overflow-y-auto">
     <!-- Loading overlay (does NOT destroy content below) -->
     {#if loading}
-      <div class="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-secondary)]/80 z-10">
+      <div
+        class="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-secondary)]/80 z-10"
+      >
         <Spinner size="lg" />
       </div>
     {/if}
 
     <!-- Error banner (does NOT destroy content below) -->
     {#if error}
-      <div class="flex-shrink-0 flex items-center gap-2 px-4 py-2 text-[var(--color-error-500)] bg-[var(--color-error-500)]/10 border-b border-[var(--color-error-500)]/20">
+      <div
+        class="flex-shrink-0 flex items-center gap-2 px-4 py-2 text-[var(--color-error-500)] bg-[var(--color-error-500)]/10 border-b border-[var(--color-error-500)]/20"
+      >
         <Icon name="alert-circle" size="sm" />
         <p class="text-xs">{error}</p>
       </div>
@@ -228,7 +229,7 @@
         <CollapsibleGroup
           title="Primary Flow"
           expanded={isPrimaryFlowExpanded}
-          onToggle={() => isPrimaryFlowExpanded = !isPrimaryFlowExpanded}
+          onToggle={() => (isPrimaryFlowExpanded = !isPrimaryFlowExpanded)}
         >
           <div class="pl-2 pr-3 pt-2 pb-3">
             {#if resolvedPrimaryFlow.length === 0}
@@ -247,12 +248,19 @@
                       variant="unstyled"
                       class="w-full flex items-center gap-2 p-1.5 rounded-lg transition-colors
                         {node.isCurrent
-                          ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
-                          : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                        ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
+                        : 'hover:bg-[var(--color-bg-tertiary)]'}"
                       onclick={() => handleNodeClick(node)}
                     >
-                      <div class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {style?.bgColor || 'bg-[var(--color-bg-tertiary)]'}">
-                        <Icon name={style?.icon || 'file'} size="xs" class={style?.color || 'text-[var(--color-text-tertiary)]'} />
+                      <div
+                        class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {style?.bgColor ||
+                          'bg-[var(--color-bg-tertiary)]'}"
+                      >
+                        <Icon
+                          name={style?.icon || 'file'}
+                          size="xs"
+                          class={style?.color || 'text-[var(--color-text-tertiary)]'}
+                        />
                       </div>
                       <div class="flex-1 min-w-0 text-left">
                         <div class="text-sm font-medium text-[var(--color-text-primary)] truncate">
@@ -265,7 +273,10 @@
                         {/if}
                       </div>
                       {#if node.isCurrent}
-                        <span class="text-xs text-[var(--color-accent-primary)] font-medium flex-shrink-0">Current</span>
+                        <span
+                          class="text-xs text-[var(--color-accent-text)] font-medium flex-shrink-0"
+                          >Current</span
+                        >
                       {/if}
                     </Button>
                   </div>
@@ -283,13 +294,15 @@
         <CollapsibleGroup
           title="Related Items"
           expanded={isRelationshipsExpanded}
-          onToggle={() => isRelationshipsExpanded = !isRelationshipsExpanded}
-          actions={[{
-            id: 'add-relationship',
-            icon: 'plus',
-            label: 'Link entity',
-            onClick: () => showLinkSearch = !showLinkSearch,
-          }]}
+          onToggle={() => (isRelationshipsExpanded = !isRelationshipsExpanded)}
+          actions={[
+            {
+              id: 'add-relationship',
+              icon: 'plus',
+              label: 'Link entity',
+              onClick: () => (showLinkSearch = !showLinkSearch),
+            },
+          ]}
         >
           <div class="px-4 pt-2 pb-3">
             {#if showLinkSearch}
@@ -299,7 +312,7 @@
                   {entityId}
                   {projectId}
                   onLinked={handleLinkCreated}
-                  onClose={() => showLinkSearch = false}
+                  onClose={() => (showLinkSearch = false)}
                 />
               </div>
             {/if}
@@ -314,24 +327,37 @@
               <div class="space-y-0.5">
                 {#each filteredRelationships as rel (rel.id)}
                   {@const relStyle = RELATION_TYPE_STYLES[rel.type]}
-                  {@const targetType = rel.direction === 'incoming' ? rel.fromEntityType : rel.toEntityType}
-                  {@const targetId = rel.direction === 'incoming' ? rel.fromEntityId : rel.toEntityId}
-                  {@const targetLabel = rel.direction === 'incoming' ? rel.fromEntityLabel : rel.toEntityLabel}
-                  {@const targetCode = rel.direction === 'incoming' ? rel.fromEntityCode : rel.toEntityCode}
+                  {@const targetType =
+                    rel.direction === 'incoming' ? rel.fromEntityType : rel.toEntityType}
+                  {@const targetId =
+                    rel.direction === 'incoming' ? rel.fromEntityId : rel.toEntityId}
+                  {@const targetLabel =
+                    rel.direction === 'incoming' ? rel.fromEntityLabel : rel.toEntityLabel}
+                  {@const targetCode =
+                    rel.direction === 'incoming' ? rel.fromEntityCode : rel.toEntityCode}
                   {@const entityStyle = ENTITY_TYPE_STYLES[targetType]}
-                  {@const relationLabel = rel.direction === 'incoming' ? getInverseRelationType(rel.type) : relStyle.label}
+                  {@const relationLabel =
+                    rel.direction === 'incoming'
+                      ? getInverseRelationType(rel.type)
+                      : relStyle.label}
                   <div class="group flex items-center gap-0.5">
                     <Button
                       variant="unstyled"
                       class="flex-1 min-w-0 flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors
                         {rel.validTo ? 'opacity-50' : ''}"
-                      onclick={() => handleRelationshipItemClick(targetType, targetId, targetLabel ?? undefined)}
+                      onclick={() =>
+                        handleRelationshipItemClick(targetType, targetId, targetLabel ?? undefined)}
                     >
                       <div
-                        class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {entityStyle?.bgColor ?? 'bg-[var(--color-bg-tertiary)]'}"
+                        class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {entityStyle?.bgColor ??
+                          'bg-[var(--color-bg-tertiary)]'}"
                         title={relationLabel}
                       >
-                        <Icon name={entityStyle?.icon ?? 'file'} size="xs" class={entityStyle?.color ?? 'text-[var(--color-text-tertiary)]'} />
+                        <Icon
+                          name={entityStyle?.icon ?? 'file'}
+                          size="xs"
+                          class={entityStyle?.color ?? 'text-[var(--color-text-tertiary)]'}
+                        />
                       </div>
                       <div class="flex-1 min-w-0 text-left">
                         <div class="text-sm font-medium text-[var(--color-text-primary)] truncate">
@@ -349,7 +375,10 @@
                       variant="ghost"
                       size="sm"
                       class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all"
-                      onclick={(e) => { e.stopPropagation(); handleUnlink(rel.id); }}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleUnlink(rel.id);
+                      }}
                       title="Remove link"
                     />
                   </div>
@@ -367,7 +396,7 @@
         <CollapsibleGroup
           title="Revision History"
           expanded={isRevisionHistoryExpanded}
-          onToggle={() => isRevisionHistoryExpanded = !isRevisionHistoryExpanded}
+          onToggle={() => (isRevisionHistoryExpanded = !isRevisionHistoryExpanded)}
         >
           {@render revisionHistory()}
         </CollapsibleGroup>
@@ -376,38 +405,37 @@
 
     <!-- Filter Section -->
     {#if !hideFilter}
-    <div>
-      <CollapsibleGroup
-        title="Filter"
-        expanded={isFilterExpanded}
-        onToggle={() => isFilterExpanded = !isFilterExpanded}
-      >
-        <div class="px-4 pt-2 pb-3 space-y-2">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <Checkbox
-              checked={showPrimaryFlow}
-              onchange={() => showPrimaryFlowOverride = !showPrimaryFlow}
-            />
-            <span class="text-sm text-[var(--color-text-secondary)]">Show Primary Flow</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <Checkbox
-              checked={showRelationships}
-              onchange={() => showRelationships = !showRelationships}
-            />
-            <span class="text-sm text-[var(--color-text-secondary)]">Show Relationships</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <Checkbox
-              checked={showDeprecated}
-              onchange={() => showDeprecated = !showDeprecated}
-            />
-            <span class="text-sm text-[var(--color-text-secondary)]">Show Deprecated</span>
-          </label>
-        </div>
-      </CollapsibleGroup>
-    </div>
+      <div>
+        <CollapsibleGroup
+          title="Filter"
+          expanded={isFilterExpanded}
+          onToggle={() => (isFilterExpanded = !isFilterExpanded)}
+        >
+          <div class="px-4 pt-2 pb-3 space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={showPrimaryFlow}
+                onchange={() => (showPrimaryFlowOverride = !showPrimaryFlow)}
+              />
+              <span class="text-sm text-[var(--color-text-secondary)]">Show Primary Flow</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={showRelationships}
+                onchange={() => (showRelationships = !showRelationships)}
+              />
+              <span class="text-sm text-[var(--color-text-secondary)]">Show Relationships</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={showDeprecated}
+                onchange={() => (showDeprecated = !showDeprecated)}
+              />
+              <span class="text-sm text-[var(--color-text-secondary)]">Show Deprecated</span>
+            </label>
+          </div>
+        </CollapsibleGroup>
+      </div>
     {/if}
   </div>
 </div>
-

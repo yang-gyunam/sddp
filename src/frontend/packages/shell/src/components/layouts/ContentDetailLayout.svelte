@@ -68,7 +68,10 @@
       // Schedule update on next animation frame
       rafId = requestAnimationFrame(() => {
         const delta = moveEvent.clientX - startX;
-        const newWidth = Math.min(maxMainContentWidth, Math.max(minMainContentWidth, startWidth + delta));
+        const newWidth = Math.min(
+          maxMainContentWidth,
+          Math.max(minMainContentWidth, startWidth + delta)
+        );
         mainContentWidth = newWidth;
         rafId = null;
       });

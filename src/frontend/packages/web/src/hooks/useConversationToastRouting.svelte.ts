@@ -8,12 +8,12 @@ import { toast } from '@sddp/shell';
 import { globalActiveTab } from '@sddp/shell/stores';
 import { getAuthState } from '@sddp/shell/auth/stores';
 import {
-  getConversationService,
+  createConversationService,
   getSidebarState,
   getActiveConversationContext,
   type ConversationEntry,
   type Message,
-} from '@sddp/activities/conversations';
+} from '@sddp/activities/runtime';
 import { isConversationVisible } from '../lib/conversation-toast';
 
 export interface ConversationToastRoutingParams {
@@ -42,9 +42,7 @@ export interface ConversationToastRoutingParams {
   ) => boolean;
 }
 
-function findConversationInSidebar(
-  conversationId: string
-): {
+function findConversationInSidebar(conversationId: string): {
   name: string;
   type: 'channel' | 'dm' | 'forum';
   muted: boolean;
@@ -158,8 +156,7 @@ export function useConversationToastRouting(params: ConversationToastRoutingPara
           const tenantId = getAuthState().user?.tenantId;
           if (tenantId) {
             try {
-              const service = getConversationService();
-              service.setContext(tenantId, '');
+              const service = createConversationService(tenantId, '');
               const detail = await service.getConversationById(message.conversationId);
               resolvedProjectId = detail.projectId ?? null;
               resolvedChannelStatus = detail.channelStatus ?? resolvedChannelStatus;
@@ -170,10 +167,7 @@ export function useConversationToastRouting(params: ConversationToastRoutingPara
                     ? 'dm'
                     : 'channel';
             } catch (error) {
-              console.warn(
-                'Failed to resolve conversation scope for toast navigation:',
-                error
-              );
+              console.warn('Failed to resolve conversation scope for toast navigation:', error);
             }
           }
         }

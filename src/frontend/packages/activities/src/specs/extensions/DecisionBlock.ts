@@ -72,7 +72,8 @@ export const DecisionBlock = Node.create({
       'div',
       mergeAttributes(HTMLAttributes, {
         'data-type': 'decision-block',
-        class: 'decision-block border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/20 p-4 my-2 rounded-r',
+        class:
+          'decision-block border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/20 p-4 my-2 rounded-r',
       }),
       [
         'div',
@@ -80,7 +81,9 @@ export const DecisionBlock = Node.create({
         // Header
         [
           'div',
-          { class: 'flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-sm' },
+          {
+            class: 'flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-sm',
+          },
           ['span', { class: 'text-lg' }, '🎯'],
           ['span', {}, 'Decision Record'],
         ],
@@ -98,7 +101,11 @@ export const DecisionBlock = Node.create({
           'div',
           { class: 'text-sm' },
           ['span', { class: 'font-medium text-gray-700 dark:text-gray-300' }, 'Decision: '],
-          ['span', { class: 'text-gray-800 dark:text-gray-200 font-medium' }, attrs.decision || 'No decision specified'],
+          [
+            'span',
+            { class: 'text-gray-800 dark:text-gray-200 font-medium' },
+            attrs.decision || 'No decision specified',
+          ],
         ],
         // Rationale
         attrs.rationale
@@ -114,7 +121,11 @@ export const DecisionBlock = Node.create({
           ? [
               'div',
               { class: 'text-sm' },
-              ['span', { class: 'font-medium text-gray-700 dark:text-gray-300' }, 'Alternatives considered: '],
+              [
+                'span',
+                { class: 'font-medium text-gray-700 dark:text-gray-300' },
+                'Alternatives considered: ',
+              ],
               [
                 'ul',
                 { class: 'list-disc list-inside text-gray-600 dark:text-gray-400 ml-2' },

@@ -95,7 +95,7 @@ class SettingsService {
     try {
       const dto = await fetchWithAuth<{ preferences: Record<string, unknown> | null }>(
         '/users/me/preferences',
-        { tenantId: this.tenantId },
+        { tenantId: this.tenantId }
       );
       if (dto.preferences) {
         const prefs = dto.preferences as unknown as UserPreferences;

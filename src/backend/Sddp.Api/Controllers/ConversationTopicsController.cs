@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Conversations.Topics.Commands;
 using Sddp.Application.Features.Conversations.Topics.Queries;
 
@@ -27,7 +30,8 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Conversation Topic get
     /// </summary>
-    [HttpGet("{conversationId:guid}/topics")]
+    [HttpGet("{conversationId}/topics")]
+    [ResourceScope<Forum>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetTopics(
         string conversationId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -56,7 +60,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic create
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics")]
+    [HttpPost("{conversationId}/topics")]
+    [ResourceScope<Forum>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationCreate)]
     [Authorize(Policy = "CanCreateConversation")]
     [Authorize]
     public async Task<IActionResult> CreateTopic(
@@ -102,7 +108,8 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic get
     /// </summary>
-    [HttpGet("{conversationId:guid}/topics/{topicId:guid}")]
+    [HttpGet("{conversationId}/topics/{topicId}")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetTopicById(
         string conversationId,
         string topicId,
@@ -133,7 +140,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic update
     /// </summary>
-    [HttpPut("{conversationId:guid}/topics/{topicId:guid}")]
+    [HttpPut("{conversationId}/topics/{topicId}")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> UpdateTopic(
         string conversationId,
@@ -172,7 +181,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics/{topicId:guid}/close")]
+    [HttpPost("{conversationId}/topics/{topicId}/close")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize(Policy = "CanCloseConversation")]
     [Authorize]
     public async Task<IActionResult> CloseTopic(
@@ -217,7 +228,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics/{topicId:guid}/reopen")]
+    [HttpPost("{conversationId}/topics/{topicId}/reopen")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ReopenTopic(
         string conversationId,
@@ -249,7 +262,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics/{topicId:guid}/archive")]
+    [HttpPost("{conversationId}/topics/{topicId}/archive")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ArchiveTopic(
         string conversationId,
@@ -281,7 +296,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics/{topicId:guid}/pin")]
+    [HttpPost("{conversationId}/topics/{topicId}/pin")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> ToggleTopicPin(
         string conversationId,
@@ -307,7 +324,9 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic lock
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics/{topicId:guid}/lock")]
+    [HttpPost("{conversationId}/topics/{topicId}/lock")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ToggleTopicLock(
         string conversationId,
@@ -333,7 +352,8 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic message get
     /// </summary>
-    [HttpGet("{conversationId:guid}/topics/{topicId:guid}/messages")]
+    [HttpGet("{conversationId}/topics/{topicId}/messages")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetTopicMessages(
         string conversationId,
         string topicId,
@@ -373,7 +393,10 @@ public class ConversationTopicsController : BaseApiController
     /// <summary>
     /// Topic message
     /// </summary>
-    [HttpPost("{conversationId:guid}/topics/{topicId:guid}/messages")]
+    [HttpPost("{conversationId}/topics/{topicId}/messages")]
+    [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
+    [Authorize]
     public async Task<IActionResult> PostTopicMessage(
         string conversationId,
         string topicId,

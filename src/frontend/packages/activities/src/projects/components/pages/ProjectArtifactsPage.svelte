@@ -2,9 +2,22 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
-  import { Icon, IconButton, Button, CardGrid } from '@sddp/ui';
+  import { Icon, IconButton, Button, CardGrid, Spinner } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
-  import { config as appConfig, PageShell, PageHeader, PageBody, SidebarDetailLayout, Dropdown, authStore, SIDEBAR_DETAIL_LAYOUT, SurfaceCard, getTabState, setTabState, toast } from '@sddp/shell';
+  import {
+    config as appConfig,
+    PageShell,
+    PageHeader,
+    PageBody,
+    SidebarDetailLayout,
+    Dropdown,
+    authStore,
+    SIDEBAR_DETAIL_LAYOUT,
+    SurfaceCard,
+    getTabState,
+    setTabState,
+    toast,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../../shared/components/idioms';
@@ -13,9 +26,21 @@
   // Import from activities/artifact (same package, use relative path)
   import ArtifactSidebar from '../../../artifact/components/sections/ArtifactSidebar.svelte';
   import ArtifactContent from '../../../artifact/components/sections/ArtifactContent.svelte';
+  import ArtifactReviewPanel from '../../../artifact/components/sections/ArtifactReviewPanel.svelte';
   import ArtifactForm from '../../../artifact/components/idioms/ArtifactForm.svelte';
-  import { getArtifactsByProjectPage, getArtifactById, regenerateArtifact, verifyArtifact, upsertArtifact, deactivateArtifact } from '../../../artifact/services/ArtifactService';
-  import type { UpsertArtifactRequest } from '../../../artifact/services/ArtifactService';
+  import ArtifactTypeIcon from '../../../artifact/components/idioms/ArtifactTypeIcon.svelte';
+  import {
+    getArtifactsByProjectPage,
+    getArtifactById,
+    regenerateArtifact,
+    verifyArtifact,
+    upsertArtifact,
+    deactivateArtifact,
+  } from '../../../artifact/services/ArtifactService';
+  import type {
+    UpsertArtifactRequest,
+    ArtifactStatusCounts,
+  } from '../../../artifact/services/ArtifactService';
   import { searchSpecs } from '../../../specs/services/SpecService';
   import { searchTerms } from '../../../glossary/services/GlossaryService';
   import { searchConversations } from '../../../conversations/services/ConversationService';
@@ -26,10 +51,7 @@
     ArtifactFilterType,
     ArtifactSummary,
   } from '../../../artifact/types';
-  import {
-    ARTIFACT_TYPE_STYLES,
-    getFileName,
-  } from '../../../artifact/types';
+  import { getFileName } from '../../../artifact/types';
   import { TraceGraphSection } from '../../../relationship/components/sections';
   import type { PrimaryFlowNode } from '../../../relationship/types';
 
@@ -61,6 +83,8 @@
   let viewMode = $state<'detail' | 'create' | 'edit'>('detail');
   let formLoading = $state(false);
   let editArtifactSpecId = $state('');
+  let editingArtifactId = $state<string | null>(null);
+  let editRequestGeneration = $state(0);
   const artifactMaintenanceEnabled = appConfig.get('enableArtifactMaintenance');
 
   // Member candidates for Owner selection
@@ -121,6 +145,9 @@
   }
 
   const tabStateKey = $derived(tabId || `project-${projectId}-artifacts`);
+
+  let reviewOpen = $state(false);
+  const reviewTenantId = $derived(authStore.get().user?.tenantId || '');
   let restoredKey = $state<string | null>(null);
   let isRestored = $state(false);
   let hasExpandedState = $state(false);
@@ -152,13 +179,18 @@
   });
 
   // Selected artifact (derived)
-  const selectedArtifact = $derived(
-    allArtifacts.find((a) => a.id === selectedArtifactId) ?? null
-  );
-
+  const selectedArtifact = $derived(allArtifacts.find((a) => a.id === selectedArtifactId) ?? null);
 
   // Initial data for edit form
+  /** The artifact the edit form is bound to; falls back to the selection outside edit mode. */
+  const editingArtifact = $derived(
+    editingArtifactId
+      ? (allArtifacts.find((a) => a.id === editingArtifactId) ?? null)
+      : selectedArtifact
+  );
+
   const editInitialData = $derived.by(() => {
+    const selectedArtifact = editingArtifact;
     if (!selectedArtifact) return undefined;
     return {
       specId: editArtifactSpecId,
@@ -173,46 +205,36 @@
   });
 
   // Status counts (derived from all artifacts)
+  /** Project-wide totals from the server, or null until the first page lands. */
+  let serverStatusCounts = $state<ArtifactStatusCounts | null>(null);
+  let projectArtifactTotal = $state(0);
+
   const statusCounts = $derived.by(() => ({
-    all: allArtifacts.length,
-    valid: allArtifacts.filter((a) => a.status === 'Valid').length,
-    modified: allArtifacts.filter((a) => a.status === 'Modified').length,
-    missing: allArtifacts.filter((a) => a.status === 'Missing').length,
+    all: projectArtifactTotal,
+    valid: serverStatusCounts?.valid ?? 0,
+    modified: serverStatusCounts?.modified ?? 0,
+    missing: serverStatusCounts?.missing ?? 0,
   }));
 
   // Filtered and grouped artifacts
+  /** The status the server filters on, or undefined for "all". */
+  const activeStatusFilter = $derived(
+    filterType === 'all'
+      ? undefined
+      : ({ valid: 'Valid', modified: 'Modified', missing: 'Missing' } as const)[filterType]
+  );
+
   const filteredTypeGroups = $derived.by(() => {
-    // Filter by status
-    let filtered = allArtifacts;
-    if (filterType !== 'all') {
-      const statusMap: Record<ArtifactFilterType, string> = {
-        all: '',
-        valid: 'Valid',
-        modified: 'Modified',
-        missing: 'Missing',
-      };
-      filtered = filtered.filter((a) => a.status === statusMap[filterType]);
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (a) =>
-          a.artifactPath.toLowerCase().includes(query) ||
-          a.entityName.toLowerCase().includes(query) ||
-          a.artifactType.toLowerCase().includes(query)
-      );
-    }
-
-    // Group by type
-    const grouped = filtered.reduce((acc, artifact) => {
-      if (!acc[artifact.artifactType]) {
-        acc[artifact.artifactType] = [];
-      }
-      acc[artifact.artifactType]!.push(artifact);
-      return acc;
-    }, {} as Record<string, ArtifactSummary[]>);
+    const grouped = allArtifacts.reduce(
+      (acc, artifact) => {
+        if (!acc[artifact.artifactType]) {
+          acc[artifact.artifactType] = [];
+        }
+        acc[artifact.artifactType]!.push(artifact);
+        return acc;
+      },
+      {} as Record<string, ArtifactSummary[]>
+    );
 
     return Object.entries(grouped).map(([type, artifacts]) => ({
       type: type as ArtifactTypeGroup['type'],
@@ -256,13 +278,21 @@
         tenantId,
         projectId,
         nextPageNumber,
-        ARTIFACTS_PAGE_SIZE
+        ARTIFACTS_PAGE_SIZE,
+        { status: activeStatusFilter, q: searchQuery }
       );
       if (requestId !== latestArtifactsRequestId) return;
 
       allArtifacts = reset ? page.items : [...allArtifacts, ...page.items];
       artifactsPageNumber = page.pageNumber ?? nextPageNumber;
       hasMoreArtifacts = page.hasNextPage ?? allArtifacts.length < page.totalCount;
+      projectArtifactTotal = page.statusCounts
+        ? page.statusCounts.valid +
+          page.statusCounts.modified +
+          page.statusCounts.missing +
+          page.statusCounts.unverified
+        : page.totalCount;
+      if (page.statusCounts) serverStatusCounts = page.statusCounts;
 
       if (!hasExpandedState) {
         expandedTypes = new SvelteSet(allArtifacts.map((artifact) => artifact.artifactType));
@@ -286,10 +316,14 @@
 
   function handleSearch(query: string) {
     searchQuery = query;
+    // The server owns filtering now, so a new term is a new request rather than a re-filter of
+    // whatever happened to be loaded.
+    loadArtifacts(true);
   }
 
   function handleFilterChange(filter: ArtifactFilterType) {
     filterType = filter;
+    loadArtifacts(true);
   }
 
   function handleToggleType(type: string) {
@@ -372,7 +406,7 @@
       return;
     }
 
-    const artifactsToVerify = allArtifacts.filter(a => a.status !== 'Missing');
+    const artifactsToVerify = allArtifacts.filter((a) => a.status !== 'Missing');
     if (artifactsToVerify.length === 0) {
       toast.info('No artifacts to verify');
       return;
@@ -381,24 +415,36 @@
     toast.info(`Verifying ${artifactsToVerify.length} artifacts...`);
 
     let verified = 0;
+    let modified = 0;
+    let missing = 0;
     let failed = 0;
 
     for (const artifact of artifactsToVerify) {
       try {
-        await verifyArtifact(tenantId, projectId, {
+        const result = await verifyArtifact(tenantId, projectId, {
           artifactId: artifact.id,
-          currentHash: artifact.contentHash || '',
         });
-        verified++;
+
+        if (result.isValid) {
+          verified++;
+        } else if (result.fileExists === false) {
+          missing++;
+        } else {
+          modified++;
+        }
       } catch {
         failed++;
       }
     }
 
-    if (failed === 0) {
-      toast.success(`All ${verified} artifacts verified`);
+    if (modified === 0 && missing === 0 && failed === 0) {
+      toast.success(`All ${verified} artifacts match their recorded hash`);
     } else {
-      toast.warning(`Verified: ${verified}, Failed: ${failed}`);
+      const parts = [`${verified} verified`];
+      if (modified > 0) parts.push(`${modified} modified`);
+      if (missing > 0) parts.push(`${missing} missing`);
+      if (failed > 0) parts.push(`${failed} could not be checked`);
+      toast.warning(parts.join(', '));
     }
 
     // Reload artifacts to get updated status
@@ -421,29 +467,52 @@
     const tenantId = authState.user?.tenantId;
     if (!tenantId) return;
 
+    // Everything below belongs to this artifact, whatever the selection does meanwhile.
+    const targetArtifact = selectedArtifact;
+    const requestId = ++editRequestGeneration;
+
     try {
       // Fetch full artifact detail to get specId
-      const fullArtifact = await getArtifactById(tenantId, projectId, selectedArtifact.id);
+      const fullArtifact = await getArtifactById(tenantId, projectId, targetArtifact.id);
+      if (requestId !== editRequestGeneration) return;
+
+      editingArtifactId = targetArtifact.id;
       editArtifactSpecId = fullArtifact.specId;
 
       // Pre-populate Combobox candidates with existing references
-      specCandidates = selectedArtifact.specCode
-        ? [{ value: fullArtifact.specId, label: selectedArtifact.specCode }]
+      specCandidates = targetArtifact.specCode
+        ? [{ value: fullArtifact.specId, label: targetArtifact.specCode }]
         : [];
-      glossaryCandidates = selectedArtifact.glossaryTermId && selectedArtifact.glossaryTermName
-        ? [{ value: selectedArtifact.glossaryTermId, label: selectedArtifact.glossaryTermName }]
-        : [];
-      conversationCandidates = selectedArtifact.sourceConversationId && selectedArtifact.sourceConversationName
-        ? [{ value: selectedArtifact.sourceConversationId, label: selectedArtifact.sourceConversationName }]
-        : [];
-      requirementCandidates = selectedArtifact.sourceRequirementId && selectedArtifact.sourceRequirementCode
-        ? [{ value: selectedArtifact.sourceRequirementId, label: selectedArtifact.sourceRequirementCode }]
-        : [];
+      glossaryCandidates =
+        targetArtifact.glossaryTermId && targetArtifact.glossaryTermName
+          ? [{ value: targetArtifact.glossaryTermId, label: targetArtifact.glossaryTermName }]
+          : [];
+      conversationCandidates =
+        targetArtifact.sourceConversationId && targetArtifact.sourceConversationName
+          ? [
+              {
+                value: targetArtifact.sourceConversationId,
+                label: targetArtifact.sourceConversationName,
+              },
+            ]
+          : [];
+      requirementCandidates =
+        targetArtifact.sourceRequirementId && targetArtifact.sourceRequirementCode
+          ? [
+              {
+                value: targetArtifact.sourceRequirementId,
+                label: targetArtifact.sourceRequirementCode,
+              },
+            ]
+          : [];
 
       // Pre-populate owner candidate so Combobox displays immediately
-      if (selectedArtifact.owner?.id && selectedArtifact.owner?.name) {
-        if (!memberCandidates.some((m) => m.value === selectedArtifact.owner!.id)) {
-          memberCandidates = [{ value: selectedArtifact.owner.id, label: selectedArtifact.owner.name }, ...memberCandidates];
+      if (targetArtifact.owner?.id && targetArtifact.owner?.name) {
+        if (!memberCandidates.some((m) => m.value === targetArtifact.owner!.id)) {
+          memberCandidates = [
+            { value: targetArtifact.owner.id, label: targetArtifact.owner.name },
+            ...memberCandidates,
+          ];
         }
       }
       if (memberCandidates.length <= 1) loadMemberCandidates();
@@ -455,6 +524,9 @@
   }
 
   function handleCancelForm() {
+    // Release the edit target too, or the next form would inherit it.
+    editingArtifactId = null;
+    editRequestGeneration++;
     viewMode = 'detail';
   }
 
@@ -482,10 +554,16 @@
       const authState = getAuthState();
       const tenantId = authState.user?.tenantId;
       if (!tenantId) return;
+      if (!editingArtifactId) {
+        toast.error('Lost track of which artifact was being edited. Reopen it and try again.');
+        return;
+      }
+
       await upsertArtifact(tenantId, projectId, {
         ...data,
-        artifactId: selectedArtifact?.id,
+        artifactId: editingArtifactId,
       });
+      editingArtifactId = null;
       viewMode = 'detail';
       await loadArtifacts();
       toast.success('Artifact updated successfully');
@@ -624,8 +702,8 @@
 
   <PageBody class="p-0">
     {#if loading}
-      <div class="flex-1 flex items-center justify-center">
-        <!-- <Spinner size="lg" /> -->
+      <div class="flex-1 flex items-center justify-center" role="status" aria-label="Loading artifacts">
+        <Spinner size="lg" />
       </div>
     {:else}
       <SidebarDetailLayout
@@ -651,7 +729,7 @@
             onRegenerate={artifactMaintenanceEnabled ? handleRegenerate : undefined}
             onVerifyAll={artifactMaintenanceEnabled ? handleVerifyAll : undefined}
             hasMore={hasMoreArtifacts}
-            loadingMore={loadingMore}
+            {loadingMore}
             onLoadMore={handleLoadMoreArtifacts}
             class="h-full"
           />
@@ -683,17 +761,30 @@
             <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">New Artifact</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('artifact-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Create"
+                  onclick={() =>
+                    (
+                      document.getElementById('artifact-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if viewMode === 'edit' && selectedArtifact}
-            {@const typeStyle = ARTIFACT_TYPE_STYLES[selectedArtifact.artifactType]}
-            <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
+            <DetailHeader>
               {#snippet leading()}
-                <div class="flex items-center justify-center w-8 h-8 rounded-lg {typeStyle.bgColor}">
-                  <Icon name={typeStyle.icon} size="sm" class={typeStyle.color} />
-                </div>
+                <ArtifactTypeIcon type={selectedArtifact.artifactType} size={20} />
               {/snippet}
               <DetailTitle title="Edit Artifact">
                 <span class="text-xs text-[var(--color-text-tertiary)] truncate min-w-0">
@@ -701,17 +792,30 @@
                 </span>
               </DetailTitle>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Save" onclick={() => (document.getElementById('artifact-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Save"
+                  onclick={() =>
+                    (
+                      document.getElementById('artifact-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if selectedArtifact}
-            {@const typeStyle = ARTIFACT_TYPE_STYLES[selectedArtifact.artifactType]}
-            <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
+            <DetailHeader>
               {#snippet leading()}
-                <div class="flex items-center justify-center w-8 h-8 rounded-lg {typeStyle.bgColor}">
-                  <Icon name={typeStyle.icon} size="sm" class={typeStyle.color} />
-                </div>
+                <ArtifactTypeIcon type={selectedArtifact.artifactType} size={20} />
               {/snippet}
               <DetailTitle title={getFileName(selectedArtifact.artifactPath)}>
                 <span class="text-xs text-[var(--color-text-tertiary)] truncate min-w-0">
@@ -719,10 +823,31 @@
                 </span>
               </DetailTitle>
               {#snippet actions()}
-                <IconButton icon="edit" variant="ghost" size="sm" title="Edit" onclick={handleEditArtifact} />
+                <IconButton
+                  icon="code"
+                  variant="ghost"
+                  size="sm"
+                  title="View Source"
+                  onclick={() => (reviewOpen = true)}
+                />
+                <IconButton
+                  icon="edit"
+                  variant="ghost"
+                  size="sm"
+                  title="Edit"
+                  onclick={handleEditArtifact}
+                />
                 <Dropdown position="bottom-right">
-                  {#snippet trigger()}
-                    <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+                  {#snippet trigger({ toggle, open })}
+                    <IconButton
+                      onclick={toggle}
+                      ariaHasPopup
+                      ariaExpanded={open}
+                      icon="more-vertical"
+                      variant="ghost"
+                      size="sm"
+                      title="More actions"
+                    />
                   {/snippet}
                   <div class="py-1 min-w-[160px]">
                     {#if artifactMaintenanceEnabled}
@@ -746,7 +871,13 @@
                     </Button>
                   </div>
                 </Dropdown>
-                <IconButton icon="x" variant="ghost" size="sm" title="Close" onclick={handleCloseArtifact} />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Close"
+                  onclick={handleCloseArtifact}
+                />
               {/snippet}
             </DetailHeader>
           {:else}
@@ -799,6 +930,9 @@
             />
           </div>
         {:else if selectedArtifact}
+          <!-- showHeader={false}: this page draws its own header, so ArtifactContent's
+               internal action bar — View Source included — never renders. That button
+               belongs in the header above. -->
           <ArtifactContent
             artifact={selectedArtifact}
             showHeader={false}
@@ -808,57 +942,102 @@
         {:else}
           <!-- Empty state: Summary dashboard -->
           <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-              <!-- Summary Cards -->
-              <CardGrid cols={4} gap="md">
-                <StatCard title="Total Artifacts" value={statusCounts.all} icon="layers" iconColor="blue-500" />
-                <StatCard title="Valid" value={statusCounts.valid} icon="check-circle" iconColor="green-500" />
-                <StatCard title="Modified" value={statusCounts.modified} icon="alert-triangle" iconColor="amber-500" />
-                <StatCard title="Missing" value={statusCounts.missing} icon="x-circle" iconColor="red-500" />
-              </CardGrid>
+            <!-- Summary Cards -->
+            <CardGrid cols={4} gap="md">
+              <StatCard
+                title="Total Artifacts"
+                value={statusCounts.all}
+                icon="layers"
+                iconColor="blue-500"
+              />
+              <StatCard
+                title="Valid"
+                value={statusCounts.valid}
+                icon="check-circle"
+                iconColor="green-500"
+              />
+              <StatCard
+                title="Modified"
+                value={statusCounts.modified}
+                icon="alert-triangle"
+                iconColor="amber-500"
+              />
+              <StatCard
+                title="Missing"
+                value={statusCounts.missing}
+                icon="x-circle"
+                iconColor="red-500"
+              />
+            </CardGrid>
 
-              <!-- Quick Guide -->
+            <!-- Quick Guide -->
+            <SurfaceCard padding="lg">
+              <h3 class="surface-card__title mb-3">Quick Guide</h3>
+              <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <div class="flex items-start gap-2">
+                  <Icon name="check-circle" size="sm" class="text-green-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Valid</strong> - Artifact matches the spec, no action needed</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <Icon
+                    name="alert-triangle"
+                    size="sm"
+                    class="text-amber-500 mt-0.5 flex-shrink-0"
+                  />
+                  <span
+                    ><strong>Modified</strong> - File changed after generation, verify or regenerate</span
+                  >
+                </div>
+                <div class="flex items-start gap-2">
+                  <Icon name="x-circle" size="sm" class="text-red-500 mt-0.5 flex-shrink-0" />
+                  <span
+                    ><strong>Missing</strong> - Expected file not found, regenerate required</span
+                  >
+                </div>
+              </div>
+            </SurfaceCard>
+
+            <!-- Type Distribution -->
+            {#if allArtifacts.length > 0}
               <SurfaceCard padding="lg">
-                <h3 class="surface-card__title mb-3">Quick Guide</h3>
-                <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
-                  <div class="flex items-start gap-2">
-                    <Icon name="check-circle" size="sm" class="text-green-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Valid</strong> - Artifact matches the spec, no action needed</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="alert-triangle" size="sm" class="text-amber-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Modified</strong> - File changed after generation, verify or regenerate</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="x-circle" size="sm" class="text-red-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Missing</strong> - Expected file not found, regenerate required</span>
-                  </div>
+                <h3 class="surface-card__title mb-3">Artifact Types</h3>
+                <div class="flex flex-wrap gap-2">
+                  {#each Object.entries(allArtifacts.reduce((acc, a) => {
+                        acc[a.artifactType] = (acc[a.artifactType] || 0) + 1;
+                        return acc;
+                      }, {} as Record<string, number>)) as [type, count] (type)}
+                    <div
+                      class="px-3 py-1.5 rounded-full text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                    >
+                      {type}: {count}
+                    </div>
+                  {/each}
                 </div>
               </SurfaceCard>
+            {/if}
 
-              <!-- Type Distribution -->
-              {#if allArtifacts.length > 0}
-                <SurfaceCard padding="lg">
-                  <h3 class="surface-card__title mb-3">Artifact Types</h3>
-                  <div class="flex flex-wrap gap-2">
-                    {#each Object.entries(allArtifacts.reduce((acc, a) => { acc[a.artifactType] = (acc[a.artifactType] || 0) + 1; return acc; }, {} as Record<string, number>)) as [type, count] (type)}
-                      <div class="px-3 py-1.5 rounded-full text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
-                        {type}: {count}
-                      </div>
-                    {/each}
-                  </div>
-                </SurfaceCard>
-              {/if}
-
-              <div class="text-center py-6">
-                <Icon name="mouse-pointer" size="lg" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70" />
-                <p class="text-sm font-medium text-[var(--color-text-primary)]">Select an artifact</p>
-                <p class="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Choose an artifact from the sidebar to view details.
-                </p>
-              </div>
+            <div class="text-center py-6">
+              <Icon
+                name="mouse-pointer"
+                size="lg"
+                class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70"
+              />
+              <p class="text-sm font-medium text-[var(--color-text-primary)]">Select an artifact</p>
+              <p class="text-xs text-[var(--color-text-secondary)] mt-1">
+                Choose an artifact from the sidebar to view details.
+              </p>
+            </div>
           </div>
         {/if}
       </SidebarDetailLayout>
     {/if}
   </PageBody>
 </PageShell>
+
+<ArtifactReviewPanel
+  open={reviewOpen}
+  artifactId={selectedArtifact?.id ?? null}
+  tenantId={reviewTenantId}
+  {projectId}
+  onClose={() => (reviewOpen = false)}
+/>

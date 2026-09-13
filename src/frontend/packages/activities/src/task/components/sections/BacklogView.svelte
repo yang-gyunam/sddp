@@ -30,16 +30,16 @@
     stats?.priorityDistribution.map((d) => ({
       label: TASK_PRIORITY_STYLES[d.priority]?.label ?? d.priority,
       value: d.count,
-      color: d.priority === 'High'
-        ? 'var(--color-error-500)'
-        : d.priority === 'Medium'
-          ? 'var(--color-warning-500)'
-          : 'var(--color-neutral-500)',
+      color:
+        d.priority === 'High'
+          ? 'var(--color-error-500)'
+          : d.priority === 'Medium'
+            ? 'var(--color-warning-500)'
+            : 'var(--color-neutral-500)',
     })) ?? []
   );
 
   // Completion rate (used in ProgressBar via stats.doneCount / stats.totalTasks)
-
 </script>
 
 <div class="flex flex-col h-full bg-[var(--color-bg-primary)] {className}">
@@ -58,7 +58,9 @@
           <Icon
             name={stats.isOwner ? 'shield' : 'folder'}
             size="md"
-            class={stats.isOwner ? 'text-[var(--color-warning-500)]' : 'text-[var(--color-text-tertiary)]'}
+            class={stats.isOwner
+              ? 'text-[var(--color-warning-500)]'
+              : 'text-[var(--color-text-tertiary)]'}
           />
           <h1 class="text-lg font-semibold text-[var(--color-text-primary)]">
             {stats.projectName}
@@ -74,31 +76,11 @@
     <div class="flex-1 overflow-y-auto p-4 space-y-6">
       <!-- Status Cards -->
       <div class="grid grid-cols-5 gap-3">
-        <StatCard
-          title="Backlog"
-          value={stats.backlogCount}
-          icon="archive"
-        />
-        <StatCard
-          title="To Do"
-          value={stats.toDoCount}
-          icon="circle"
-        />
-        <StatCard
-          title="In Progress"
-          value={stats.inProgressCount}
-          icon="loader"
-        />
-        <StatCard
-          title="Done"
-          value={stats.doneCount}
-          icon="check-circle"
-        />
-        <StatCard
-          title="Blocked"
-          value={stats.blockedCount}
-          icon="x-circle"
-        />
+        <StatCard title="Backlog" value={stats.backlogCount} icon="archive" />
+        <StatCard title="To Do" value={stats.toDoCount} icon="circle" />
+        <StatCard title="In Progress" value={stats.inProgressCount} icon="loader" />
+        <StatCard title="Done" value={stats.doneCount} icon="check-circle" />
+        <StatCard title="Blocked" value={stats.blockedCount} icon="x-circle" />
       </div>
 
       <!-- Charts Row -->
@@ -112,7 +94,9 @@
         />
 
         <!-- Completion & Effort -->
-        <div class="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] space-y-4">
+        <div
+          class="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] space-y-4"
+        >
           <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Progress</h3>
 
           <div>
@@ -135,7 +119,9 @@
       {#if stats.isOwner && stats.assigneeStats.length > 0}
         <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
           <div class="px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+            <h3
+              class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2"
+            >
               <Icon name="user" size="sm" />
               Team Workload
             </h3>
@@ -149,13 +135,23 @@
                 </span>
                 <div class="flex items-center gap-2 text-xs">
                   {#if assignee.backlogCount > 0}
-                    <span class="text-[var(--color-neutral-500)]" title="Backlog">{assignee.backlogCount}</span>
+                    <span class="text-[var(--color-neutral-500)]" title="Backlog"
+                      >{assignee.backlogCount}</span
+                    >
                   {/if}
-                  <span class="text-[var(--color-text-tertiary)]" title="To Do">{assignee.toDoCount}</span>
-                  <span class="text-[var(--color-info-500)]" title="In Progress">{assignee.inProgressCount}</span>
-                  <span class="text-[var(--color-success-500)]" title="Done">{assignee.doneCount}</span>
+                  <span class="text-[var(--color-text-tertiary)]" title="To Do"
+                    >{assignee.toDoCount}</span
+                  >
+                  <span class="text-[var(--color-info-500)]" title="In Progress"
+                    >{assignee.inProgressCount}</span
+                  >
+                  <span class="text-[var(--color-success-500)]" title="Done"
+                    >{assignee.doneCount}</span
+                  >
                   {#if assignee.blockedCount > 0}
-                    <span class="text-[var(--color-error-500)]" title="Blocked">{assignee.blockedCount}</span>
+                    <span class="text-[var(--color-error-500)]" title="Blocked"
+                      >{assignee.blockedCount}</span
+                    >
                   {/if}
                   <span class="font-medium text-[var(--color-text-primary)] ml-1">
                     = {assignee.totalCount}
@@ -171,7 +167,9 @@
       {#if tasks.length > 0}
         <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
           <div class="px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+            <h3
+              class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2"
+            >
               <Icon name="list" size="sm" />
               All Tasks ({tasks.length})
             </h3>
@@ -182,8 +180,8 @@
                 variant="unstyled"
                 class="w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors
                   {selectedTaskId === task.id
-                    ? 'bg-[var(--color-accent-primary)]/10'
-                    : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                  ? 'bg-[var(--color-accent-primary)]/10'
+                  : 'hover:bg-[var(--color-bg-tertiary)]'}"
                 onclick={() => onSelectTask?.(task.id)}
               >
                 <!-- Status icon -->
@@ -224,7 +222,11 @@
     <!-- Empty State -->
     <div class="flex-1 flex items-center justify-center">
       <div class="text-center">
-        <Icon name="inbox" size="xl" class="mx-auto mb-3 text-[var(--color-text-tertiary)] opacity-50" />
+        <Icon
+          name="inbox"
+          size="xl"
+          class="mx-auto mb-3 text-[var(--color-text-tertiary)] opacity-50"
+        />
         <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a project</p>
         <p class="text-xs text-[var(--color-text-secondary)] mt-1">
           Choose a project from the sidebar to view backlog statistics.

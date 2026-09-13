@@ -105,14 +105,20 @@
   >
     {#each items as item (item.id)}
       {#if item.separator}
-        <div class="border-t border-[var(--color-border)] my-1"></div>
+        <div class="border-t border-[var(--color-border)] my-1" role="separator"></div>
       {:else}
+        <!--
+          role="menu" may only own menuitem children. Without this the container claimed a
+          structure it did not have, and an assistive technology reading the menu found nothing
+          in it.
+        -->
         <Button
+          role="menuitem"
           variant="unstyled"
           class="w-full flex items-center justify-between px-3 py-1.5 text-sm text-left transition-colors duration-150
             {item.disabled
-              ? 'opacity-50 cursor-not-allowed text-[var(--color-text-tertiary)]'
-              : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] cursor-pointer'}"
+            ? 'opacity-50 cursor-not-allowed text-[var(--color-text-tertiary)]'
+            : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] cursor-pointer'}"
           disabled={item.disabled}
           onclick={(event) => handleItemClick(event, item)}
         >

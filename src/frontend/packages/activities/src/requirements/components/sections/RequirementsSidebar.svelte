@@ -58,9 +58,7 @@
   ];
 
   // Total count
-  const totalCount = $derived(
-    projectGroups.reduce((sum, g) => sum + g.requirements.length, 0)
-  );
+  const totalCount = $derived(projectGroups.reduce((sum, g) => sum + g.requirements.length, 0));
 
   function handleSearchInput(e: Event) {
     const target = e.target as HTMLInputElement;
@@ -121,8 +119,8 @@
           class="filter-btn flex items-center gap-1 px-2 py-1 text-xs rounded
                  transition-colors
                  {filterType === option.value
-                   ? 'bg-[var(--color-accent-primary)] text-white'
-                   : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]/80'}"
+            ? 'bg-[var(--color-accent-primary)] text-white'
+            : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]/80'}"
           onclick={() => onFilterChange?.(option.value)}
         >
           <Icon name={option.icon} size="xs" />
@@ -140,8 +138,8 @@
         variant="unstyled"
         class="flex items-center gap-1 px-2 py-1 text-xs rounded
                {viewMode === 'tree'
-                 ? 'bg-[var(--color-accent-primary)] text-white'
-                 : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
+          ? 'bg-[var(--color-accent-primary)] text-white'
+          : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
         onclick={() => onViewModeChange?.('tree')}
       >
         <Icon name="list-tree" size="xs" />
@@ -151,8 +149,8 @@
         variant="unstyled"
         class="flex items-center gap-1 px-2 py-1 text-xs rounded
                {viewMode === 'flat'
-                 ? 'bg-[var(--color-accent-primary)] text-white'
-                 : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
+          ? 'bg-[var(--color-accent-primary)] text-white'
+          : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
         onclick={() => onViewModeChange?.('flat')}
       >
         <Icon name="list-flat" size="xs" />
@@ -162,11 +160,16 @@
   </div>
 
   <!-- List Header -->
-  <div class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+  <div
+    class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
+  >
     <span class="w-5"></span>
-    <span class="w-5 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-center">Lv</span>
+    <span class="w-5 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-center"
+      >Lv</span
+    >
     <span class="w-16 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Code</span>
-    <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Title</span>
+    <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Title</span
+    >
     <span class="w-4"></span>
   </div>
 
@@ -199,11 +202,7 @@
 
   <!-- Footer Actions -->
   <div class="sidebar-footer flex-shrink-0 p-2 border-t border-[var(--color-border-primary)]">
-    <Button
-      variant="primary"
-      size="sm"
-      fullWidth
-    >
+    <Button variant="primary" size="sm" fullWidth>
       <Icon name="plus" size="xs" />
       <span>New Requirement</span>
     </Button>

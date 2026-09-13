@@ -3,13 +3,9 @@
  * Mediates between Timeline store and TimelineService
  */
 
-import { getTimelineService } from './services';
+import { createTimelineService } from './services';
 import type { AuditLogEntry, AuditLogDto } from './services';
-import {
-  setTimelineEvents,
-  setTimelineLoading,
-  setTimelineError,
-} from './stores';
+import { setTimelineEvents, setTimelineLoading, setTimelineError } from './stores';
 import type { TimelineEvent, TimelineEventType, TimelineEntityType } from './types';
 import type { ActivityLogEntry } from '../dashboard/types';
 
@@ -55,7 +51,7 @@ const ACTION_TO_EVENT_TYPE: Record<string, TimelineEventType> = {
 const RESOURCE_TO_ENTITY_TYPE: Record<string, TimelineEntityType> = {
   Spec: 'spec',
   Conversation: 'conversation',
- Discussion: 'conversation', // Legacy: AuditLog 
+  Discussion: 'conversation', // Legacy: AuditLog
   Requirement: 'requirement',
   GlossaryTerm: 'glossary',
   Artifact: 'artifact',
@@ -143,7 +139,10 @@ export function mapAuditLogDtoToTimelineEvent(dto: AuditLogDto, projectId: strin
 // Transform: AuditLogDto → ActivityLogEntry (for Recent Activity)
 // ============================================
 
-export function mapAuditLogDtoToActivityLogEntry(dto: AuditLogDto, projectName: string = ''): ActivityLogEntry {
+export function mapAuditLogDtoToActivityLogEntry(
+  dto: AuditLogDto,
+  projectName: string = ''
+): ActivityLogEntry {
   const entityType = RESOURCE_TO_ENTITY_TYPE[dto.resourceType] ?? 'spec';
 
   let entityTitle = dto.resourceType;
@@ -183,8 +182,7 @@ export async function loadTimelineByProject(
   setTimelineError(null);
 
   try {
-    const service = getTimelineService();
-    service.setContext(tenantId, projectId);
+    const service = createTimelineService(tenantId, projectId);
 
     const entries = await service.getByProject(limit);
     const events = entries.map((e) => mapAuditLogDtoToTimelineEvent(e, projectId ?? ''));
@@ -209,8 +207,7 @@ export async function loadRecentActivity(
   projectId?: string
 ): Promise<AuditLogDto[]> {
   try {
-    const service = getTimelineService();
-    service.setContext(tenantId, projectId);
+    const service = createTimelineService(tenantId, projectId);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -236,8 +233,7 @@ export async function loadTimelineByResource(
   setTimelineError(null);
 
   try {
-    const service = getTimelineService();
-    service.setContext(tenantId, projectId);
+    const service = createTimelineService(tenantId, projectId);
 
     const entries = await service.getByResource(resourceType, resourceId);
     const events = entries.map((e) => mapAuditLogToTimelineEvent(e, projectId));
@@ -264,8 +260,7 @@ export async function loadTimelineByActor(
   setTimelineError(null);
 
   try {
-    const service = getTimelineService();
-    service.setContext(tenantId, projectId);
+    const service = createTimelineService(tenantId, projectId);
 
     const entries = await service.getByActor(actorId);
     const events = entries.map((e) => mapAuditLogToTimelineEvent(e, projectId));

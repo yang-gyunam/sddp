@@ -25,11 +25,7 @@
     class?: string;
   }
 
-  let {
-    items,
-    title = 'References',
-    class: className = '',
-  }: Props = $props();
+  let { items, title = 'References', class: className = '' }: Props = $props();
 
   const visibleItems = $derived(items.filter((item) => item.value));
 </script>

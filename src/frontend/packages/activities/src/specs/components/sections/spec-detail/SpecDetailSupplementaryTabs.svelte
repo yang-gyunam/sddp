@@ -27,12 +27,6 @@
     description: string;
   };
 
-  type GenerationResult = {
-    label: string;
-    status: 'success' | 'failed';
-    detail: string;
-  };
-
   type ParsedResult<T> = {
     data?: T;
     error?: string;
@@ -76,9 +70,7 @@
     specStatus: SpecStatus;
     generationOptions: GenerationOption[];
     selectedGeneration: Set<GenerationOption['key']>;
-    generationProgress: number;
-    generationRunning: boolean;
-    generationResults: GenerationResult[];
+    generationAvailable: boolean;
     artifacts: Artifact[];
     artifactsLoading: boolean;
     artifactsError: string | null;
@@ -134,9 +126,7 @@
     specStatus,
     generationOptions,
     selectedGeneration,
-    generationProgress,
-    generationRunning,
-    generationResults,
+    generationAvailable,
     artifacts,
     artifactsLoading,
     artifactsError,
@@ -185,7 +175,7 @@
       {#if activeDetailTab === 'ai-analysis'}
         <SpecDetailAiAnalysisTab
           {aiFeatureFlagEnabled}
-          isReadOnly={isReadOnly}
+          {isReadOnly}
           {analysisLoading}
           {qualityReport}
           {impactReport}
@@ -196,7 +186,7 @@
           {qualityParsed}
           {impactParsed}
           {qualityScoreEntries}
-          onRunAnalysis={onRunAnalysis}
+          {onRunAnalysis}
           {formatDateStr}
           {getStatusVariant}
           {getScoreVariant}
@@ -208,18 +198,16 @@
           {specStatus}
           {generationOptions}
           {selectedGeneration}
-          {generationProgress}
-          {generationRunning}
-          {generationResults}
+          {generationAvailable}
           {artifacts}
           {artifactsLoading}
           {artifactsError}
-          onStartGeneration={onStartGeneration}
-          onToggleGenerationOption={onToggleGenerationOption}
+          {onStartGeneration}
+          {onToggleGenerationOption}
         />
       {:else if activeDetailTab === 'documentation'}
         <SpecDetailDocumentationTab
-          isReadOnly={isReadOnly}
+          {isReadOnly}
           {docMarkdown}
           {docLoading}
           {docError}
@@ -228,10 +216,10 @@
           {summaryLoading}
           {summaryError}
           {formatDateStr}
-          onLoadDocMarkdown={onLoadDocMarkdown}
-          onLoadSummary={onLoadSummary}
-          onDownloadDocMarkdown={onDownloadDocMarkdown}
-          onDocViewModeChange={onDocViewModeChange}
+          {onLoadDocMarkdown}
+          {onLoadSummary}
+          {onDownloadDocMarkdown}
+          {onDocViewModeChange}
         />
       {:else if activeDetailTab === 'entity-schema'}
         <EntitySchemaSection

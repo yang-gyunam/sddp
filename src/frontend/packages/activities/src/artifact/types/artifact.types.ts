@@ -32,11 +32,23 @@ export type ArtifactType =
   | 'Configuration';
 
 export const ARTIFACT_TYPES: ArtifactType[] = [
-  'Entity', 'CreateDto', 'UpdateDto', 'ResponseDto',
-  'Validator', 'Repository', 'DapperReadRepository',
-  'Command', 'Query', 'UnitTest', 'Endpoints',
-  'Service', 'Migration', 'EntityJson', 'UiComponent',
-  'Documentation', 'Configuration',
+  'Entity',
+  'CreateDto',
+  'UpdateDto',
+  'ResponseDto',
+  'Validator',
+  'Repository',
+  'DapperReadRepository',
+  'Command',
+  'Query',
+  'UnitTest',
+  'Endpoints',
+  'Service',
+  'Migration',
+  'EntityJson',
+  'UiComponent',
+  'Documentation',
+  'Configuration',
 ];
 
 /**
@@ -80,6 +92,31 @@ export interface ArtifactDetail extends Artifact {
   currentHash?: string;
   fileSize?: number;
   lineCount?: number;
+}
+
+/**
+ * Rendered artifact descriptor — what the file was supposed to be, per the Spec it was
+ * generated from. Projected from the server's records, so it is available even when the
+ * YAML file has not been materialized.
+ */
+export interface ArtifactDescriptor {
+  artifactId: string;
+  schemaVersion: number;
+  yaml: string;
+}
+
+/**
+ * Artifact file contents for review. `content` is null for binary files.
+ */
+export interface ArtifactFileContent {
+  artifactId: string;
+  path: string;
+  content: string | null;
+  contentHash: string | null;
+  sizeBytes: number;
+  isBinary: boolean;
+  status: ArtifactStatus;
+  language: string;
 }
 
 /**
@@ -172,7 +209,7 @@ export const ARTIFACT_TYPE_STYLES: Record<ArtifactType, ArtifactTypeStyle> = {
     bgColor: 'bg-[var(--color-success-500)]/10',
     borderColor: 'border-[var(--color-success-500)]/20',
     label: 'Create DTO',
-    icon: 'plus-circle',
+    icon: 'plus',
   },
   UpdateDto: {
     color: 'text-[var(--color-amber-600)] dark:text-[var(--color-amber-400)]',
@@ -207,7 +244,7 @@ export const ARTIFACT_TYPE_STYLES: Record<ArtifactType, ArtifactTypeStyle> = {
     bgColor: 'bg-[var(--color-cyan-500)]/10',
     borderColor: 'border-[var(--color-cyan-500)]/20',
     label: 'Dapper Repo',
-    icon: 'zap',
+    icon: 'cpu',
   },
   Command: {
     color: 'text-[var(--color-orange-600)] dark:text-[var(--color-orange-400)]',
@@ -256,14 +293,14 @@ export const ARTIFACT_TYPE_STYLES: Record<ArtifactType, ArtifactTypeStyle> = {
     bgColor: 'bg-[var(--color-yellow-500)]/10',
     borderColor: 'border-[var(--color-yellow-500)]/20',
     label: 'Entity JSON',
-    icon: 'file-json',
+    icon: 'file-code',
   },
   UiComponent: {
     color: 'text-[var(--color-rose-600)] dark:text-[var(--color-rose-400)]',
     bgColor: 'bg-[var(--color-rose-500)]/10',
     borderColor: 'border-[var(--color-rose-500)]/20',
     label: 'UI Component',
-    icon: 'layout',
+    icon: 'grid',
   },
   Documentation: {
     color: 'text-[var(--color-sky-600)] dark:text-[var(--color-sky-400)]',
@@ -336,4 +373,3 @@ export function getFileName(path: string): string {
   const parts = path.split('/');
   return parts[parts.length - 1]!;
 }
-

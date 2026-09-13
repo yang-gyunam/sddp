@@ -66,7 +66,9 @@
 
 <div class="flex flex-col h-full {className}">
   <!-- Header with Search and Actions -->
-  <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+  <div
+    class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+  >
     <div class="flex items-center gap-1 w-full">
       <!-- Search -->
       <div class="relative flex-1">
@@ -86,15 +88,35 @@
         />
       </div>
       {#if onVerifyAll}
-        <IconButton icon="workspace-trusted" size="sm" variant="ghost" onclick={onVerifyAll} title="Verify All" />
+        <IconButton
+          icon="workspace-trusted"
+          size="sm"
+          variant="ghost"
+          onclick={onVerifyAll}
+          title="Verify All"
+        />
       {/if}
       {#if onRegenerate}
-        <IconButton icon="lightbulb-sparkle" size="sm" variant="ghost" onclick={onRegenerate} title="Regenerate" />
+        <IconButton
+          icon="lightbulb-sparkle"
+          size="sm"
+          variant="ghost"
+          onclick={onRegenerate}
+          title="Regenerate"
+        />
       {/if}
       <!-- Filter dropdown -->
       <Dropdown position="bottom-right">
-        {#snippet trigger()}
-          <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+        {#snippet trigger({ toggle, open })}
+          <IconButton
+            onclick={toggle}
+            ariaHasPopup
+            ariaExpanded={open}
+            icon="more-vertical"
+            size="sm"
+            variant="ghost"
+            title="Filter options"
+          />
         {/snippet}
         <div class="py-1 min-w-[180px]">
           <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
@@ -105,14 +127,14 @@
               variant="unstyled"
               class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                 {filterType === filter.key
-                  ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
               onclick={() => onFilterChange?.(filter.key)}
             >
               <Icon name={filter.icon} size="sm" />
               <span class="flex-1">{filter.label}</span>
               {#if filterType === filter.key}
-                <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
               {/if}
               <span class="text-xs opacity-70">({statusCounts[filter.key]})</span>
             </Button>
@@ -129,7 +151,7 @@
         {group}
         {selectedArtifactId}
         onToggle={() => onToggleType?.(group.type)}
-        onSelectArtifact={onSelectArtifact}
+        {onSelectArtifact}
       />
     {/each}
 

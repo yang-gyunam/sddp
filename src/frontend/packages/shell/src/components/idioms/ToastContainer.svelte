@@ -3,14 +3,12 @@
   import Toast from './Toast.svelte';
 
   interface Props {
-    position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+    position?:
+      'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
     maxVisible?: number;
   }
 
-  let {
-    position = 'bottom-right',
-    maxVisible = 5,
-  }: Props = $props();
+  let { position = 'bottom-right', maxVisible = 5 }: Props = $props();
 
   let toasts = $state<typeof $toastStore.toasts>([]);
 
@@ -37,7 +35,6 @@
 
 <section
   class="fixed z-[9999] flex flex-col gap-2 w-[340px] {positionClasses[position]}"
-  role="region"
   aria-live="polite"
   aria-label="Notifications"
 >
@@ -50,6 +47,7 @@
       duration={toast.duration}
       closable={toast.closable}
       actions={toast.actions}
+      onContentClick={toast.onContentClick}
       onclose={handleClose}
     />
   {/each}

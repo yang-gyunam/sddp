@@ -8,12 +8,7 @@
 // ============================================
 
 export type AiAnalysisType =
-  | 'Reminder'
-  | 'Summary'
-  | 'MissingField'
-  | 'Conflict'
-  | 'Quality'
-  | 'Impact';
+  'Reminder' | 'Summary' | 'MissingField' | 'Conflict' | 'Quality' | 'Impact';
 
 export type AiReportStatus = 'Pending' | 'Processing' | 'Completed' | 'Failed';
 
@@ -201,11 +196,36 @@ export interface AiContextItemStyle {
 }
 
 export const AI_CONTEXT_ITEM_STYLES: Record<AiContextItemType, AiContextItemStyle> = {
-  reminder: { icon: 'bell', color: 'text-[var(--color-warning-500)]', bgColor: 'bg-[var(--color-warning-500)]/10', borderColor: 'border-[var(--color-warning-500)]/20' },
-  suggestion: { icon: 'lightbulb', color: 'text-[var(--color-info-500)]', bgColor: 'bg-[var(--color-info-500)]/10', borderColor: 'border-[var(--color-info-500)]/20' },
-  warning: { icon: 'alert-triangle', color: 'text-[var(--color-orange-500)]', bgColor: 'bg-[var(--color-orange-500)]/10', borderColor: 'border-[var(--color-orange-500)]/20' },
-  info: { icon: 'info', color: 'text-[var(--color-cyan-500)]', bgColor: 'bg-[var(--color-cyan-500)]/10', borderColor: 'border-[var(--color-cyan-500)]/20' },
-  error: { icon: 'alert-circle', color: 'text-[var(--color-error-500)]', bgColor: 'bg-[var(--color-error-500)]/10', borderColor: 'border-[var(--color-error-500)]/20' },
+  reminder: {
+    icon: 'bell',
+    color: 'text-[var(--color-warning-500)]',
+    bgColor: 'bg-[var(--color-warning-500)]/10',
+    borderColor: 'border-[var(--color-warning-500)]/20',
+  },
+  suggestion: {
+    icon: 'lightbulb',
+    color: 'text-[var(--color-info-500)]',
+    bgColor: 'bg-[var(--color-info-500)]/10',
+    borderColor: 'border-[var(--color-info-500)]/20',
+  },
+  warning: {
+    icon: 'alert-triangle',
+    color: 'text-[var(--color-orange-500)]',
+    bgColor: 'bg-[var(--color-orange-500)]/10',
+    borderColor: 'border-[var(--color-orange-500)]/20',
+  },
+  info: {
+    icon: 'info',
+    color: 'text-[var(--color-cyan-500)]',
+    bgColor: 'bg-[var(--color-cyan-500)]/10',
+    borderColor: 'border-[var(--color-cyan-500)]/20',
+  },
+  error: {
+    icon: 'alert-circle',
+    color: 'text-[var(--color-error-500)]',
+    bgColor: 'bg-[var(--color-error-500)]/10',
+    borderColor: 'border-[var(--color-error-500)]/20',
+  },
 };
 
 export interface AiAnalysisTypeStyle {
@@ -219,7 +239,15 @@ export const AI_ANALYSIS_TYPE_STYLES: Record<AiAnalysisType, AiAnalysisTypeStyle
   Quality: { icon: 'star', color: 'text-[var(--color-yellow-500)]', label: 'Quality Analysis' },
   Impact: { icon: 'zap', color: 'text-[var(--color-error-500)]', label: 'Impact Analysis' },
   Summary: { icon: 'file-text', color: 'text-[var(--color-info-500)]', label: 'Summary' },
-  MissingField: { icon: 'alert-triangle', color: 'text-[var(--color-orange-500)]', label: 'Missing Fields' },
-  Conflict: { icon: 'git-merge', color: 'text-[var(--color-purple-500)]', label: 'Conflict Detection' },
+  MissingField: {
+    icon: 'alert-triangle',
+    color: 'text-[var(--color-orange-500)]',
+    label: 'Missing Fields',
+  },
+  Conflict: {
+    icon: 'git-merge',
+    color: 'text-[var(--color-purple-500)]',
+    label: 'Conflict Detection',
+  },
   Reminder: { icon: 'bell', color: 'text-[var(--color-cyan-500)]', label: 'Reminders' },
 };

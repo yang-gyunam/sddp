@@ -43,9 +43,7 @@
   <!-- Header -->
   <div class="flex-shrink-0 p-2 border-b border-[var(--color-border-primary)]">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-semibold text-[var(--color-text-secondary)]">
-        Tasks
-      </h2>
+      <h2 class="text-sm font-semibold text-[var(--color-text-secondary)]">Tasks</h2>
       {#if onNewTask}
         <Button size="sm" variant="ghost" onclick={onNewTask}>
           <Icon name="plus" size="sm" />
@@ -85,32 +83,31 @@
     </Button>
 
     <div>
-      {#each [
-        { key: 'todo' as TaskFilterType, label: 'To Do', icon: 'circle', count: myTasksStats.toDoCount },
-        { key: 'inProgress' as TaskFilterType, label: 'In Progress', icon: 'loader', count: myTasksStats.inProgressCount },
-        { key: 'done' as TaskFilterType, label: 'Done', icon: 'check-circle', count: myTasksStats.doneCount },
-        { key: 'blocked' as TaskFilterType, label: 'Blocked', icon: 'x-circle', count: myTasksStats.blockedCount },
-      ] as item (item.key)}
+      {#each [{ key: 'todo' as TaskFilterType, label: 'To Do', icon: 'circle', count: myTasksStats.toDoCount }, { key: 'inProgress' as TaskFilterType, label: 'In Progress', icon: 'loader', count: myTasksStats.inProgressCount }, { key: 'done' as TaskFilterType, label: 'Done', icon: 'check-circle', count: myTasksStats.doneCount }, { key: 'blocked' as TaskFilterType, label: 'Blocked', icon: 'x-circle', count: myTasksStats.blockedCount }] as item (item.key)}
         {@const isSelected = filterType === item.key}
         <Button
           variant="unstyled"
           class="w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer border
             transition-colors duration-150
             {isSelected
-              ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30'
-              : 'border-transparent hover:bg-[var(--color-bg-tertiary)]'}"
+            ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30'
+            : 'border-transparent hover:bg-[var(--color-bg-tertiary)]'}"
           onclick={() => onFilterChange?.(item.key)}
         >
           <Icon
             name={item.icon}
             size="sm"
-            class={isSelected ? 'text-[var(--color-accent-primary)]' : 'text-[var(--color-text-tertiary)]'}
+            class={isSelected
+              ? 'text-[var(--color-accent-text)]'
+              : 'text-[var(--color-text-tertiary)]'}
           />
           <span class="flex-1 text-left text-sm truncate text-[var(--color-text-primary)]">
             {item.label}
           </span>
           {#if item.count > 0}
-            <span class="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs text-[var(--color-text-tertiary)] rounded-full bg-[var(--color-bg-tertiary)]">
+            <span
+              class="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs text-[var(--color-text-tertiary)] rounded-full bg-[var(--color-bg-tertiary)]"
+            >
               {item.count}
             </span>
           {/if}
@@ -145,19 +142,23 @@
             variant="unstyled"
             class="w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center gap-2
               {isSelected
-                ? 'bg-[var(--color-accent-primary)]/10'
-                : 'hover:bg-[var(--color-bg-tertiary)]'}"
+              ? 'bg-[var(--color-accent-primary)]/10'
+              : 'hover:bg-[var(--color-bg-tertiary)]'}"
             onclick={() => onSelectBacklogProject?.(project.projectId)}
           >
             <Icon
               name={project.isOwner ? 'shield' : 'folder'}
               size="sm"
-              class={isSelected ? 'text-[var(--color-accent-primary)]' : 'text-[var(--color-text-tertiary)]'}
+              class={isSelected
+                ? 'text-[var(--color-accent-text)]'
+                : 'text-[var(--color-text-tertiary)]'}
             />
             <span class="flex-1 min-w-0 text-sm truncate text-[var(--color-text-primary)]">
               {project.projectName}
             </span>
-            <span class="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]">
+            <span
+              class="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]"
+            >
               {project.activeTaskCount}
             </span>
           </Button>

@@ -8,7 +8,16 @@
 
   import { untrack } from 'svelte';
   import { IconButton, CardGrid, Button, Select, DatePicker } from '@sddp/ui';
-  import { ENTITY_SVG_ICONS, PageShell, PageHeader, PageBody, formatDateTime, toast, getTabState, setTabState } from '@sddp/shell';
+  import {
+    ENTITY_SVG_ICONS,
+    PageShell,
+    PageHeader,
+    PageBody,
+    formatDateTime,
+    toast,
+    getTabState,
+    setTabState,
+  } from '@sddp/shell';
   import { ActivityLog } from '../sections';
   import { AuditLogItem } from '../idioms';
   import { LineChart, BarChart } from '../idioms';
@@ -21,7 +30,11 @@
     setDashboardLoading,
     setDashboardError,
   } from '../../stores/dashboard.store';
-  import type { SystemDashboard, SystemStatistics, ActivityLogEntry as ActivityLogType } from '../../types';
+  import type {
+    SystemDashboard,
+    SystemStatistics,
+    ActivityLogEntry as ActivityLogType,
+  } from '../../types';
 
   type SystemSection = 'system-stats' | 'audit-logs' | 'health';
 
@@ -77,7 +90,15 @@
   let systemStats = $state<SystemStatistics | null>(null);
   let auditLogs = $state<ActivityLogType[]>([]);
   let auditLogsTotal = $state(0);
-  let healthData = $state<{ status: string; services: Array<{ name: string; status: string; message: string | null; responseTimeMs: number | null }> } | null>(null);
+  let healthData = $state<{
+    status: string;
+    services: Array<{
+      name: string;
+      status: string;
+      message: string | null;
+      responseTimeMs: number | null;
+    }>;
+  } | null>(null);
 
   // Track which sections have been loaded (cache)
   let loadedSections = $state<Set<SystemSection>>(new Set());
@@ -188,10 +209,16 @@
     }
     return healthData.services.map((service) => ({
       title: service.name,
-      status: (service.status.toLowerCase() === 'healthy' ? 'healthy' : service.status.toLowerCase() === 'warning' ? 'warning' : 'error') as HealthStatus,
+      status: (service.status.toLowerCase() === 'healthy'
+        ? 'healthy'
+        : service.status.toLowerCase() === 'warning'
+          ? 'warning'
+          : 'error') as HealthStatus,
       metrics: [
         { label: 'Status', value: service.status },
-        ...(service.responseTimeMs !== null ? [{ label: 'Response Time', value: `${service.responseTimeMs}ms` }] : []),
+        ...(service.responseTimeMs !== null
+          ? [{ label: 'Response Time', value: `${service.responseTimeMs}ms` }]
+          : []),
         ...(service.message ? [{ label: 'Message', value: service.message }] : []),
       ],
     }));
@@ -210,7 +237,13 @@
 <PageShell>
   <PageHeader title={sectionTitles[section]} {loading}>
     {#snippet actions()}
-      <IconButton icon="refresh-cw" size="sm" variant="ghost" title="Refresh" onclick={handleRefresh} />
+      <IconButton
+        icon="refresh-cw"
+        size="sm"
+        variant="ghost"
+        title="Refresh"
+        onclick={handleRefresh}
+      />
     {/snippet}
   </PageHeader>
   <PageBody>
@@ -219,139 +252,148 @@
     {:else if error}
       <div class="error-state">{error}</div>
     {:else if section === 'system-stats'}
-    <!-- System Stats Section -->
-    {#if systemStats || systemDashboard}
-      {@const stats = systemStats || systemDashboard?.statistics}
-      <CardGrid cols={4} gap="md" class="mx-3 mt-2 mb-8">
-        <StatCard
-          title="Projects"
-          value={stats?.projects.total ?? 0}
-          subtitle="+{stats?.projects.thisMonth ?? 0} this month"
-          icon={ENTITY_SVG_ICONS.projects}
-        />
-        <StatCard
-          title="Users"
-          value={stats?.users.total ?? 0}
-          subtitle="+{stats?.users.thisMonth ?? 0} this month"
-          icon={ENTITY_SVG_ICONS.users}
-        />
-        <StatCard
-          title="Specs"
-          value={stats?.specs.total ?? 0}
-          subtitle="+{stats?.specs.thisWeek ?? 0} this week"
-          icon={ENTITY_SVG_ICONS.specs}
-        />
-        <StatCard
-          title="Tasks"
-          value={stats?.tasks.total ?? 0}
-          subtitle="+{stats?.tasks.thisWeek ?? 0} this week"
-          icon={ENTITY_SVG_ICONS.tasks}
-        />
-        <StatCard
-          title="Conversations"
-          value={stats?.conversations.total ?? 0}
-          subtitle="+{stats?.conversations.thisWeek ?? 0} this week"
-          icon={ENTITY_SVG_ICONS.conversations}
-        />
-      </CardGrid>
-
-      {#if systemDashboard}
-        <div class="chart-section mx-2 my-2">
-          <LineChart data={systemDashboard.projectActivity} title="Project Activity (Last 30 days)" />
-        </div>
-
-        <div class="two-column-grid mx-2 my-2">
-          <div class="card-section">
-            <h2>Top Projects by Activity</h2>
-            <ul class="project-list">
-              {#each systemDashboard.topProjects as project, index (project.projectId)}
-                <li class="project-item">
-                  <span class="project-rank">{index + 1}.</span>
-                  <span class="project-name">{project.projectName}</span>
-                  <span class="project-count">({project.activityCount})</span>
-                </li>
-              {/each}
-            </ul>
-          </div>
-
-          <div class="card-section">
-            <h2>Recent System Activities</h2>
-            <ActivityLog activities={systemDashboard.recentActivities} />
-          </div>
-        </div>
-
-        <div class="chart-section mx-2 my-2">
-          <BarChart data={systemDashboard.userDistribution} title="User Activity Distribution" />
-        </div>
-      {/if}
-    {:else}
-      <div class="empty-state">No system data available</div>
-    {/if}
-
-  {:else if section === 'audit-logs'}
-    <!-- Audit Logs Section -->
-    <div class="section-content mx-2 my-2">
-      <div class="filter-bar">
-        <Select options={periodOptions} bind:value={auditTypeFilter} placeholder="All Types" />
-        <Select options={timeRangeOptions} bind:value={auditUserFilter} placeholder="All Users" />
-        <DatePicker bind:value={auditDateFilter} />
-      </div>
-
-      <div class="audit-log-list">
-        {#if auditLogs.length > 0}
-          {#each auditLogs as log (log.id)}
-            <AuditLogItem
-              actionType={getAuditLogActionType(log.action)}
-              user={log.userName}
-              action={log.action}
-              meta="{log.entityType} • {formatDateTime(log.timestamp)}"
-            />
-          {/each}
-        {:else}
-          <div class="empty-state">No audit logs available</div>
-        {/if}
-      </div>
-
-      <div class="pagination">
-        <Button variant="ghost" disabled>Previous</Button>
-        <span>Page 1 of {Math.ceil(auditLogsTotal / 50) || 1}</span>
-        <Button variant="ghost" disabled={auditLogsTotal <= 50}>Next</Button>
-      </div>
-    </div>
-
-  {:else if section === 'health'}
-    <!-- Health Check Section -->
-    {@const overallStatus = healthData?.status?.toLowerCase() ?? 'unknown'}
-    <div class="section-content mx-2 my-2">
-      <div class="health-overview">
-        <div class="health-status {overallStatus === 'healthy' ? 'healthy' : overallStatus === 'warning' ? 'warning' : 'error'}">
-          <span class="status-icon codicon codicon-{overallStatus === 'healthy' ? 'pass-filled' : overallStatus === 'warning' ? 'warning' : 'error'}"></span>
-          <span class="status-text">
-            {#if overallStatus === 'healthy'}
-              All Systems Operational
-            {:else if overallStatus === 'warning'}
-              Some Services Degraded
-            {:else}
-              System Issues Detected
-            {/if}
-          </span>
-        </div>
-        <div class="last-checked">Last checked: just now</div>
-      </div>
-
-      <CardGrid cols={4} gap="md">
-        {#each getHealthServices() as service (service.title)}
+      <!-- System Stats Section -->
+      {#if systemStats || systemDashboard}
+        {@const stats = systemStats || systemDashboard?.statistics}
+        <CardGrid cols={4} gap="md" class="mx-3 mt-2 mb-8">
           <StatCard
-            title={service.title}
-            status={service.status}
-            metrics={service.metrics}
+            title="Projects"
+            value={stats?.projects.total ?? 0}
+            subtitle="+{stats?.projects.thisMonth ?? 0} this month"
+            icon={ENTITY_SVG_ICONS.projects}
           />
-        {:else}
-          <div class="empty-state">No health data available</div>
-        {/each}
-      </CardGrid>
-    </div>
-  {/if}
+          <StatCard
+            title="Users"
+            value={stats?.users.total ?? 0}
+            subtitle="+{stats?.users.thisMonth ?? 0} this month"
+            icon={ENTITY_SVG_ICONS.users}
+          />
+          <StatCard
+            title="Specs"
+            value={stats?.specs.total ?? 0}
+            subtitle="+{stats?.specs.thisWeek ?? 0} this week"
+            icon={ENTITY_SVG_ICONS.specs}
+          />
+          <StatCard
+            title="Tasks"
+            value={stats?.tasks.total ?? 0}
+            subtitle="+{stats?.tasks.thisWeek ?? 0} this week"
+            icon={ENTITY_SVG_ICONS.tasks}
+          />
+          <StatCard
+            title="Conversations"
+            value={stats?.conversations.total ?? 0}
+            subtitle="+{stats?.conversations.thisWeek ?? 0} this week"
+            icon={ENTITY_SVG_ICONS.conversations}
+          />
+        </CardGrid>
+
+        {#if systemDashboard}
+          <div class="chart-section mx-2 my-2">
+            <LineChart
+              data={systemDashboard.projectActivity}
+              title="Project Activity (Last 30 days)"
+            />
+          </div>
+
+          <div class="two-column-grid mx-2 my-2">
+            <div class="card-section">
+              <h2>Top Projects by Activity</h2>
+              <ul class="project-list">
+                {#each systemDashboard.topProjects as project, index (project.projectId)}
+                  <li class="project-item">
+                    <span class="project-rank">{index + 1}.</span>
+                    <span class="project-name">{project.projectName}</span>
+                    <span class="project-count">({project.activityCount})</span>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+
+            <div class="card-section">
+              <h2>Recent System Activities</h2>
+              <ActivityLog activities={systemDashboard.recentActivities} />
+            </div>
+          </div>
+
+          <div class="chart-section mx-2 my-2">
+            <BarChart data={systemDashboard.userDistribution} title="User Activity Distribution" />
+          </div>
+        {/if}
+      {:else}
+        <div class="empty-state">No system data available</div>
+      {/if}
+    {:else if section === 'audit-logs'}
+      <!-- Audit Logs Section -->
+      <div class="section-content mx-2 my-2">
+        <div class="filter-bar">
+          <Select options={periodOptions} bind:value={auditTypeFilter} placeholder="All Types" />
+          <Select options={timeRangeOptions} bind:value={auditUserFilter} placeholder="All Users" />
+          <DatePicker bind:value={auditDateFilter} />
+        </div>
+
+        <div class="audit-log-list">
+          {#if auditLogs.length > 0}
+            {#each auditLogs as log (log.id)}
+              <AuditLogItem
+                actionType={getAuditLogActionType(log.action)}
+                user={log.userName}
+                action={log.action}
+                meta="{log.entityType} • {formatDateTime(log.timestamp)}"
+              />
+            {/each}
+          {:else}
+            <div class="empty-state">No audit logs available</div>
+          {/if}
+        </div>
+
+        <div class="pagination">
+          <Button variant="ghost" disabled>Previous</Button>
+          <span>Page 1 of {Math.ceil(auditLogsTotal / 50) || 1}</span>
+          <Button variant="ghost" disabled={auditLogsTotal <= 50}>Next</Button>
+        </div>
+      </div>
+    {:else if section === 'health'}
+      <!-- Health Check Section -->
+      {@const overallStatus = healthData?.status?.toLowerCase() ?? 'unknown'}
+      <div class="section-content mx-2 my-2">
+        <div class="health-overview">
+          <div
+            class="health-status {overallStatus === 'healthy'
+              ? 'healthy'
+              : overallStatus === 'warning'
+                ? 'warning'
+                : 'error'}"
+          >
+            <span
+              class="status-icon codicon codicon-{overallStatus === 'healthy'
+                ? 'pass-filled'
+                : overallStatus === 'warning'
+                  ? 'warning'
+                  : 'error'}"
+            ></span>
+            <span class="status-text">
+              {#if overallStatus === 'healthy'}
+                All Systems Operational
+              {:else if overallStatus === 'warning'}
+                Some Services Degraded
+              {:else}
+                System Issues Detected
+              {/if}
+            </span>
+          </div>
+          <div class="last-checked">Last checked: just now</div>
+        </div>
+
+        <CardGrid cols={4} gap="md">
+          {#each getHealthServices() as service (service.title)}
+            <StatCard title={service.title} status={service.status} metrics={service.metrics} />
+          {:else}
+            <div class="empty-state">No health data available</div>
+          {/each}
+        </CardGrid>
+      </div>
+    {/if}
   </PageBody>
 </PageShell>
 
@@ -496,5 +538,4 @@
     font-size: 0.875rem;
     color: var(--color-text-tertiary);
   }
-
 </style>

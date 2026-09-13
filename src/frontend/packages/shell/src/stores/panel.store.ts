@@ -204,7 +204,7 @@ function createWritablePanelStore(initialState: BottomPanelState): PanelStoreLik
         return {
           ...state,
           tabs: nextTabs,
-          activeTab: state.activeTab === tabId ? nextTabs[0]?.id ?? '' : state.activeTab,
+          activeTab: state.activeTab === tabId ? (nextTabs[0]?.id ?? '') : state.activeTab,
         };
       });
     },
@@ -308,13 +308,38 @@ function createParityAwarePanelStore(
     show: () => execute('show', primary.show, shadow.show),
     hide: () => execute('hide', primary.hide, shadow.hide),
     toggle: () => execute('toggle', primary.toggle, shadow.toggle),
-    setActiveTab: (tabId) => execute('setActiveTab', () => primary.setActiveTab(tabId), () => shadow.setActiveTab(tabId)),
-    setHeight: (height) => execute('setHeight', () => primary.setHeight(height), () => shadow.setHeight(height)),
+    setActiveTab: (tabId) =>
+      execute(
+        'setActiveTab',
+        () => primary.setActiveTab(tabId),
+        () => shadow.setActiveTab(tabId)
+      ),
+    setHeight: (height) =>
+      execute(
+        'setHeight',
+        () => primary.setHeight(height),
+        () => shadow.setHeight(height)
+      ),
     startResize: () => execute('startResize', primary.startResize, shadow.startResize),
     endResize: () => execute('endResize', primary.endResize, shadow.endResize),
-    updateTabBadge: (tabId, badge) => execute('updateTabBadge', () => primary.updateTabBadge(tabId, badge), () => shadow.updateTabBadge(tabId, badge)),
-    addTab: (tab) => execute('addTab', () => primary.addTab(tab), () => shadow.addTab(tab)),
-    removeTab: (tabId) => execute('removeTab', () => primary.removeTab(tabId), () => shadow.removeTab(tabId)),
+    updateTabBadge: (tabId, badge) =>
+      execute(
+        'updateTabBadge',
+        () => primary.updateTabBadge(tabId, badge),
+        () => shadow.updateTabBadge(tabId, badge)
+      ),
+    addTab: (tab) =>
+      execute(
+        'addTab',
+        () => primary.addTab(tab),
+        () => shadow.addTab(tab)
+      ),
+    removeTab: (tabId) =>
+      execute(
+        'removeTab',
+        () => primary.removeTab(tabId),
+        () => shadow.removeTab(tabId)
+      ),
     reset: () => execute('reset', primary.reset, shadow.reset),
     get: () => clonePanelState(currentState),
   };
@@ -357,10 +382,30 @@ function createParityAwareStatusBarStore(
 
   return {
     subscribe,
-    addItem: (item) => execute('addItem', () => primary.addItem(item), () => shadow.addItem(item)),
-    updateItem: (id, updates) => execute('updateItem', () => primary.updateItem(id, updates), () => shadow.updateItem(id, updates)),
-    removeItem: (id) => execute('removeItem', () => primary.removeItem(id), () => shadow.removeItem(id)),
-    setCurrentUser: (user) => execute('setCurrentUser', () => primary.setCurrentUser(user), () => shadow.setCurrentUser(user)),
+    addItem: (item) =>
+      execute(
+        'addItem',
+        () => primary.addItem(item),
+        () => shadow.addItem(item)
+      ),
+    updateItem: (id, updates) =>
+      execute(
+        'updateItem',
+        () => primary.updateItem(id, updates),
+        () => shadow.updateItem(id, updates)
+      ),
+    removeItem: (id) =>
+      execute(
+        'removeItem',
+        () => primary.removeItem(id),
+        () => shadow.removeItem(id)
+      ),
+    setCurrentUser: (user) =>
+      execute(
+        'setCurrentUser',
+        () => primary.setCurrentUser(user),
+        () => shadow.setCurrentUser(user)
+      ),
     toggle: () => execute('toggle', primary.toggle, shadow.toggle),
     reset: () => execute('reset', primary.reset, shadow.reset),
     get: () => cloneStatusBarState(currentState),
@@ -387,22 +432,30 @@ function createPanelStores(): {
 
   return {
     panel: enableShadowParity
-      ? createParityAwarePanelStore(primaryPanelStore, shadowPanelStore, ({ action, primaryState, shadowState }) => {
-        console.error('[panel.store parity mismatch]', {
-          action,
-          primaryState: normalizePanelState(primaryState),
-          shadowState: normalizePanelState(shadowState),
-        });
-      })
+      ? createParityAwarePanelStore(
+          primaryPanelStore,
+          shadowPanelStore,
+          ({ action, primaryState, shadowState }) => {
+            console.error('[panel.store parity mismatch]', {
+              action,
+              primaryState: normalizePanelState(primaryState),
+              shadowState: normalizePanelState(shadowState),
+            });
+          }
+        )
       : primaryPanelStore,
     statusBar: enableShadowParity
-      ? createParityAwareStatusBarStore(primaryStatusBarStore, shadowStatusBarStore, ({ action, primaryState, shadowState }) => {
-        console.error('[statusBar.store parity mismatch]', {
-          action,
-          primaryState: normalizeStatusBarState(primaryState),
-          shadowState: normalizeStatusBarState(shadowState),
-        });
-      })
+      ? createParityAwareStatusBarStore(
+          primaryStatusBarStore,
+          shadowStatusBarStore,
+          ({ action, primaryState, shadowState }) => {
+            console.error('[statusBar.store parity mismatch]', {
+              action,
+              primaryState: normalizeStatusBarState(primaryState),
+              shadowState: normalizeStatusBarState(shadowState),
+            });
+          }
+        )
       : primaryStatusBarStore,
   };
 }

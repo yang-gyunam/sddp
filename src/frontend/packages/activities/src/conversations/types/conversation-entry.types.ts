@@ -22,7 +22,7 @@ export type ChannelEntryStatus = 'Active' | 'Concluded';
 // Canonical conversation model (UI layer)
 export interface ConversationEntry {
   id: string;
-  projectId?: string | null;  // null = tenant-wide (global) conversation
+  projectId?: string | null; // null = tenant-wide (global) conversation
   name: string;
   type: ConversationType;
   visibility?: ConversationVisibility;
@@ -47,7 +47,7 @@ export interface Topic {
   messageCount: number;
   createdAt: string;
   updatedAt: string;
-  lastReplyAt?: string;  // Optional - for UI display
+  lastReplyAt?: string; // Optional - for UI display
 }
 
 // Direct Message (1:1)

@@ -15,11 +15,7 @@
     referenceCount?: number;
   }
 
-  let {
-    messageId,
-    projectId = '',
-    referenceCount = 0,
-  }: Props = $props();
+  let { messageId, projectId = '', referenceCount = 0 }: Props = $props();
 
   let items = $state<DecisionImpactItem[]>([]);
   let loading = $state(false);
@@ -29,7 +25,10 @@
   const totalCount = $derived(items.length + referenceCount);
 
   $effect(() => {
-    if (!messageId) { prevMessageId = null; return; }
+    if (!messageId) {
+      prevMessageId = null;
+      return;
+    }
     if (messageId === prevMessageId) return;
     prevMessageId = messageId;
     untrack(() => {
@@ -101,10 +100,18 @@
 
         <div class="max-h-[200px] overflow-y-auto">
           {#each items as item (item.entityId)}
-            <div class="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-[var(--color-bg-tertiary)]">
-              <Icon name={getEntityIcon(item.entityType)} size="xs" class="text-[var(--color-text-muted)] flex-shrink-0" />
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-[var(--color-bg-tertiary)]"
+            >
+              <Icon
+                name={getEntityIcon(item.entityType)}
+                size="xs"
+                class="text-[var(--color-text-muted)] flex-shrink-0"
+              />
               <span class="truncate text-[var(--color-text-primary)]">{item.label}</span>
-              <span class="ml-auto text-[var(--color-text-muted)] flex-shrink-0">{item.relationType}</span>
+              <span class="ml-auto text-[var(--color-text-muted)] flex-shrink-0"
+                >{item.relationType}</span
+              >
             </div>
           {/each}
 

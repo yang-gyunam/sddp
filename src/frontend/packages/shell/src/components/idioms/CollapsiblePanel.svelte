@@ -95,7 +95,9 @@
 
     <!-- Actions -->
     {#if actions.length > 0 && expanded}
-      <div class="panel-actions flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div
+        class="panel-actions flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
         {#each actions as action, index (action.id + index)}
           <IconButton
             icon={action.icon}
@@ -110,7 +112,10 @@
 
   <!-- Content -->
   {#if expanded}
-    <div class="panel-content flex-1 overflow-auto min-h-0 mt-1" transition:slide={{ duration: skipSlide ? 0 : 150 }}>
+    <div
+      class="panel-content flex-1 overflow-auto min-h-0 mt-1"
+      transition:slide={{ duration: skipSlide ? 0 : 150 }}
+    >
       {#if children}
         {@render children()}
       {/if}

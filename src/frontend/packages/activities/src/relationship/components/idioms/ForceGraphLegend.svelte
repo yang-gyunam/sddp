@@ -15,8 +15,14 @@
 
   let { class: className = '' }: Props = $props();
 
-  const entityTypes = Object.entries(ENTITY_TYPE_STYLES) as [EntityType, (typeof ENTITY_TYPE_STYLES)[EntityType]][];
-  const relationTypes = Object.entries(RELATION_TYPE_STYLES) as [RelationType, (typeof RELATION_TYPE_STYLES)[RelationType]][];
+  const entityTypes = Object.entries(ENTITY_TYPE_STYLES) as [
+    EntityType,
+    (typeof ENTITY_TYPE_STYLES)[EntityType],
+  ][];
+  const relationTypes = Object.entries(RELATION_TYPE_STYLES) as [
+    RelationType,
+    (typeof RELATION_TYPE_STYLES)[RelationType],
+  ][];
 </script>
 
 <div
@@ -26,9 +32,7 @@
   <div class="flex flex-wrap gap-x-3 gap-y-1 mb-3">
     {#each entityTypes as [type, style] (type)}
       <div class="flex items-center gap-1.5">
-        <span
-          class="w-3 h-3 rounded-full shrink-0"
-          style="background-color: {NODE_COLORS[type]}"
+        <span class="w-3 h-3 rounded-full shrink-0" style="background-color: {NODE_COLORS[type]}"
         ></span>
         <span class="text-gray-600 dark:text-gray-400">{style.label}</span>
       </div>

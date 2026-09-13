@@ -29,11 +29,7 @@
 
 {#if conflicts.length > 0}
   <div class="conflicts {className}">
-    <Button
-      variant="unstyled"
-      class="conflicts__header"
-      onclick={() => (isExpanded = !isExpanded)}
-    >
+    <Button variant="unstyled" class="conflicts__header" onclick={() => (isExpanded = !isExpanded)}>
       <div class="conflicts__header-left">
         <Icon name="alert-triangle" size="sm" class="conflicts__icon" />
         <span class="conflicts__title">Allocation Conflicts</span>

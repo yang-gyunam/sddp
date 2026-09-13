@@ -214,11 +214,7 @@ export async function rejectSpec(
 /**
  * Lock spec (Approved → Locked)
  */
-export async function lockSpec(
-  tenantId: string,
-  projectId: string,
-  specId: string
-): Promise<Spec> {
+export async function lockSpec(tenantId: string, projectId: string, specId: string): Promise<Spec> {
   return fetchWithAuth<Spec>(`/specs/${specId}/lock`, {
     method: 'POST',
     tenantId,
@@ -391,6 +387,11 @@ export class SpecService {
   private tenantId: string = '';
   private projectId: string = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   /**
    * Set tenant context
    */
@@ -502,6 +503,11 @@ export class SpecService {
   async getSpecTimeline(specId: string, limit?: number): Promise<AuditLogEntry[]> {
     return getSpecTimeline(this.tenantId, this.projectId, specId, limit);
   }
+}
+
+/** Create a context-bound service for a single tab or request flow. */
+export function createSpecService(tenantId: string, projectId: string): SpecService {
+  return new SpecService(tenantId, projectId);
 }
 
 // Singleton instance

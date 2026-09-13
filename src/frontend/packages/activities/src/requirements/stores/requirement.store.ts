@@ -17,33 +17,33 @@ import type {
 // Initial State
 // ============================================
 
-const initialState: RequirementState = {
-  // Requirements list
-  requirements: [],
-  totalCount: 0,
-  page: 1,
-  pageSize: 20,
-  totalPages: 0,
-  requirementsLoading: false,
-  requirementsError: null,
+function createInitialState(): RequirementState {
+  return {
+    requirements: [],
+    totalCount: 0,
+    page: 1,
+    pageSize: 20,
+    totalPages: 0,
+    requirementsLoading: false,
+    requirementsError: null,
+    levelFilter: null,
+    statusFilter: null,
+    currentRequirement: null,
+    currentRequirementLoading: false,
+    currentRequirementError: null,
+    children: [],
+    childrenLoading: false,
+    childrenError: null,
+  };
+}
 
-  // Filters
-  levelFilter: null,
-  statusFilter: null,
+/** Create an isolated store for a single editor tab. */
+export function createRequirementStoreInstance(): Store<RequirementState> {
+  return createStore<RequirementState>(createInitialState());
+}
 
-  // Current requirement
-  currentRequirement: null,
-  currentRequirementLoading: false,
-  currentRequirementError: null,
-
-  // Children
-  children: [],
-  childrenLoading: false,
-  childrenError: null,
-};
-
-// Create the store
-const requirementStore: Store<RequirementState> = createStore<RequirementState>(initialState);
+// Backward-compatible application store. Editor tabs use createRequirementStoreScope().
+const requirementStore: Store<RequirementState> = createRequirementStoreInstance();
 
 // ============================================
 // Requirements List Actions
@@ -52,8 +52,11 @@ const requirementStore: Store<RequirementState> = createStore<RequirementState>(
 /**
  * Set requirements page data
  */
-export function setRequirementsPage(page: RequirementPage): void {
-  requirementStore.update((state) => ({
+export function setRequirementsPage(
+  page: RequirementPage,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     requirements: page.items,
     totalCount: page.totalCount,
@@ -68,8 +71,11 @@ export function setRequirementsPage(page: RequirementPage): void {
 /**
  * Set requirements loading state
  */
-export function setRequirementsLoading(loading: boolean): void {
-  requirementStore.update((state) => ({
+export function setRequirementsLoading(
+  loading: boolean,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     requirementsLoading: loading,
   }));
@@ -89,8 +95,11 @@ export function setRequirementsError(error: string | null): void {
 /**
  * Add a new requirement to the list
  */
-export function addRequirement(requirement: Requirement): void {
-  requirementStore.update((state) => ({
+export function addRequirement(
+  requirement: Requirement,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     requirements: [requirement, ...state.requirements],
     totalCount: state.totalCount + 1,
@@ -102,9 +111,10 @@ export function addRequirement(requirement: Requirement): void {
  */
 export function updateRequirementInList(
   requirementId: string,
-  updates: Partial<Requirement>
+  updates: Partial<Requirement>,
+  target: Store<RequirementState> = requirementStore
 ): void {
-  requirementStore.update((state) => ({
+  target.update((state) => ({
     ...state,
     requirements: state.requirements.map((r) =>
       r.id === requirementId ? { ...r, ...updates } : r
@@ -130,8 +140,11 @@ export function removeRequirement(requirementId: string): void {
 /**
  * Set level filter
  */
-export function setLevelFilter(level: RequirementLevel | null): void {
-  requirementStore.update((state) => ({
+export function setLevelFilter(
+  level: RequirementLevel | null,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     levelFilter: level,
     page: 1, // Reset to first page on filter change
@@ -141,8 +154,11 @@ export function setLevelFilter(level: RequirementLevel | null): void {
 /**
  * Set status filter
  */
-export function setStatusFilter(status: RequirementStatus | null): void {
-  requirementStore.update((state) => ({
+export function setStatusFilter(
+  status: RequirementStatus | null,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     statusFilter: status,
     page: 1, // Reset to first page on filter change
@@ -164,8 +180,8 @@ export function clearFilters(): void {
 /**
  * Set page number
  */
-export function setPage(page: number): void {
-  requirementStore.update((state) => ({
+export function setPage(page: number, target: Store<RequirementState> = requirementStore): void {
+  target.update((state) => ({
     ...state,
     page,
   }));
@@ -189,8 +205,11 @@ export function setPageSize(pageSize: number): void {
 /**
  * Set current requirement (detail view)
  */
-export function setCurrentRequirement(requirement: RequirementDetail | null): void {
-  requirementStore.update((state) => ({
+export function setCurrentRequirement(
+  requirement: RequirementDetail | null,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     currentRequirement: requirement,
     currentRequirementLoading: false,
@@ -203,8 +222,11 @@ export function setCurrentRequirement(requirement: RequirementDetail | null): vo
 /**
  * Set current requirement loading state
  */
-export function setCurrentRequirementLoading(loading: boolean): void {
-  requirementStore.update((state) => ({
+export function setCurrentRequirementLoading(
+  loading: boolean,
+  target: Store<RequirementState> = requirementStore
+): void {
+  target.update((state) => ({
     ...state,
     currentRequirementLoading: loading,
   }));
@@ -224,8 +246,8 @@ export function setCurrentRequirementError(error: string | null): void {
 /**
  * Clear current requirement
  */
-export function clearCurrentRequirement(): void {
-  requirementStore.update((state) => ({
+export function clearCurrentRequirement(target: Store<RequirementState> = requirementStore): void {
+  target.update((state) => ({
     ...state,
     currentRequirement: null,
     currentRequirementLoading: false,
@@ -408,6 +430,30 @@ export function subscribeRequirement(
  */
 export function resetRequirementStore(): void {
   requirementStore.reset();
+}
+
+/** Actions bound to one store instance for a Split Editor tab. */
+export function createRequirementStoreScope() {
+  const store = createRequirementStoreInstance();
+
+  return {
+    getState: () => store.get(),
+    subscribe: (listener: (state: RequirementState, prevState: RequirementState) => void) =>
+      store.subscribe(listener),
+    setRequirementsPage: (page: RequirementPage) => setRequirementsPage(page, store),
+    setRequirementsLoading: (loading: boolean) => setRequirementsLoading(loading, store),
+    addRequirement: (requirement: Requirement) => addRequirement(requirement, store),
+    updateRequirementInList: (requirementId: string, updates: Partial<Requirement>) =>
+      updateRequirementInList(requirementId, updates, store),
+    setLevelFilter: (level: RequirementLevel | null) => setLevelFilter(level, store),
+    setStatusFilter: (status: RequirementStatus | null) => setStatusFilter(status, store),
+    setPage: (page: number) => setPage(page, store),
+    setCurrentRequirement: (requirement: RequirementDetail | null) =>
+      setCurrentRequirement(requirement, store),
+    setCurrentRequirementLoading: (loading: boolean) =>
+      setCurrentRequirementLoading(loading, store),
+    clearCurrentRequirement: () => clearCurrentRequirement(store),
+  };
 }
 
 // Export the store for direct access

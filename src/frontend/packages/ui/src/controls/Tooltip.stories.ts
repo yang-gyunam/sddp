@@ -33,7 +33,9 @@ export const Top: Story = {
   render: (args) => ({
     Component: Tooltip,
     props: args,
-    slots: { default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>' },
+    slots: {
+      default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>',
+    },
   }),
 };
 
@@ -45,7 +47,9 @@ export const Bottom: Story = {
   render: (args) => ({
     Component: Tooltip,
     props: args,
-    slots: { default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>' },
+    slots: {
+      default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>',
+    },
   }),
 };
 
@@ -57,7 +61,9 @@ export const Left: Story = {
   render: (args) => ({
     Component: Tooltip,
     props: args,
-    slots: { default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>' },
+    slots: {
+      default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>',
+    },
   }),
 };
 
@@ -69,7 +75,9 @@ export const Right: Story = {
   render: (args) => ({
     Component: Tooltip,
     props: args,
-    slots: { default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>' },
+    slots: {
+      default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me</button>',
+    },
   }),
 };
 
@@ -82,6 +90,9 @@ export const WithDelay: Story = {
   render: (args) => ({
     Component: Tooltip,
     props: args,
-    slots: { default: '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me (delayed)</button>' },
+    slots: {
+      default:
+        '<button class="px-4 py-2 bg-blue-500 text-white rounded">Hover me (delayed)</button>',
+    },
   }),
 };

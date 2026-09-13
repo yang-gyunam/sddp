@@ -53,10 +53,23 @@ export function getAvatarColor(name: string): string {
  * Hex color values for avatars (used with inline style to avoid Tailwind JIT purge)
  */
 export const AVATAR_HEX_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-  '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-  '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-  '#ec4899', '#f43f5e',
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#eab308',
+  '#84cc16',
+  '#22c55e',
+  '#10b981',
+  '#14b8a6',
+  '#06b6d4',
+  '#0ea5e9',
+  '#3b82f6',
+  '#6366f1',
+  '#8b5cf6',
+  '#a855f7',
+  '#d946ef',
+  '#ec4899',
+  '#f43f5e',
 ] as const;
 
 /**
@@ -137,5 +150,5 @@ export function parseAvatarUrl(avatarUrl: string | null | undefined): {
  * Get emoji for a preset avatar ID
  */
 export function getPresetAvatarEmoji(presetId: string): string {
-  return PRESET_AVATARS.find(p => p.id === presetId)?.emoji ?? '?';
+  return PRESET_AVATARS.find((p) => p.id === presetId)?.emoji ?? '?';
 }

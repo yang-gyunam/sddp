@@ -90,7 +90,7 @@ public class OutboxMessage : EntityBase
     public void RecordFailure(string errorMessage)
     {
         RetryCount++;
-        LastError = errorMessage;
+        LastError = errorMessage.Length > 4000 ? errorMessage[..4000] : errorMessage;
         MarkAsModified();
     }
 

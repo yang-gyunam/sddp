@@ -48,9 +48,9 @@ function cloneMenuNode(node: MenuNode): MenuNode {
     ...node,
     tabConfig: node.tabConfig
       ? {
-        ...node.tabConfig,
-        createTab: node.tabConfig.createTab,
-      }
+          ...node.tabConfig,
+          createTab: node.tabConfig.createTab,
+        }
       : undefined,
     children: node.children.map(cloneMenuNode),
   };
@@ -274,18 +274,68 @@ function createParityAwareMenuStore(
 
   return {
     subscribe,
-    setItems: (items) => execute('setItems', () => primary.setItems(items), () => shadow.setItems(items)),
-    addItem: (item, parentId) => execute('addItem', () => primary.addItem(item, parentId), () => shadow.addItem(item, parentId)),
-    updateItem: (id, updates) => execute('updateItem', () => primary.updateItem(id, updates), () => shadow.updateItem(id, updates)),
-    removeItem: (id) => execute('removeItem', () => primary.removeItem(id), () => shadow.removeItem(id)),
-    toggleExpanded: (id) => execute('toggleExpanded', () => primary.toggleExpanded(id), () => shadow.toggleExpanded(id)),
-    expand: (id) => execute('expand', () => primary.expand(id), () => shadow.expand(id)),
-    collapse: (id) => execute('collapse', () => primary.collapse(id), () => shadow.collapse(id)),
+    setItems: (items) =>
+      execute(
+        'setItems',
+        () => primary.setItems(items),
+        () => shadow.setItems(items)
+      ),
+    addItem: (item, parentId) =>
+      execute(
+        'addItem',
+        () => primary.addItem(item, parentId),
+        () => shadow.addItem(item, parentId)
+      ),
+    updateItem: (id, updates) =>
+      execute(
+        'updateItem',
+        () => primary.updateItem(id, updates),
+        () => shadow.updateItem(id, updates)
+      ),
+    removeItem: (id) =>
+      execute(
+        'removeItem',
+        () => primary.removeItem(id),
+        () => shadow.removeItem(id)
+      ),
+    toggleExpanded: (id) =>
+      execute(
+        'toggleExpanded',
+        () => primary.toggleExpanded(id),
+        () => shadow.toggleExpanded(id)
+      ),
+    expand: (id) =>
+      execute(
+        'expand',
+        () => primary.expand(id),
+        () => shadow.expand(id)
+      ),
+    collapse: (id) =>
+      execute(
+        'collapse',
+        () => primary.collapse(id),
+        () => shadow.collapse(id)
+      ),
     expandAll: () => execute('expandAll', primary.expandAll, shadow.expandAll),
     collapseAll: () => execute('collapseAll', primary.collapseAll, shadow.collapseAll),
-    select: (id) => execute('select', () => primary.select(id), () => shadow.select(id)),
-    setLoading: (loading) => execute('setLoading', () => primary.setLoading(loading), () => shadow.setLoading(loading)),
-    setError: (error) => execute('setError', () => primary.setError(error), () => shadow.setError(error)),
+    select: (id) =>
+      execute(
+        'select',
+        () => primary.select(id),
+        () => shadow.select(id)
+      ),
+    setLoading: (loading) =>
+      execute(
+        'setLoading',
+        () => primary.setLoading(loading),
+        () => shadow.setLoading(loading)
+      ),
+    setError: (error) =>
+      execute(
+        'setError',
+        () => primary.setError(error),
+        () => shadow.setError(error)
+      ),
     reset: () => execute('reset', primary.reset, shadow.reset),
     get: () => cloneMenuState(currentState),
   };
@@ -305,13 +355,17 @@ function createStore(): MenuStoreLike {
     return primaryStore;
   }
 
-  return createParityAwareMenuStore(primaryStore, shadowStore, ({ action, primaryState, shadowState }) => {
-    console.error('[menu.store parity mismatch]', {
-      action,
-      primaryState: normalizeMenuState(primaryState),
-      shadowState: normalizeMenuState(shadowState),
-    });
-  });
+  return createParityAwareMenuStore(
+    primaryStore,
+    shadowStore,
+    ({ action, primaryState, shadowState }) => {
+      console.error('[menu.store parity mismatch]', {
+        action,
+        primaryState: normalizeMenuState(primaryState),
+        shadowState: normalizeMenuState(shadowState),
+      });
+    }
+  );
 }
 
 export const __internal = {

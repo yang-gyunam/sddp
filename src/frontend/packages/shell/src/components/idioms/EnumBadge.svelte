@@ -5,7 +5,12 @@
 <script lang="ts" generics="T extends string">
   import { Icon } from '@sddp/ui';
   import type { IconSize } from '@sddp/ui';
-  import type { BadgeStyleConfig, BadgeSize, BadgeDisplayMode, BadgeShape } from '../../types/badge.types';
+  import type {
+    BadgeStyleConfig,
+    BadgeSize,
+    BadgeDisplayMode,
+    BadgeShape,
+  } from '../../types/badge.types';
 
   let {
     value,

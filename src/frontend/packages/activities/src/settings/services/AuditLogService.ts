@@ -57,10 +57,7 @@ export async function getAuditLogs(
 /**
  * Get audit log by ID
  */
-export async function getAuditLogById(
-  tenantId: string,
-  logId: string
-): Promise<AuditLog> {
+export async function getAuditLogById(tenantId: string, logId: string): Promise<AuditLog> {
   return fetchWithAuth<AuditLog>(`/audit-logs/${logId}`, { tenantId });
 }
 
@@ -70,6 +67,10 @@ export async function getAuditLogById(
 
 export class AuditLogService {
   private tenantId = '';
+
+  constructor(tenantId: string = '') {
+    this.tenantId = tenantId;
+  }
 
   setContext(tenantId: string): void {
     this.tenantId = tenantId;
@@ -82,6 +83,10 @@ export class AuditLogService {
   getAuditLogById(logId: string): Promise<AuditLog> {
     return getAuditLogById(this.tenantId, logId);
   }
+}
+
+export function createAuditLogService(tenantId: string): AuditLogService {
+  return new AuditLogService(tenantId);
 }
 
 // ============================================

@@ -1,7 +1,11 @@
 using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using Sddp.Abstractions.Base;
+using Sddp.Abstractions.Exceptions;
 using Sddp.Abstractions.Interfaces;
+using Sddp.Domain.Entities;
 using Sddp.Infrastructure.Persistence.Contexts;
 using Sddp.Infrastructure.Persistence.Repositories;
 
@@ -44,7 +48,7 @@ public class UnitOfWork : IUnitOfWork
             _saveChangesCalledInTransaction = true;
         }
 
-        return await (_context.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+        return await SaveChangesWithConcurrencyTranslationAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IDisposable> BeginTransactionAsync(CancellationToken cancellationToken = default)
@@ -60,7 +64,7 @@ public class UnitOfWork : IUnitOfWork
         {
             if (!_saveChangesCalledInTransaction)
             {
-                await (_context.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+                await SaveChangesWithConcurrencyTranslationAsync(cancellationToken).ConfigureAwait(false);
             }
 
             if (_transaction is not null)
@@ -101,34 +105,43 @@ public class UnitOfWork : IUnitOfWork
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default)
     {
-        var strategy = _context.Database.CreateExecutionStrategy();
-        if (strategy.RetriesOnFailure)
+        // A nested command (a handler sending another command through MediatR) reaches here
+        // with the outer boundary already open. Join it instead of starting a second one.
+        if (_transaction is not null)
         {
-            // Npgsql retry strategy does not allow user-initiated transactions.
-            // Execute the operation and persist changes without explicit BeginTransaction.
-            var response = await (operation(cancellationToken)).ConfigureAwait(false);
+            return await (operation(cancellationToken)).ConfigureAwait(false);
+        }
 
-            if (_transaction is null && _context.ChangeTracker.HasChanges())
+        var attempted = false;
+
+        return await (_context.Database.CreateExecutionStrategy().ExecuteAsync(
+            async ct =>
             {
-                await (_context.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
-            }
+                // A failed attempt leaves its entities tracked as Added/Modified; replaying
+                // over them would insert duplicates. Only on retry — clearing on the first
+                // attempt would detach what the pipeline read before reaching this boundary.
+                if (attempted)
+                {
+                    _context.ChangeTracker.Clear();
+                }
 
-            return response;
-        }
+                attempted = true;
 
-        using var transaction = await (BeginTransactionAsync(cancellationToken)).ConfigureAwait(false);
+                await (BeginTransactionAsync(ct)).ConfigureAwait(false);
 
-        try
-        {
-            var response = await (operation(cancellationToken)).ConfigureAwait(false);
-            await (CommitAsync(cancellationToken)).ConfigureAwait(false);
-            return response;
-        }
-        catch
-        {
-            await (RollbackAsync(cancellationToken)).ConfigureAwait(false);
-            throw;
-        }
+                try
+                {
+                    var response = await (operation(ct)).ConfigureAwait(false);
+                    await (CommitAsync(ct)).ConfigureAwait(false);
+                    return response;
+                }
+                catch
+                {
+                    await (RollbackAsync(ct)).ConfigureAwait(false);
+                    throw;
+                }
+            },
+            cancellationToken)).ConfigureAwait(false);
     }
 
     public void Dispose()
@@ -149,5 +162,72 @@ public class UnitOfWork : IUnitOfWork
 
             _disposed = true;
         }
+    }
+
+    private async Task<int> SaveChangesWithConcurrencyTranslationAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            var pageEntry = exception.Entries.FirstOrDefault(
+                entry => entry.Entity is KnowledgePage);
+            if (pageEntry is null)
+            {
+                throw;
+            }
+
+            var expectedRevision = pageEntry.OriginalValues.GetValue<int>(
+                nameof(KnowledgePage.Revision));
+            var databaseValues = await pageEntry.GetDatabaseValuesAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var currentRevision = databaseValues?.GetValue<int>(
+                nameof(KnowledgePage.Revision)) ?? expectedRevision;
+
+            throw new KnowledgePageEditConflictException(
+                expectedRevision,
+                currentRevision);
+        }
+        catch (DbUpdateException exception)
+            when (TryGetUniqueViolationConstraint(exception, out var constraintName))
+        {
+            // Slug allocation reads siblings before writing, so two concurrent creates under the
+            // same parent can both pass the pre-check and collide on the partial unique index.
+            // Translate that race into the same 409 the pre-check produces instead of a 500.
+            throw KnowledgeSlugConstraints.Contains(constraintName)
+                ? new ConflictException(
+                    "That page slug was just taken under the selected parent. Retry the request.")
+                : new ConflictException(
+                    "The change conflicts with an existing record. Retry the request.");
+        }
+    }
+
+    private static readonly HashSet<string> KnowledgeSlugConstraints = new(StringComparer.Ordinal)
+    {
+        "uq_knowledge_pages_root_slug",
+        "uq_knowledge_pages_child_slug"
+    };
+
+    /// <summary>
+    /// Detects a PostgreSQL unique-violation (SQLSTATE 23505) and returns its constraint name.
+    /// </summary>
+    private static bool TryGetUniqueViolationConstraint(
+        DbUpdateException exception,
+        out string constraintName)
+    {
+        constraintName = string.Empty;
+        if (exception.InnerException is not PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation
+            } postgresException)
+        {
+            return false;
+        }
+
+        constraintName = postgresException.ConstraintName ?? string.Empty;
+        return true;
     }
 }

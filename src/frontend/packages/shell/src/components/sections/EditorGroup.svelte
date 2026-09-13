@@ -12,6 +12,7 @@
   import ErrorBoundary from '../idioms/ErrorBoundary.svelte';
   import Welcome from '../idioms/Welcome.svelte';
   import { tabActions, globalActiveTab } from '../../stores/tabs.store';
+  import { requestCloseTab, requestCloseTabs } from '../../stores/tab-close';
 
   interface EditorGroupProps {
     group: EditorGroupData;
@@ -44,7 +45,7 @@
   function getContextMenuItems(): ContextMenuItem[] {
     if (!contextMenuTabId) return [];
 
-    const tab = group.tabs.find(t => t.id === contextMenuTabId);
+    const tab = group.tabs.find((t) => t.id === contextMenuTabId);
     if (!tab) return [];
 
     const tabId = contextMenuTabId;
@@ -57,8 +58,9 @@
         icon: 'x',
         shortcut: 'Ctrl+W',
         action: () => {
-          tabActions.closeTab(tabId, groupIdRef);
-          onTabClose?.(tabId);
+          void requestCloseTab(tabId, groupIdRef).then((closed) => {
+            if (closed) onTabClose?.(tabId);
+          });
         },
         disabled: tab.closable === false,
       },
@@ -67,7 +69,10 @@
         label: 'Close Others',
         icon: 'x-circle',
         action: () => {
-          tabActions.closeOtherTabs(tabId, groupIdRef);
+          void requestCloseTabs(
+            group.tabs.filter((t) => t.id !== tabId && t.closable !== false).map((t) => t.id),
+            groupIdRef
+          );
         },
         disabled: group.tabs.length <= 1,
       },
@@ -76,11 +81,10 @@
         label: 'Close All',
         icon: 'x-square',
         action: () => {
-          group.tabs.forEach(t => {
-            if (t.closable !== false) {
-              tabActions.closeTab(t.id, groupIdRef);
-            }
-          });
+          void requestCloseTabs(
+            group.tabs.filter((t) => t.closable !== false).map((t) => t.id),
+            groupIdRef
+          );
         },
       },
       { id: 'sep1', label: '', separator: true },
@@ -118,11 +122,10 @@
         label: 'Close All',
         icon: 'x-square',
         action: () => {
-          group.tabs.forEach(t => {
-            if (t.closable !== false) {
-              tabActions.closeTab(t.id, groupIdRef);
-            }
-          });
+          void requestCloseTabs(
+            group.tabs.filter((t) => t.closable !== false).map((t) => t.id),
+            groupIdRef
+          );
         },
         disabled: group.tabs.length === 0,
       },
@@ -248,7 +251,9 @@
   function scrollToActiveTab() {
     if (!tabsInnerElement || !tabsWrapperElement || !group.activeTab) return;
 
-    const activeTabElement = tabsInnerElement.querySelector(`[data-tab-id="${group.activeTab}"]`) as HTMLElement;
+    const activeTabElement = tabsInnerElement.querySelector(
+      `[data-tab-id="${group.activeTab}"]`
+    ) as HTMLElement;
     if (!activeTabElement) return;
 
     const wrapperWidth = tabsWrapperElement.clientWidth;
@@ -393,9 +398,7 @@
       crossGroupDragTabId = 'cross-group-drag';
     }
 
-    const dragTabId = hasTabData
-      ? (crossGroupDragTabId || draggedTabId)
-      : draggedTabId;
+    const dragTabId = hasTabData ? crossGroupDragTabId || draggedTabId : draggedTabId;
 
     if (!dragTabId || dragTabId === tabId) return;
 
@@ -594,7 +597,6 @@
       tabActions.moveTabToGroup(draggedTabIdFromData, group.id, sourceGroupId);
     }
   }
-
 </script>
 
 <div
@@ -629,8 +631,14 @@
         role="tablist"
         onwheel={handleWheel}
       >
+        <!--
+          The translateX wrapper exists for scrolling only. Without a presentation role it
+          sits between the tablist and its tabs, so the tabs stop counting as required
+          children and axe reports aria-required-children.
+        -->
         <div
           bind:this={tabsInnerElement}
+          role="presentation"
           class="flex items-stretch h-full transition-transform duration-150 ease-out"
           style="transform: translateX(-{scrollPosition}px)"
         >
@@ -638,7 +646,8 @@
             {@const isFirstTab = index === 0}
             {@const isLastTab = index === group.tabs.length - 1}
             {@const nextTab = index < group.tabs.length - 1 ? group.tabs[index + 1] : null}
-            {@const showLeftIndicator = isFirstTab && dragOverTabId === tab.id && dropPosition === 'left'}
+            {@const showLeftIndicator =
+              isFirstTab && dragOverTabId === tab.id && dropPosition === 'left'}
             {@const showRightIndicator =
               (dragOverTabId === tab.id && dropPosition === 'right') ||
               (nextTab && dragOverTabId === nextTab.id && dropPosition === 'left') ||
@@ -652,10 +661,14 @@
               ondrop={(e) => handleDrop(e, tab.id)}
             >
               {#if showLeftIndicator}
-                <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-[var(--color-accent-primary)] z-10"></div>
+                <div
+                  class="absolute left-0 top-0 bottom-0 w-0.5 bg-[var(--color-accent-primary)] z-10"
+                ></div>
               {/if}
               {#if showRightIndicator}
-                <div class="absolute right-0 top-0 bottom-0 w-0.5 bg-[var(--color-accent-primary)] z-10"></div>
+                <div
+                  class="absolute right-0 top-0 bottom-0 w-0.5 bg-[var(--color-accent-primary)] z-10"
+                ></div>
               {/if}
               <TabItem
                 id={tab.id}
@@ -670,7 +683,7 @@
                 isDragging={draggedTabId === tab.id}
                 onSelect={() => handleTabClick(tab.id)}
                 onClose={() => {
-                  tabActions.closeTab(tab.id, group.id);
+                  void requestCloseTab(tab.id, group.id);
                   onTabClose?.(tab.id);
                 }}
                 ondragstart={(e) => handleDragStart(e, tab.id)}
@@ -679,11 +692,14 @@
               />
             </div>
           {/each}
-          <!-- Trailing empty area for drop after last tab -->
+          <!--
+            Trailing empty area for drop after last tab. It is a pointer-only drag affordance,
+            and a tablist may only expose tabs: exposing it as a region made every tab stop
+            counting as a required child (axe aria-required-children).
+          -->
           <div
             class="flex-1 min-w-[40px] h-full"
-            role="region"
-            aria-label="Drop zone for tabs"
+            role="presentation"
             ondragover={handleTrailingAreaDragOver}
             ondragleave={handleTrailingAreaDragLeave}
             ondrop={handleTrailingAreaDrop}
@@ -740,12 +756,8 @@
             <Icon name="maximize-2" size="md" class="text-[var(--color-text-tertiary)]" />
           </div>
           <div>
-            <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-2">
-              No Active Tab
-            </h3>
-            <p class="text-[var(--color-text-secondary)]">
-              Select a tab from the tab bar
-            </p>
+            <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-2">No Active Tab</h3>
+            <p class="text-[var(--color-text-secondary)]">Select a tab from the tab bar</p>
           </div>
         </div>
       </div>

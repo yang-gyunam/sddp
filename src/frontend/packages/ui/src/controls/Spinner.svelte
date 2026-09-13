@@ -28,7 +28,7 @@
   // OnBrick variant sizing (px)
   const obWidthMap: Record<SpinnerSize, number> = { sm: 16, md: 24, lg: 32, xl: 48 };
   const obW = $derived(obWidthMap[size]);
-  const obH = $derived(Math.round(obW * 5 / 7));
+  const obH = $derived(Math.round((obW * 5) / 7));
   const obBlockW = $derived(obW / 2);
   const obBlockH = $derived(obH / 2);
 
@@ -44,32 +44,88 @@
   <style>
     /* Ring spinner */
     @keyframes sddp-ring-spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* OnBrick animations */
     @keyframes sddp-b3 {
-      0%, 6%    { opacity: 0; }
-      8%, 75%   { opacity: 1; }
-      85%, 100% { opacity: 0; }
+      0%,
+      6% {
+        opacity: 0;
+      }
+      8%,
+      75% {
+        opacity: 1;
+      }
+      85%,
+      100% {
+        opacity: 0;
+      }
     }
     @keyframes sddp-b1 {
-      0%, 8%    { opacity: 0; transform: translateY(100%); }
-      10%       { opacity: 1; transform: translateY(100%); }
-      22%, 75%  { opacity: 1; transform: translateY(0); }
-      85%, 100% { opacity: 0; transform: translateY(0); }
+      0%,
+      8% {
+        opacity: 0;
+        transform: translateY(100%);
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(100%);
+      }
+      22%,
+      75% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      85%,
+      100% {
+        opacity: 0;
+        transform: translateY(0);
+      }
     }
     @keyframes sddp-b4 {
-      0%, 18%   { opacity: 0; transform: translateX(-100%); }
-      20%       { opacity: 1; transform: translateX(-100%); }
-      32%, 75%  { opacity: 1; transform: translateX(0); }
-      85%, 100% { opacity: 0; transform: translateX(0); }
+      0%,
+      18% {
+        opacity: 0;
+        transform: translateX(-100%);
+      }
+      20% {
+        opacity: 1;
+        transform: translateX(-100%);
+      }
+      32%,
+      75% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      85%,
+      100% {
+        opacity: 0;
+        transform: translateX(0);
+      }
     }
     @keyframes sddp-b2 {
-      0%, 33%   { opacity: 0; transform: translate(-100%, 100%); }
-      34%       { opacity: 1; transform: translate(-100%, 100%); }
-      67%, 75%  { opacity: 1; transform: translate(0, 0); }
-      85%, 100% { opacity: 0; transform: translate(0, 0); }
+      0%,
+      33% {
+        opacity: 0;
+        transform: translate(-100%, 100%);
+      }
+      34% {
+        opacity: 1;
+        transform: translate(-100%, 100%);
+      }
+      67%,
+      75% {
+        opacity: 1;
+        transform: translate(0, 0);
+      }
+      85%,
+      100% {
+        opacity: 0;
+        transform: translate(0, 0);
+      }
     }
   </style>
 </svelte:head>
@@ -113,9 +169,17 @@
     role="status"
     aria-label="Loading"
   >
-    <div style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.green}; animation: sddp-b1 3s ease-out infinite; opacity:0;"></div>
-    <div style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.red}; clip-path: polygon(70% 0, 100% 0, 100% 36%); animation: sddp-b2 3s ease-out infinite; opacity:0;"></div>
-    <div style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.brown}; animation: sddp-b3 3s ease-out infinite; opacity:0; z-index:1;"></div>
-    <div style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.orange}; animation: sddp-b4 3s ease-out infinite; opacity:0;"></div>
+    <div
+      style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.green}; animation: sddp-b1 3s ease-out infinite; opacity:0;"
+    ></div>
+    <div
+      style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.red}; clip-path: polygon(70% 0, 100% 0, 100% 36%); animation: sddp-b2 3s ease-out infinite; opacity:0;"
+    ></div>
+    <div
+      style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.brown}; animation: sddp-b3 3s ease-out infinite; opacity:0; z-index:1;"
+    ></div>
+    <div
+      style="width:{obBlockW}px; height:{obBlockH}px; background:{obColors.orange}; animation: sddp-b4 3s ease-out infinite; opacity:0;"
+    ></div>
   </div>
 {/if}

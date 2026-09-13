@@ -99,6 +99,8 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
             .HasColumnName("updated_at");
 
         //
+        builder.HasAlternateKey(p => new { p.TenantId, p.Id })
+            .HasName("uq_projects_scope_id");
         builder.HasIndex(p => new { p.TenantId, p.Code }).IsUnique();
         builder.HasIndex(p => new { p.TenantId, p.Name });
         builder.HasIndex(p => p.IsActive);

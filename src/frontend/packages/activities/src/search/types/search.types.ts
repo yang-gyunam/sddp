@@ -4,21 +4,10 @@
  */
 
 // Entity Types
-export type EntityType =
-  | 'conversation'
-  | 'requirement'
-  | 'spec'
-  | 'task'
-  | 'glossary'
-  | 'artifact';
+export type EntityType = 'conversation' | 'requirement' | 'spec' | 'task' | 'glossary' | 'artifact';
 
 // Search Sort Options
-export type SearchSort =
-  | 'relevance'
-  | 'date-desc'
-  | 'date-asc'
-  | 'title'
-  | 'project';
+export type SearchSort = 'relevance' | 'date-desc' | 'date-asc' | 'title' | 'project';
 
 // Date Range
 export interface DateRange {
@@ -54,8 +43,8 @@ export interface SearchResultItem {
   projectId: string;
   projectName: string;
   title: string;
-  snippet: string; // Highlighted text
-  highlights: string[]; // Matched text fragments
+  snippet: string; // Untrusted plain text; never pre-rendered HTML
+  highlights: string[]; // Terms rendered as safe <mark> text segments
   metadata: Record<string, unknown>; // Type-specific metadata
   score: number; // Relevance score
   createdAt: string;

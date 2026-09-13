@@ -8,7 +8,12 @@
   import { ContextMenu, renderMarkdown, toast } from '@sddp/shell';
   import type { ContextMenuItem } from '@sddp/shell';
   import MessageTypeIcon from './MessageTypeIcon.svelte';
-  import { HUMAN_MESSAGE_TYPES, type MessageType, type Message, type CreateMessageRequest } from '../../types';
+  import {
+    HUMAN_MESSAGE_TYPES,
+    type MessageType,
+    type Message,
+    type CreateMessageRequest,
+  } from '../../types';
   import { getConversationDraft, setConversationDraft, clearConversationDraft } from '../../stores';
   import { startAudioRecorder, type AudioRecorderHandle } from '../../services/audioRecorder';
   import { transcribeAudio, isSpeechToTextAvailable } from '../../services/SpeechService';
@@ -454,8 +459,14 @@
   >
     <!-- Reply preview bar -->
     {#if replyTo}
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-t-[11px] border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]">
-        <Icon name="corner-up-left" size="xs" class="text-[var(--color-accent-primary)] flex-shrink-0" />
+      <div
+        class="flex items-center gap-2 px-3 py-1.5 rounded-t-[11px] border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
+      >
+        <Icon
+          name="corner-up-left"
+          size="xs"
+          class="text-[var(--color-accent-text)] flex-shrink-0"
+        />
         <span class="text-xs text-[var(--color-text-secondary)]">
           Replying to <span class="font-semibold">{replyTo.sender?.name ?? 'Unknown'}</span>
         </span>
@@ -477,17 +488,24 @@
 
     <!-- Recording / transcribing bar (speech-to-text) -->
     {#if recState !== 'idle'}
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-t-[11px] border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]">
+      <div
+        class="flex items-center gap-2 px-3 py-1.5 rounded-t-[11px] border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
+      >
         {#if recState === 'recording'}
           <span class="rec-dot flex-shrink-0" aria-hidden="true"></span>
           <span class="text-xs font-medium text-[var(--color-text-secondary)]">Recording</span>
-          <span class="text-xs tabular-nums text-[var(--color-text-muted)]" role="timer" aria-label="Recording time remaining">
+          <span
+            class="text-xs tabular-nums text-[var(--color-text-muted)]"
+            role="timer"
+            aria-label="Recording time remaining"
+          >
             {formatCountdown(remainingSec)}
           </span>
           <!-- Live input level meter — scrolls left as new samples arrive -->
           <div class="rec-meter flex-1 min-w-0" aria-hidden="true">
             {#each levelBars as level, i (i)}
-              <span class="rec-meter__bar" style="height: {Math.max(12, Math.round(level * 100))}%"></span>
+              <span class="rec-meter__bar" style="height: {Math.max(12, Math.round(level * 100))}%"
+              ></span>
             {/each}
           </div>
           <IconButton
@@ -516,51 +534,107 @@
 
     <!-- Markdown formatting toolbar (topic mode only) -->
     {#if showToolbar && inputMode === 'write'}
-      <div class="md-toolbar flex items-center gap-0.5 px-2 pt-1.5 pb-0.5 border-b border-[var(--color-border-secondary)]">
+      <div
+        class="md-toolbar flex items-center gap-0.5 px-2 pt-1.5 pb-0.5 border-b border-[var(--color-border-secondary)]"
+      >
         <!-- Text formatting -->
-        <Button variant="unstyled" class="md-toolbar__btn" title="Heading (## )" onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('## '))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Heading (## )"
+          onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('## '))}
+        >
           <span class="md-toolbar__text font-bold">H</span>
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Bold (**text**)" onmousedown={(e) => toolbarAction(e, () => applyWrap('**', '**'))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Bold (**text**)"
+          onmousedown={(e) => toolbarAction(e, () => applyWrap('**', '**'))}
+        >
           <span class="md-toolbar__text font-bold">B</span>
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Italic (*text*)" onmousedown={(e) => toolbarAction(e, () => applyWrap('*', '*'))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Italic (*text*)"
+          onmousedown={(e) => toolbarAction(e, () => applyWrap('*', '*'))}
+        >
           <span class="md-toolbar__text italic">I</span>
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Strikethrough (~~text~~)" onmousedown={(e) => toolbarAction(e, () => applyWrap('~~', '~~'))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Strikethrough (~~text~~)"
+          onmousedown={(e) => toolbarAction(e, () => applyWrap('~~', '~~'))}
+        >
           <span class="md-toolbar__text line-through">S</span>
         </Button>
 
         <span class="md-toolbar__sep"></span>
 
         <!-- Block formatting -->
-        <Button variant="unstyled" class="md-toolbar__btn" title="Inline code" onmousedown={(e) => toolbarAction(e, () => applyWrap('`', '`'))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Inline code"
+          onmousedown={(e) => toolbarAction(e, () => applyWrap('`', '`'))}
+        >
           <Icon name="code" size="xs" />
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Code block" onmousedown={(e) => toolbarAction(e, () => applyWrap('```\n', '\n```'))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Code block"
+          onmousedown={(e) => toolbarAction(e, () => applyWrap('```\n', '\n```'))}
+        >
           <span class="md-toolbar__text font-mono text-[0.5625rem]">{'{}'}</span>
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Blockquote (> )" onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('> '))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Blockquote (> )"
+          onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('> '))}
+        >
           <span class="md-toolbar__text text-[0.8125rem]">"</span>
         </Button>
 
         <span class="md-toolbar__sep"></span>
 
         <!-- List & link -->
-        <Button variant="unstyled" class="md-toolbar__btn" title="Bullet list (- )" onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('- '))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Bullet list (- )"
+          onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('- '))}
+        >
           <Icon name="list" size="xs" />
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Numbered list (1. )" onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('1. '))}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Numbered list (1. )"
+          onmousedown={(e) => toolbarAction(e, () => applyLinePrefix('1. '))}
+        >
           <span class="md-toolbar__text font-mono text-[0.5625rem]">1.</span>
         </Button>
-        <Button variant="unstyled" class="md-toolbar__btn" title="Link ([text](url))" onmousedown={toolbarLink}>
+        <Button
+          variant="unstyled"
+          class="md-toolbar__btn"
+          title="Link ([text](url))"
+          onmousedown={toolbarLink}
+        >
           <Icon name="link" size="xs" />
         </Button>
       </div>
     {/if}
 
     <!-- Textarea / Preview area + Send button -->
-    <div bind:this={contentAreaEl} class="relative flex items-start pr-10" style:min-height={lockedHeight}>
+    <div
+      bind:this={contentAreaEl}
+      class="relative flex items-start pr-10"
+      style:min-height={lockedHeight}
+    >
       {#if inputMode === 'write'}
         <Textarea
           unstyled
@@ -573,12 +647,16 @@
           onblur={() => (isFocused = false)}
           {placeholder}
           rows={1}
-          class="flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] bg-transparent resize-none focus:outline-none {showToolbar ? 'min-h-[9.75rem] max-h-[20rem]' : 'min-h-[5rem] max-h-[10rem] overflow-y-hidden'}"
+          class="flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] bg-transparent resize-none focus:outline-none {showToolbar
+            ? 'min-h-[9.75rem] max-h-[20rem]'
+            : 'min-h-[5rem] max-h-[10rem] overflow-y-hidden'}"
           {disabled}
         />
       {:else}
         <div
-          class="flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] overflow-y-auto prose-message {showToolbar ? 'min-h-[9.75rem] max-h-[20rem]' : 'min-h-[5rem]'}"
+          class="flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] overflow-y-auto prose-message {showToolbar
+            ? 'min-h-[9.75rem] max-h-[20rem]'
+            : 'min-h-[5rem]'}"
           role="region"
           aria-label="Markdown preview"
         >
@@ -646,7 +724,8 @@
         <Button
           variant="unstyled"
           onclick={() => setInputMode('write')}
-          class="px-2 h-full text-[0.6875rem] font-medium rounded-l-md transition-colors {inputMode === 'write'
+          class="px-2 h-full text-[0.6875rem] font-medium rounded-l-md transition-colors {inputMode ===
+          'write'
             ? 'bg-[var(--color-surface-200)] text-[var(--color-text-primary)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-100)]'}"
         >
@@ -655,7 +734,8 @@
         <Button
           variant="unstyled"
           onclick={() => setInputMode('preview')}
-          class="px-2 h-full text-[0.6875rem] font-medium rounded-r-md transition-colors {inputMode === 'preview'
+          class="px-2 h-full text-[0.6875rem] font-medium rounded-r-md transition-colors {inputMode ===
+          'preview'
             ? 'bg-[var(--color-surface-200)] text-[var(--color-text-primary)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-100)]'}"
         >
@@ -704,7 +784,9 @@
     x={ctxMenuX}
     y={ctxMenuY}
     items={buildContextMenuItems()}
-    onClose={() => { ctxMenuVisible = false; }}
+    onClose={() => {
+      ctxMenuVisible = false;
+    }}
   />
 {/if}
 
@@ -721,7 +803,9 @@
     background: transparent;
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: background-color 0.1s ease, color 0.1s ease;
+    transition:
+      background-color 0.1s ease,
+      color 0.1s ease;
   }
 
   .md-toolbar :global(.md-toolbar__btn:hover) {
@@ -753,8 +837,13 @@
   }
 
   @keyframes rec-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
   }
 
   .rec-meter {
@@ -785,12 +874,25 @@
     font-weight: 600;
     margin: 0.25em 0;
   }
-  .prose-message :global(h1) { font-size: 1.25em; }
-  .prose-message :global(h2) { font-size: 1.125em; }
-  .prose-message :global(h3) { font-size: 1em; }
-  .prose-message :global(strong) { font-weight: 600; }
-  .prose-message :global(em) { font-style: italic; }
-  .prose-message :global(del) { text-decoration: line-through; opacity: 0.7; }
+  .prose-message :global(h1) {
+    font-size: 1.25em;
+  }
+  .prose-message :global(h2) {
+    font-size: 1.125em;
+  }
+  .prose-message :global(h3) {
+    font-size: 1em;
+  }
+  .prose-message :global(strong) {
+    font-weight: 600;
+  }
+  .prose-message :global(em) {
+    font-style: italic;
+  }
+  .prose-message :global(del) {
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
   .prose-message :global(code.md-inline-code) {
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
@@ -820,8 +922,12 @@
     padding-left: 1.25rem;
     margin: 0.25em 0;
   }
-  .prose-message :global(ul.md-list) { list-style-type: disc; }
-  .prose-message :global(ol.md-list) { list-style-type: decimal; }
+  .prose-message :global(ul.md-list) {
+    list-style-type: disc;
+  }
+  .prose-message :global(ol.md-list) {
+    list-style-type: decimal;
+  }
   .prose-message :global(a.md-link) {
     color: var(--color-accent-primary);
     text-decoration: underline;

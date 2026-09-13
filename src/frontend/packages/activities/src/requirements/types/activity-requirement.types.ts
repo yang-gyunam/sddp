@@ -60,7 +60,8 @@ export interface RequirementSummary {
 /**
  * Sidebar filter type
  */
-export type RequirementFilterType = 'all' | 'draft' | 'inReview' | 'approved' | 'levelA' | 'levelB' | 'levelC';
+export type RequirementFilterType =
+  'all' | 'draft' | 'inReview' | 'approved' | 'levelA' | 'levelB' | 'levelC';
 
 /**
  * Sidebar view mode
@@ -79,4 +80,3 @@ export interface RequirementSidebarState {
   selectedRequirementId: string | null;
   projectGroups: ProjectRequirementGroup[];
 }
-

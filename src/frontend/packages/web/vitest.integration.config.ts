@@ -26,10 +26,5 @@ export default defineConfig({
     include: ['tests/integration/**/*.{test,spec}.{js,ts}'],
     setupFiles: ['tests/integration/api/setup.ts'],
     passWithNoTests: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov'],
-      reportsDirectory: 'coverage/integration',
-    },
   },
 });

@@ -14,22 +14,14 @@
     class?: string;
   }
 
-  let {
-    type,
-    size = 'md',
-    showLabel = true,
-    class: className = '',
-  }: Props = $props();
+  let { type, size = 'md', showLabel = true, class: className = '' }: Props = $props();
 
   const style = $derived(AI_ANALYSIS_TYPE_STYLES[type]);
   const iconSize = $derived(size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md');
   const textSize = $derived(size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm');
 </script>
 
-<span
-  class="inline-flex items-center gap-1.5 {style.color} {className}"
-  title={style.description}
->
+<span class="inline-flex items-center gap-1.5 {style.color} {className}" title={style.description}>
   <Icon name={style.icon} size={iconSize} />
   {#if showLabel}
     <span class="{textSize} font-medium">{style.label}</span>

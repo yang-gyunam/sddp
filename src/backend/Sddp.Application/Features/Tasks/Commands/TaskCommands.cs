@@ -135,6 +135,11 @@ public sealed class UpdateTaskCommandHandler : IRequestHandler<UpdateTaskCommand
             return null;
         }
 
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
+        {
+            return null;
+        }
+
         var title = request.Dto.Title ?? task.Title;
         var description = request.Dto.Description ?? task.Description;
         var priority = request.Dto.Priority ?? task.Priority;
@@ -247,6 +252,11 @@ public sealed class UpdateTaskStatusCommandHandler : IRequestHandler<UpdateTaskS
             return null;
         }
 
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
+        {
+            return null;
+        }
+
         var transitionResult = task.TransitionTo(request.NewStatus);
         transitionResult.EnsureSuccess("TRANSITION_ERROR");
         task.SetUpdatedBy(request.UserId);
@@ -299,6 +309,11 @@ public sealed class AddTaskTimeLogCommandHandler : IRequestHandler<AddTaskTimeLo
 
         var task = await (taskRepo.GetByIdAsync(request.TaskId, cancellationToken)).ConfigureAwait(false);
         if (task is null || task.TenantId != request.TenantId || !task.IsActive)
+        {
+            return null;
+        }
+
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
         {
             return null;
         }
@@ -379,6 +394,11 @@ public sealed class UpdateTaskPositionCommandHandler : IRequestHandler<UpdateTas
             return null;
         }
 
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
+        {
+            return null;
+        }
+
         var positionResult = task.UpdatePosition(request.Dto.NewStatus, request.Dto.NewPosition);
         positionResult.EnsureSuccess("POSITION_ERROR");
         task.SetUpdatedBy(request.UserId);
@@ -435,6 +455,11 @@ public sealed class AddTaskLinkedItemCommandHandler : IRequestHandler<AddTaskLin
             return null;
         }
 
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
+        {
+            return null;
+        }
+
         if (!GlobalUniqueId.TryParse(request.Dto.LinkedEntityId, out var linkedEntityId))
         {
             throw new SddpException("VALIDATION_ERROR", "Invalid linked entity ID format");
@@ -472,13 +497,11 @@ public sealed class AddTaskLinkedItemCommandHandler : IRequestHandler<AddTaskLin
     }
 }
 
-/// <summary>
-/// task
-/// </summary>
 public sealed record RemoveTaskLinkedItemCommand(
     GlobalUniqueId TenantId,
     GlobalUniqueId TaskId,
-    GlobalUniqueId LinkedItemId) : ICommand<bool>, IAuditableRequest<bool>
+    GlobalUniqueId LinkedItemId,
+    GlobalUniqueId UserId) : ICommand<bool>, IAuditableRequest<bool>
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(bool response) => response ? AuditLog : null;
@@ -499,6 +522,11 @@ public sealed class RemoveTaskLinkedItemCommandHandler : IRequestHandler<RemoveT
 
         var task = await (taskRepo.GetByIdAsync(request.TaskId, cancellationToken)).ConfigureAwait(false);
         if (task is null || task.TenantId != request.TenantId || !task.IsActive)
+        {
+            return false;
+        }
+
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
         {
             return false;
         }
@@ -555,6 +583,11 @@ public sealed class DeleteTaskCommandHandler : IRequestHandler<DeleteTaskCommand
 
         var task = await (taskRepo.GetByIdAsync(request.TaskId, cancellationToken)).ConfigureAwait(false);
         if (task is null || task.TenantId != request.TenantId || !task.IsActive)
+        {
+            return false;
+        }
+
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
         {
             return false;
         }

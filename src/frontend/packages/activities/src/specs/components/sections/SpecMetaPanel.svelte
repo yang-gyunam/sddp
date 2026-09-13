@@ -52,7 +52,9 @@
   {#if spec}
     <!-- Quick Info -->
     <div class="panel-section p-3 border-b border-[var(--color-border-primary)]">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+      <h3
+        class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+      >
         Quick Info
       </h3>
       <div class="space-y-2 text-sm">
@@ -74,7 +76,9 @@
     <!-- Sign-Off Progress (for InReview) -->
     {#if spec.status === 'InReview' && signOffSummary}
       <div class="panel-section p-3 border-b border-[var(--color-border-primary)]">
-        <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+        <h3
+          class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+        >
           Sign-Off Progress
         </h3>
 
@@ -129,7 +133,9 @@
 
     <!-- Version History -->
     <div class="panel-section flex-1 p-3 overflow-y-auto">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+      <h3
+        class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+      >
         Version History
       </h3>
 
@@ -143,20 +149,26 @@
               <Button
                 variant="unstyled"
                 class="relative flex items-start gap-3 w-full text-left pl-6 py-2 rounded
-                       {version.isCurrent ? 'bg-[var(--color-accent-primary)]/10' : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                       {version.isCurrent
+                  ? 'bg-[var(--color-accent-primary)]/10'
+                  : 'hover:bg-[var(--color-bg-tertiary)]'}"
                 onclick={() => onVersionSelect?.(version.version)}
               >
                 <!-- Timeline Dot -->
                 <div
                   class="absolute left-0.5 top-3 w-3 h-3 rounded-full border-2 border-[var(--color-border-primary)]
-                         {version.isCurrent ? 'bg-[var(--color-accent-primary)]' : 'bg-[var(--color-bg-secondary)]'}"
+                         {version.isCurrent
+                    ? 'bg-[var(--color-accent-primary)]'
+                    : 'bg-[var(--color-bg-secondary)]'}"
                 ></div>
 
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="font-mono text-sm">v{version.version}</span>
                     {#if version.isCurrent}
-                      <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-primary)]">
+                      <span
+                        class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-text)]"
+                      >
                         Current
                       </span>
                     {/if}
@@ -173,30 +185,24 @@
           </div>
         </div>
       {:else}
-        <p class="text-sm text-[var(--color-text-tertiary)] italic">
-          No version history
-        </p>
+        <p class="text-sm text-[var(--color-text-tertiary)] italic">No version history</p>
       {/if}
     </div>
 
     <!-- Linked Items -->
     {#if spec.requirementId || spec.bornFromConversationId}
       <div class="panel-section p-3 border-t border-[var(--color-border-primary)]">
-        <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+        <h3
+          class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+        >
           Linked Items
         </h3>
         <div class="space-y-2">
           {#if spec.requirementId}
-            <LinkedEntityCard
-              icon="file-text"
-              label="Linked Requirement"
-            />
+            <LinkedEntityCard icon="file-text" label="Linked Requirement" />
           {/if}
           {#if spec.bornFromConversationId}
-            <LinkedEntityCard
-              icon="message-circle"
-              label="Source Conversation"
-            />
+            <LinkedEntityCard icon="message-circle" label="Source Conversation" />
           {/if}
         </div>
       </div>
@@ -205,7 +211,11 @@
     <!-- Empty State -->
     <div class="flex-1 flex items-center justify-center p-4">
       <div class="text-center">
-        <Icon name="file-code" size="lg" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70" />
+        <Icon
+          name="file-code"
+          size="lg"
+          class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70"
+        />
         <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a spec</p>
         <p class="text-xs text-[var(--color-text-secondary)] mt-1">
           Choose a spec to view details.

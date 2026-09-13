@@ -6,21 +6,8 @@
    */
   import { SearchInput, SearchResults } from '../sections';
   import { AdvancedSearchModal } from '../idioms';
-  import SearchService from '../../services/SearchService';
-  import {
-    searchQueryStore,
-    setSearchText,
-    setSearchPage,
-    addRecentSearch,
-    getSearchQuery,
-  } from '../../stores/searchQuery.store';
-  import {
-    searchResultsStore,
-    setSearchResults,
-    appendSearchResults,
-    setSearchLoading,
-    setSearchError,
-  } from '../../stores/searchResults.store';
+  import { createSearchService } from '../../services/SearchService';
+  import { addRecentSearch, getSearchQuery } from '../../stores/searchQuery.store';
   import type { SearchResult, SearchResultItem, AdvancedSearchOptions } from '../../types';
   import {
     toast,
@@ -28,49 +15,45 @@
     navigateToRequirement,
     navigateToConversation,
     navigateToGlossary,
+    getAuthState,
   } from '@sddp/shell';
+
+  interface Props {
+    tenantId?: string;
+    projectId?: string;
+  }
+
+  let { tenantId: propTenantId = '', projectId }: Props = $props();
+  const tenantId = $derived(propTenantId || getAuthState().user?.tenantId || '');
 
   let showAdvancedModal = $state(false);
   let results = $state<SearchResult | null>(null);
   let loading = $state(false);
-  let queryText = $state('');
+  let queryText = $state(getSearchQuery().text);
   let currentPage = $state(1);
   let hasMore = $state(false);
   let loadingMore = $state(false);
-
-  $effect(() => {
-    const unsubscribe = searchResultsStore.subscribe((state) => {
-      results = state.results;
-      loading = state.loading;
-      if (state.results) {
-        hasMore = state.results.results.length < state.results.total;
-      } else {
-        hasMore = false;
-      }
-    });
-    return unsubscribe;
-  });
-
-  $effect(() => {
-    const unsubscribe = searchQueryStore.subscribe((state) => {
-      queryText = state.query.text;
-      currentPage = state.query.page;
-    });
-    return unsubscribe;
-  });
+  let latestRequestId = 0;
 
   async function handleSearch(text: string) {
-    setSearchText(text);
+    queryText = text;
+    currentPage = 1;
     if (!text.trim()) return;
     addRecentSearch(text);
+    const requestId = ++latestRequestId;
     try {
-      setSearchLoading(true);
-      const query = getSearchQuery();
-      const result = await SearchService.search(query);
-      setSearchResults(result);
+      loading = true;
+      const query = { ...getSearchQuery(), text, page: 1 };
+      const result = await createSearchService(tenantId, projectId).search(query);
+      if (requestId !== latestRequestId) return;
+      results = result;
+      hasMore = result.results.length < result.total;
     } catch (error) {
+      if (requestId !== latestRequestId) return;
       console.error('Search failed:', error);
-      setSearchError('Search failed. Please try again.');
+      toast.error('Search failed. Please try again.');
+    } finally {
+      if (requestId === latestRequestId) loading = false;
     }
   }
 
@@ -79,33 +62,48 @@
     if (options.allWords) parts.push(options.allWords.split(' ').join(' AND '));
     if (options.exactPhrase) parts.push(`"${options.exactPhrase}"`);
     if (options.anyWords) parts.push(`(${options.anyWords.split(' ').join(' OR ')})`);
-    if (options.noneWords) parts.push(options.noneWords.split(' ').map((w) => `NOT ${w}`).join(' '));
+    if (options.noneWords)
+      parts.push(
+        options.noneWords
+          .split(' ')
+          .map((w) => `NOT ${w}`)
+          .join(' ')
+      );
     handleSearch(parts.join(' '));
   }
 
   function handleResultClick(item: SearchResultItem) {
     switch (item.type) {
-      case 'spec': navigateToSpec(item.id); break;
-      case 'requirement': navigateToRequirement(item.id); break;
-      case 'conversation': navigateToConversation(item.id); break;
-      case 'glossary': navigateToGlossary(item.id); break;
-      default: toast.info(`Opening ${item.type}: ${item.title}`);
+      case 'spec':
+        navigateToSpec(item.id);
+        break;
+      case 'requirement':
+        navigateToRequirement(item.id);
+        break;
+      case 'conversation':
+        navigateToConversation(item.id);
+        break;
+      case 'glossary':
+        navigateToGlossary(item.id);
+        break;
+      default:
+        toast.info(`Opening ${item.type}: ${item.title}`);
     }
   }
 
   async function handleLoadMore() {
     if (loading || loadingMore || !hasMore) return;
     const nextPage = currentPage + 1;
-    setSearchPage(nextPage);
     loadingMore = true;
     try {
-      const query = getSearchQuery();
-      const result = await SearchService.search(query);
-      appendSearchResults(result);
+      const query = { ...getSearchQuery(), text: queryText, page: nextPage };
+      const result = await createSearchService(tenantId, projectId).search(query);
+      results = results ? { ...result, results: [...results.results, ...result.results] } : result;
+      currentPage = nextPage;
+      hasMore = results.results.length < results.total;
     } catch (error) {
       console.error('Load more failed:', error);
-      setSearchError('Failed to load more results.');
-      setSearchPage(currentPage);
+      toast.error('Failed to load more results.');
     } finally {
       loadingMore = false;
     }

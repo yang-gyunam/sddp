@@ -30,7 +30,17 @@
     onDeactivated: (userId: string) => void;
   }
 
-  let { mode, member, memberCount, existingMemberIds, onClose, onInvited, onRoleChanged, onRemoved, onDeactivated }: Props = $props();
+  let {
+    mode,
+    member,
+    memberCount,
+    existingMemberIds,
+    onClose,
+    onInvited,
+    onRoleChanged,
+    onRemoved,
+    onDeactivated,
+  }: Props = $props();
 
   let loading = $state(false);
   let errors = $state<Record<string, string>>({});
@@ -134,7 +144,8 @@
 
   function handleRemove() {
     if (!member) return;
-    if (!confirm(`Remove ${member.displayName} from the project? This action cannot be undone.`)) return;
+    if (!confirm(`Remove ${member.displayName} from the project? This action cannot be undone.`))
+      return;
     onRemoved(member.userId);
   }
 
@@ -148,13 +159,25 @@
   {#if mode === 'view' && member}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="user" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="user" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Member Details</span>
       {#snippet actions()}
         {#if !isSystemRole(member.role)}
-          <IconButton icon="lock" variant="warn" onclick={handleDeactivate} disabled={loading} title="Deactivate member" />
-          <IconButton icon="trash" variant="danger" onclick={handleRemove} disabled={loading} title="Remove member" />
+          <IconButton
+            icon="lock"
+            variant="warn"
+            onclick={handleDeactivate}
+            disabled={loading}
+            title="Deactivate member"
+          />
+          <IconButton
+            icon="trash"
+            variant="danger"
+            onclick={handleRemove}
+            disabled={loading}
+            title="Remove member"
+          />
         {/if}
         <IconButton icon="x" onclick={onClose} title="Close" />
       {/snippet}
@@ -162,11 +185,17 @@
   {:else if mode === 'invite'}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="person-add" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="person-add" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Add Member</span>
       {#snippet actions()}
-        <IconButton icon="check" variant="success" onclick={handleInvite} disabled={loading || isAtLimit || !inviteForm.userId} title="Add member" />
+        <IconButton
+          icon="check"
+          variant="success"
+          onclick={handleInvite}
+          disabled={loading || isAtLimit || !inviteForm.userId}
+          title="Add member"
+        />
         <IconButton icon="x" onclick={onClose} title="Cancel" />
       {/snippet}
     </DetailHeader>
@@ -187,10 +216,17 @@
           <!-- Selected User -->
           <div class="selected-user">
             <div class="selected-user-info">
-              <Icon name="user" size="sm" class="text-[var(--color-accent-primary)]" />
-              <span class="text-sm font-medium text-[var(--color-text-primary)]">{inviteForm.userName}</span>
+              <Icon name="user" size="sm" class="text-[var(--color-accent-text)]" />
+              <span class="text-sm font-medium text-[var(--color-text-primary)]"
+                >{inviteForm.userName}</span
+              >
             </div>
-            <IconButton icon="x" variant="ghost" onclick={clearSelectedUser} title="Clear selection" />
+            <IconButton
+              icon="x"
+              variant="ghost"
+              onclick={clearSelectedUser}
+              title="Clear selection"
+            />
           </div>
         {:else}
           <!-- User Search -->
@@ -222,14 +258,20 @@
                 {/each}
               </div>
             {:else if userSearchQuery.length >= 2}
-              <div class="text-xs text-[var(--color-text-tertiary)] mt-2 text-center">No users found</div>
+              <div class="text-xs text-[var(--color-text-tertiary)] mt-2 text-center">
+                No users found
+              </div>
             {/if}
           </div>
         {/if}
 
-        <Select label="Role" bind:value={inviteForm.role} disabled={loading || isAtLimit} options={roleSelectOptions} />
+        <Select
+          label="Role"
+          bind:value={inviteForm.role}
+          disabled={loading || isAtLimit}
+          options={roleSelectOptions}
+        />
       </div>
-
     {:else if mode === 'view' && member}
       <!-- View Mode -->
       <div class="member-header">
@@ -241,7 +283,9 @@
             <span class="status-text">{member.isOnline ? 'Online' : 'Offline'}</span>
           </div>
         </div>
-        <span class="role-badge" class:system={isSystemRole(member.role)}>{getRoleLabel(member.role)}</span>
+        <span class="role-badge" class:system={isSystemRole(member.role)}
+          >{getRoleLabel(member.role)}</span
+        >
       </div>
 
       <div class="detail-grid">
@@ -255,7 +299,7 @@
         </div>
       </div>
 
-      <!-- Role Change (system roles like Admin cannot be reassigned) -->
+      <!-- Role Change (system roles cannot be reassigned — see isSystemRole) -->
       {#if !isSystemRole(member.role)}
         <div class="role-section">
           <h4 class="section-title">Change Role</h4>

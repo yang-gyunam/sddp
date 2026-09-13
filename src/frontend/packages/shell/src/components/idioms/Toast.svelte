@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon, Button } from '@sddp/ui';
-  import { toastStore, type ToastType, type ToastAction } from '../../stores/toast.store';
+  import type { ToastType, ToastAction } from '../../stores/toast.store';
 
   interface Props {
     id: string;
@@ -10,6 +10,7 @@
     duration?: number;
     closable?: boolean;
     actions?: ToastAction[];
+    onContentClick?: () => void;
     onclose?: (id: string) => void;
   }
 
@@ -21,13 +22,13 @@
     duration = 0,
     closable = true,
     actions = [],
+    onContentClick,
     onclose,
   }: Props = $props();
 
   let visible = $state(true);
   let timerId: ReturnType<typeof setTimeout> | null = null;
   let actionInProgress = $state<number | null>(null);
-  let contentClick = $state<(() => void) | undefined>(undefined);
 
   const typeConfig: Record<ToastType, { icon: string; iconColor: string; barColor: string }> = {
     info: {
@@ -84,16 +85,9 @@
   }
 
   function handleContentClick() {
-    contentClick?.();
+    onContentClick?.();
     close();
   }
-
-  $effect(() => {
-    const unsubscribe = toastStore.subscribe((state) => {
-      contentClick = state.toasts.find((toast) => toast.id === id)?.onContentClick;
-    });
-    return unsubscribe;
-  });
 
   $effect(() => {
     if (duration > 0) {
@@ -105,11 +99,28 @@
   });
 </script>
 
+{#snippet messageContent()}
+  {#if title}
+    <p class="text-[13px] font-semibold text-[var(--color-text-primary)] leading-tight">
+      {title}
+    </p>
+    <p class="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed line-clamp-3">
+      {message}
+    </p>
+  {:else}
+    <p class="text-[13px] text-[var(--color-text-primary)] leading-tight line-clamp-2">
+      {message}
+    </p>
+  {/if}
+{/snippet}
+
 {#if visible}
   <div
     class="flex overflow-hidden rounded-lg border border-[var(--color-border)]
       shadow-lg bg-[var(--color-bg-secondary)]
-      transition-all duration-200 {visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}"
+      transition-all duration-200 {visible
+      ? 'opacity-100 translate-y-0'
+      : 'opacity-0 -translate-y-1'}"
     role="alert"
     aria-live="polite"
   >
@@ -118,18 +129,17 @@
 
     <div class="flex items-start gap-2.5 px-3 py-2.5 flex-1 min-w-0">
       <Icon name={config.icon} size="sm" class="flex-shrink-0 mt-0.5 {config.iconColor}" />
-      <div
-        class="flex-1 min-w-0 {contentClick ? 'cursor-pointer' : ''}"
-        onclick={() => { if (contentClick) { handleContentClick(); } }}
-        onkeydown={(e) => { if (contentClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleContentClick(); } }}
-        role={contentClick ? 'button' : undefined}
-        tabindex={contentClick ? 0 : undefined}
-      >
-        {#if title}
-          <p class="text-[13px] font-semibold text-[var(--color-text-primary)] leading-tight">{title}</p>
-          <p class="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed line-clamp-3">{message}</p>
+      <div class="flex-1 min-w-0">
+        {#if onContentClick}
+          <Button
+            variant="unstyled"
+            class="block w-full min-w-0 text-left cursor-pointer"
+            onclick={handleContentClick}
+          >
+            {@render messageContent()}
+          </Button>
         {:else}
-          <p class="text-[13px] text-[var(--color-text-primary)] leading-tight line-clamp-2">{message}</p>
+          <div>{@render messageContent()}</div>
         {/if}
         {#if actions.length > 0}
           <div class="mt-2.5 flex items-center gap-2">

@@ -1,8 +1,10 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
+using Sddp.Api.Services;
 using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Extensions;
@@ -19,75 +21,68 @@ public static class AuthorizationExtensions
     {
         services.AddAuthorization(options =>
         {
-            options.AddPolicy("RequireAdmin", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User, RoleType.Admin)));
+            AddScopedRolePolicy(options, "RequireAdmin", RoleType.Admin);
+            AddScopedRolePolicy(options, "RequireProductOwner", RoleType.ProductOwner, RoleType.Admin);
+            AddScopedRolePolicy(
+                options, "RequireDeveloper", RoleType.Developer, RoleType.ProductOwner, RoleType.Admin);
+            AddScopedRolePolicy(
+                options, "RequireReviewer", RoleType.Reviewer, RoleType.ProductOwner, RoleType.Admin);
 
-            options.AddPolicy("RequireProductOwner", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User, RoleType.ProductOwner, RoleType.Admin)));
-
-            options.AddPolicy("RequireDeveloper", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User, RoleType.Developer, RoleType.ProductOwner, RoleType.Admin)));
-
-            options.AddPolicy("RequireReviewer", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User, RoleType.Reviewer, RoleType.ProductOwner, RoleType.Admin)));
-
-            options.AddPolicy("CanCreateSpec", policy =>
-                policy.RequireClaim("permission", "spec:create"));
-
-            options.AddPolicy("CanApproveSpec", policy =>
-                policy.RequireClaim("permission", "spec:approve"));
-
-            options.AddPolicy("CanManageUsers", policy =>
-                policy.RequireClaim("permission", "user:manage"));
-
-            options.AddPolicy("CanAssignRoles", policy =>
-                policy.RequireClaim("permission", "role:assign"));
-
-            options.AddPolicy("CanExecuteGeneration", policy =>
-                policy.RequireClaim("permission", "generation:execute"));
-
-            options.AddPolicy("CanReadAuditLogs", policy =>
-                policy.RequireClaim("permission", "audit:read"));
-
-            options.AddPolicy("CanCreateConversation", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User,
-                        RoleType.ProductOwner,
-                        RoleType.DomainExpert,
-                        RoleType.Developer,
-                        RoleType.Admin)));
-
-            options.AddPolicy("CanCloseConversation", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User, RoleType.ProductOwner, RoleType.Admin)));
-
-            options.AddPolicy("CanTriggerAnalysis", policy =>
-                policy.RequireAssertion(context =>
-                    HasAnyRole(context.User,
-                        RoleType.ProductOwner,
-                        RoleType.Developer,
-                        RoleType.Reviewer,
-                        RoleType.Admin)));
+            AddScopedPermissionPolicy(options, "CanCreateSpec", PermissionCodes.SpecCreate);
+            AddScopedPermissionPolicy(options, "CanApproveSpec", PermissionCodes.SpecApprove);
+            AddScopedPermissionPolicy(options, "CanManageUsers", PermissionCodes.UserManage);
+            AddScopedPermissionPolicy(options, "CanAssignRoles", PermissionCodes.RoleAssign);
+            AddScopedPermissionPolicy(options, "CanExecuteGeneration", PermissionCodes.GenerationExecute);
+            AddScopedPermissionPolicy(options, "CanReadAuditLogs", PermissionCodes.AuditRead);
+            AddScopedPermissionPolicy(options, "CanCreateConversation", PermissionCodes.ConversationCreate);
+            AddScopedPermissionPolicy(options, "CanCloseConversation", PermissionCodes.ConversationClose);
+            AddScopedPermissionPolicy(options, "CanTriggerAnalysis", PermissionCodes.GenerationExecute);
 
             options.AddPolicy("CanManageProjectMembers", policy =>
-                policy.Requirements.Add(new ProjectOwnerRequirement()));
+            {
+                policy.RequireAuthenticatedUser();
+                policy.Requirements.Add(new ProjectOwnerRequirement());
+            });
+
+            foreach (var permissionCode in PermissionCodes.All)
+            {
+                options.AddPolicy(PermissionPolicyNames.For(permissionCode), policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.Requirements.Add(new ScopedPermissionRequirement(permissionCode));
+                });
+            }
         });
 
+        services.AddScoped<IScopedAuthorizationService, ScopedAuthorizationService>();
+        services.AddScoped<IAuthorizationHandler, ScopedPermissionHandler>();
+        services.AddScoped<IAuthorizationHandler, ScopedRoleHandler>();
         services.AddScoped<IAuthorizationHandler, ProjectOwnerHandler>();
         return services;
     }
 
-    /// <summary>
-    /// Checks whether the user has any of the specified roles.
-    /// </summary>
-    private static bool HasAnyRole(ClaimsPrincipal user, params RoleType[] roles)
+    private static void AddScopedRolePolicy(
+        AuthorizationOptions options,
+        string policyName,
+        params RoleType[] roleTypes)
     {
-        var userRoles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet();
-        return roles.Any(role => userRoles.Contains(role.ToString()));
+        options.AddPolicy(policyName, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.Requirements.Add(new ScopedRoleRequirement(roleTypes));
+        });
+    }
+
+    private static void AddScopedPermissionPolicy(
+        AuthorizationOptions options,
+        string policyName,
+        string permissionCode)
+    {
+        options.AddPolicy(policyName, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.Requirements.Add(new ScopedPermissionRequirement(permissionCode));
+        });
     }
 }
 
@@ -103,26 +98,29 @@ public class ProjectOwnerRequirement : IAuthorizationRequirement
 /// </summary>
 public class ProjectOwnerHandler : AuthorizationHandler<ProjectOwnerRequirement>
 {
+    private static readonly RoleType[] AdminRoles = [RoleType.Admin];
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IScopedAuthorizationService _authorizationService;
+    private readonly ITenantContext _tenantContext;
 
-    public ProjectOwnerHandler(IHttpContextAccessor httpContextAccessor, IUnitOfWork unitOfWork)
+    public ProjectOwnerHandler(
+        IHttpContextAccessor httpContextAccessor,
+        IUnitOfWork unitOfWork,
+        IScopedAuthorizationService authorizationService,
+        ITenantContext tenantContext)
     {
         _httpContextAccessor = httpContextAccessor;
         _unitOfWork = unitOfWork;
+        _authorizationService = authorizationService;
+        _tenantContext = tenantContext;
     }
 
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         ProjectOwnerRequirement requirement)
     {
-        var userRoles = context.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet();
-        if (userRoles.Contains(RoleType.Admin.ToString()))
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
         var httpContext = _httpContextAccessor.HttpContext;
         var routeProjectId = httpContext?.GetRouteValue("id")?.ToString();
         if (string.IsNullOrEmpty(routeProjectId) || !GlobalUniqueId.TryParse(routeProjectId, out var projectId))
@@ -131,18 +129,34 @@ public class ProjectOwnerHandler : AuthorizationHandler<ProjectOwnerRequirement>
             return;
         }
 
-        var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !GlobalUniqueId.TryParse(userIdClaim, out var userId))
+        if (!_tenantContext.UserId.HasValue || !_tenantContext.TenantId.HasValue)
         {
             context.Fail(new AuthorizationFailureReason(this, "User identity not found"));
             return;
         }
 
+        var cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
+        var isAdmin = await _authorizationService.HasAnyRoleAsync(
+            _tenantContext.UserId.Value,
+            _tenantContext.TenantId.Value,
+            projectId,
+            AdminRoles,
+            cancellationToken);
+        if (isAdmin)
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         var projectRepo = _unitOfWork.Repository<Project>();
-        var projects = await projectRepo.FindAsync(p => p.Id == projectId);
+        var projects = await projectRepo.FindAsync(
+            p => p.Id == projectId && p.TenantId == _tenantContext.TenantId.Value,
+            cancellationToken);
         var project = projects.FirstOrDefault();
 
-        if (project is not null && project.OwnerId.HasValue && project.OwnerId.Value == userId)
+        if (project is not null
+            && project.OwnerId.HasValue
+            && project.OwnerId.Value == _tenantContext.UserId.Value)
         {
             context.Succeed(requirement);
             return;

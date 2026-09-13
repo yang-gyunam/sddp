@@ -6,19 +6,7 @@
   import RequirementList from './RequirementList.svelte';
   import RequirementDetailView from './RequirementDetailView.svelte';
   import RequirementForm from '../idioms/RequirementForm.svelte';
-  import {
-    subscribeRequirement,
-    setRequirementsPage,
-    setRequirementsLoading,
-    setCurrentRequirement,
-    setCurrentRequirementLoading,
-    setLevelFilter,
-    setStatusFilter,
-    clearCurrentRequirement,
-    updateRequirementInList,
-    addRequirement,
-    setPage,
-  } from '../../stores';
+  import { createRequirementStoreScope } from '../../stores';
   import type {
     Requirement,
     RequirementState,
@@ -28,10 +16,10 @@
     UpdateRequirementRequest,
     RequirementDetail,
   } from '../../types';
-  import { getRequirementService } from '../../services';
+  import { createRequirementService } from '../../services';
   import type { ComboboxOption } from '@sddp/ui';
   import { getProjectById } from '../../../projects/services/ProjectService';
-  import { getConversationService } from '../../../conversations/services/ConversationService';
+  import { createConversationService } from '../../../conversations/services/ConversationService';
 
   interface Props {
     tenantId: string;
@@ -42,8 +30,21 @@
 
   let { tenantId, projectId, tabId = '', class: className = '' }: Props = $props();
 
-  // State from store
+  // State and service are owned by this tab instance.
   let storeState: RequirementState | null = $state(null);
+  const storeScope = createRequirementStoreScope();
+  const {
+    setRequirementsPage,
+    setRequirementsLoading,
+    setCurrentRequirement,
+    setCurrentRequirementLoading,
+    setLevelFilter,
+    setStatusFilter,
+    clearCurrentRequirement,
+    updateRequirementInList,
+    addRequirement,
+    setPage,
+  } = storeScope;
   let memberCandidates = $state<ComboboxOption[]>([]);
 
   // Form states (inline instead of modal)
@@ -56,8 +57,7 @@
   let parentSearchLoading = $state(false);
   let parentSearchTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // Get service
-  const requirementService = getRequirementService();
+  const requirementService = $derived(createRequirementService(tenantId, projectId));
 
   // Tab state persistence
   interface RequirementPanelTabState {
@@ -89,9 +89,7 @@
 
   // Subscribe to requirement state
   $effect(() => {
-    requirementService.setContext(tenantId, projectId);
-
-    const unsubscribe = subscribeRequirement((newState: RequirementState) => {
+    const unsubscribe = storeScope.subscribe((newState: RequirementState) => {
       storeState = newState;
     });
 
@@ -99,15 +97,19 @@
     untrack(() => loadRequirements());
 
     // Load project members for owner selection
-    untrack(() => getProjectById(tenantId, projectId)
-      .then((proj) => {
-        memberCandidates = (proj.members ?? []).map((m) => ({
-          value: m.userId,
-          label: m.displayName,
-          description: m.role,
-        }));
-      })
-      .catch(() => { /* member list is optional */ }));
+    untrack(() =>
+      getProjectById(tenantId, projectId)
+        .then((proj) => {
+          memberCandidates = (proj.members ?? []).map((m) => ({
+            value: m.userId,
+            label: m.displayName,
+            description: m.role,
+          }));
+        })
+        .catch(() => {
+          /* member list is optional */
+        })
+    );
 
     return () => {
       unsubscribe();
@@ -121,9 +123,7 @@
 
       // Only reload if filters or page actually changed
       const filtersChanged =
-        levelFilter !== prevLevelFilter ||
-        statusFilter !== prevStatusFilter ||
-        page !== prevPage;
+        levelFilter !== prevLevelFilter || statusFilter !== prevStatusFilter || page !== prevPage;
 
       if (filtersChanged && storeState.requirements.length > 0) {
         prevLevelFilter = levelFilter;
@@ -193,7 +193,9 @@
     }
   }
 
-  async function handleCreate(data: CreateRequirementRequest | UpdateRequirementRequest): Promise<void> {
+  async function handleCreate(
+    data: CreateRequirementRequest | UpdateRequirementRequest
+  ): Promise<void> {
     formLoading = true;
     try {
       const { conversationId: convId, ...createData } = data as CreateRequirementRequest;
@@ -204,9 +206,7 @@
         await requirementService.linkConversation(detail.id, { conversationId: convId });
       }
 
-      const fullDetail = convId
-        ? await requirementService.getRequirementById(detail.id)
-        : detail;
+      const fullDetail = convId ? await requirementService.getRequirementById(detail.id) : detail;
 
       // Add to list
       addRequirement({
@@ -236,21 +236,22 @@
     }
   }
 
-  async function handleUpdate(data: CreateRequirementRequest | UpdateRequirementRequest): Promise<void> {
+  async function handleUpdate(
+    data: CreateRequirementRequest | UpdateRequirementRequest
+  ): Promise<void> {
     if (!storeState?.currentRequirement) return;
 
     formLoading = true;
     try {
       const { conversationId: newConvId, ...updateData } = data as UpdateRequirementRequest;
-      await requirementService.updateRequirement(
-        storeState.currentRequirement.id,
-        updateData
-      );
+      await requirementService.updateRequirement(storeState.currentRequirement.id, updateData);
 
       // Handle conversation link/unlink
       const oldConvId = storeState.currentRequirement.conversationId;
       if (newConvId && newConvId !== oldConvId) {
-        await requirementService.linkConversation(storeState.currentRequirement.id, { conversationId: newConvId });
+        await requirementService.linkConversation(storeState.currentRequirement.id, {
+          conversationId: newConvId,
+        });
       } else if (!newConvId && oldConvId) {
         await requirementService.unlinkConversation(storeState.currentRequirement.id);
       }
@@ -277,10 +278,9 @@
     if (!storeState?.currentRequirement) return;
 
     try {
-      const updated = await requirementService.transitionStatus(
-        storeState.currentRequirement.id,
-        { newStatus }
-      );
+      const updated = await requirementService.transitionStatus(storeState.currentRequirement.id, {
+        newStatus,
+      });
       // Update in list
       updateRequirementInList(updated.id, { status: updated.status });
       // Reload detail
@@ -297,21 +297,25 @@
     // Pre-populate conversation option so Combobox shows current name
     if (current?.conversationId && current?.conversationName) {
       const prefix = current.conversationType === 'Channel' ? '#' : '';
-      conversationCandidates = [{
-        value: current.conversationId,
-        label: `${prefix}${current.conversationName}`,
-        description: current.conversationDescription ?? current.conversationType ?? undefined,
-      }];
+      conversationCandidates = [
+        {
+          value: current.conversationId,
+          label: `${prefix}${current.conversationName}`,
+          description: current.conversationDescription ?? current.conversationType ?? undefined,
+        },
+      ];
     } else {
       conversationCandidates = [];
     }
     // Pre-populate parent option so Combobox shows current parent
     if (current?.parentId && (current?.parentTitle || current?.parentCode)) {
-      parentCandidates = [{
-        value: current.parentId,
-        label: `${current.parentCode ?? ''}  ${current.parentTitle ?? ''}`.trim(),
-        description: current.parentLevel ? `Level ${current.parentLevel}` : undefined,
-      }];
+      parentCandidates = [
+        {
+          value: current.parentId,
+          label: `${current.parentCode ?? ''}  ${current.parentTitle ?? ''}`.trim(),
+          description: current.parentLevel ? `Level ${current.parentLevel}` : undefined,
+        },
+      ];
     } else {
       parentCandidates = [];
     }
@@ -349,8 +353,7 @@
     conversationSearchTimer = setTimeout(async () => {
       conversationSearchLoading = true;
       try {
-        const svc = getConversationService();
-        svc.setContext(tenantId, projectId);
+        const svc = createConversationService(tenantId, projectId);
         const results = await svc.searchConversations(query, 15);
         conversationCandidates = results.map((c) => ({
           value: c.id,
@@ -390,7 +393,9 @@
 
 <div class="flex h-full bg-[var(--color-surface-100)] {className}">
   <!-- Requirement List (Left sidebar) -->
-  <div class="w-80 flex-shrink-0 border-r border-[var(--color-border-primary)] bg-[var(--color-surface-50)]">
+  <div
+    class="w-80 flex-shrink-0 border-r border-[var(--color-border-primary)] bg-[var(--color-surface-50)]"
+  >
     <RequirementList
       requirements={storeState?.requirements || []}
       selectedId={storeState?.currentRequirement?.id}
@@ -405,7 +410,9 @@
 
     <!-- Pagination -->
     {#if storeState && storeState.totalPages > 1}
-      <div class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border-secondary)]">
+      <div
+        class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border-secondary)]"
+      >
         <span class="text-xs text-[var(--color-text-muted)]">
           Page {storeState.page} of {storeState.totalPages}
         </span>
@@ -436,14 +443,33 @@
     {#if formMode === 'create'}
       <!-- Inline Create Form -->
       <div class="flex-1 flex flex-col min-w-0">
-        <div class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]">
+        <div
+          class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]"
+        >
           <div class="flex items-center gap-2">
             <Icon name="clipboard-list" size="sm" class="text-[var(--color-text-tertiary)]" />
-            <span class="text-sm font-medium text-[var(--color-text-primary)]">New Requirement</span>
+            <span class="text-sm font-medium text-[var(--color-text-primary)]">New Requirement</span
+            >
           </div>
           <div class="flex items-center gap-1">
-            <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('requirement-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-            <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={() => (formMode = null)} />
+            <IconButton
+              icon="check"
+              variant="success"
+              size="sm"
+              title="Create"
+              onclick={() =>
+                (
+                  document.getElementById('requirement-form') as HTMLFormElement | null
+                )?.requestSubmit()}
+              disabled={formLoading}
+            />
+            <IconButton
+              icon="x"
+              variant="ghost"
+              size="sm"
+              title="Cancel"
+              onclick={() => (formMode = null)}
+            />
           </div>
         </div>
         <div class="flex-1 overflow-y-auto p-4">
@@ -461,14 +487,34 @@
     {:else if formMode === 'edit' && storeState?.currentRequirement}
       <!-- Inline Edit Form -->
       <div class="flex-1 flex flex-col min-w-0">
-        <div class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]">
+        <div
+          class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]"
+        >
           <div class="flex items-center gap-2">
             <Icon name="clipboard-list" size="sm" class="text-[var(--color-text-tertiary)]" />
-            <span class="text-sm font-medium text-[var(--color-text-primary)]">Edit Requirement</span>
+            <span class="text-sm font-medium text-[var(--color-text-primary)]"
+              >Edit Requirement</span
+            >
           </div>
           <div class="flex items-center gap-1">
-            <IconButton icon="check" variant="success" size="sm" title="Save" onclick={() => (document.getElementById('requirement-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-            <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={() => (formMode = null)} />
+            <IconButton
+              icon="check"
+              variant="success"
+              size="sm"
+              title="Save"
+              onclick={() =>
+                (
+                  document.getElementById('requirement-form') as HTMLFormElement | null
+                )?.requestSubmit()}
+              disabled={formLoading}
+            />
+            <IconButton
+              icon="x"
+              variant="ghost"
+              size="sm"
+              title="Cancel"
+              onclick={() => (formMode = null)}
+            />
           </div>
         </div>
         <div class="flex-1 overflow-y-auto p-4">
@@ -510,7 +556,11 @@
       <!-- Empty state -->
       <div class="flex-1 flex items-center justify-center">
         <div class="text-center">
-          <Icon name="file-text" size="xl" class="mx-auto mb-4 text-[var(--color-text-muted)] opacity-50" />
+          <Icon
+            name="file-text"
+            size="xl"
+            class="mx-auto mb-4 text-[var(--color-text-muted)] opacity-50"
+          />
           <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a requirement</p>
           <p class="text-xs text-[var(--color-text-secondary)] mt-1">
             Choose a requirement from the sidebar to view details.
@@ -524,4 +574,3 @@
     {/if}
   </div>
 </div>
-

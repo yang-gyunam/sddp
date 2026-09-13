@@ -5,20 +5,12 @@
 
 import { createStore, type Store } from '@sddp/shell/core';
 import { clamp } from '@sddp/shell/utils';
-import type {
-  TraceGraphState,
-  TraceGraphConfig,
-  PrimaryFlowNode,
-} from '../types';
-import {
-  INITIAL_TRACE_GRAPH_STATE,
-  DEFAULT_TRACE_GRAPH_CONFIG,
-} from '../types';
+import type { TraceGraphState, TraceGraphConfig, PrimaryFlowNode } from '../types';
+import { INITIAL_TRACE_GRAPH_STATE, DEFAULT_TRACE_GRAPH_CONFIG } from '../types';
 
 // Create the store
-const traceGraphStore: Store<TraceGraphState> = createStore<TraceGraphState>(
-  INITIAL_TRACE_GRAPH_STATE
-);
+const traceGraphStore: Store<TraceGraphState> =
+  createStore<TraceGraphState>(INITIAL_TRACE_GRAPH_STATE);
 
 // ============================================
 // Configuration Actions

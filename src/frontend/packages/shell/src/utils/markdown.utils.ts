@@ -15,6 +15,15 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function renderSafeLink(_match: string, label: string, rawUrl: string): string {
+  const url = rawUrl.trim();
+  if (!/^(?:https?:\/\/|mailto:)/i.test(url)) {
+    return label;
+  }
+
+  return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="md-link">${label}</a>`;
+}
+
 /**
  * Convert a markdown string to sanitised HTML.
  *
@@ -37,7 +46,7 @@ export function renderMarkdown(text: string): string {
     const idx = codeBlocks.length;
     const langAttr = lang ? ` data-lang="${lang}"` : '';
     codeBlocks.push(
-      `<pre class="md-code-block"${langAttr}><code>${code.replace(/\n$/, '')}</code></pre>`,
+      `<pre class="md-code-block"${langAttr}><code>${code.replace(/\n$/, '')}</code></pre>`
     );
     return `\x00CB${idx}\x00`;
   });
@@ -109,10 +118,7 @@ export function renderMarkdown(text: string): string {
   // Inline code `code`
   html = html.replace(/`(.+?)`/g, '<code class="md-inline-code">$1</code>');
   // Links [text](url)
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="md-link">$1</a>',
-  );
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, renderSafeLink);
 
   // --- 4. Newlines → <br> (skip after block elements) ------------------------
   html = html.replace(/\n/g, '<br>');

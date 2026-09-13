@@ -8,8 +8,27 @@
 
   import { untrack } from 'svelte';
   import { Button, CardGrid, Icon, IconButton } from '@sddp/ui';
-  import { ENTITY_SVG_ICONS, PageShell, PageHeader, PageBody, output, setActiveActivityItem, toast, getTabState, setTabState, formatDateByPreference } from '@sddp/shell';
-  import { ActivityLog, SpecHealthWidget, SignOffQueueWidget, ContributionWidget, ProjectSpotlightWidget, DueDateWidget, EffortTrackerWidget } from '../sections';
+  import {
+    ENTITY_SVG_ICONS,
+    PageShell,
+    PageHeader,
+    PageBody,
+    output,
+    setActiveActivityItem,
+    toast,
+    getTabState,
+    setTabState,
+    formatDateByPreference,
+  } from '@sddp/shell';
+  import {
+    ActivityLog,
+    SpecHealthWidget,
+    SignOffQueueWidget,
+    ContributionWidget,
+    ProjectSpotlightWidget,
+    DueDateWidget,
+    EffortTrackerWidget,
+  } from '../sections';
   import { StatCard } from '../../../shared/components/idioms';
   import { LineChart } from '../idioms';
   import { getDashboardService } from '../../services';
@@ -26,7 +45,13 @@
     markNotificationRead as storeMarkRead,
     markAllNotificationsRead as storeMarkAllRead,
   } from '../../stores/dashboard.store';
-  import type { MyDashboard, MyStatistics, ActivityLogEntry as ActivityLogType, DashboardWidgets, NotificationItem } from '../../types';
+  import type {
+    MyDashboard,
+    MyStatistics,
+    ActivityLogEntry as ActivityLogType,
+    DashboardWidgets,
+    NotificationItem,
+  } from '../../types';
 
   // Navigation handlers for statistics cards (forceOpen to avoid toggle)
   function navigateToTasks() {
@@ -113,17 +138,23 @@
 
   function getNotificationIcon(type: string): string {
     switch (type) {
-      case 'task_assigned': return 'clipboard-list';
-      case 'new_message': return 'message-circle';
-      default: return 'bell';
+      case 'task_assigned':
+        return 'clipboard-list';
+      case 'new_message':
+        return 'message-circle';
+      default:
+        return 'bell';
     }
   }
 
   function getNotificationIconColor(type: string): string {
     switch (type) {
-      case 'task_assigned': return 'var(--color-info-500)';
-      case 'new_message': return 'var(--color-accent-primary)';
-      default: return 'var(--color-text-tertiary)';
+      case 'task_assigned':
+        return 'var(--color-info-500)';
+      case 'new_message':
+        return 'var(--color-accent-primary)';
+      default:
+        return 'var(--color-text-tertiary)';
     }
   }
 
@@ -134,7 +165,7 @@
   }
 
   async function markAsRead(id: string) {
-    const notification = notifications.find(n => n.id === id);
+    const notification = notifications.find((n) => n.id === id);
     if (notification && !notification.isRead) {
       // Optimistic update
       storeMarkRead(id);
@@ -171,9 +202,8 @@
   function handleNotificationClick(notification: NotificationItem) {
     markAsRead(notification.id);
 
-    const dmConversationId = notification.type === 'dm_invite_accepted'
-      ? notification.entityId
-      : null;
+    const dmConversationId =
+      notification.type === 'dm_invite_accepted' ? notification.entityId : null;
     if (dmConversationId && typeof window !== 'undefined') {
       const projectId = parseDmProjectId(notification.entityType);
       window.dispatchEvent(
@@ -241,7 +271,8 @@
           setMyDashboard(fullData);
           // Load Phase 1 widgets (parallel, non-blocking)
           setWidgetsLoading(true);
-          dashboardService.getMyDashboardWidgets()
+          dashboardService
+            .getMyDashboardWidgets()
             .then((w) => setWidgets(w))
             .catch((err) => {
               const msg = err instanceof Error ? err.message : 'Failed to load widgets';
@@ -259,7 +290,8 @@
           // Load widgets if not already loaded from overview
           if (!widgets) {
             setWidgetsLoading(true);
-            dashboardService.getMyDashboardWidgets()
+            dashboardService
+              .getMyDashboardWidgets()
               .then((w) => setWidgets(w))
               .catch((err) => {
                 const msg = err instanceof Error ? err.message : 'Failed to load widgets';
@@ -317,212 +349,227 @@
 </script>
 
 <PageShell>
-  <PageHeader title={sectionTitles[section]} meta={section === 'notifications' && unreadCount > 0 ? `${unreadCount} unread` : undefined} {loading}>
+  <PageHeader
+    title={sectionTitles[section]}
+    meta={section === 'notifications' && unreadCount > 0 ? `${unreadCount} unread` : undefined}
+    {loading}
+  >
     {#snippet actions()}
       {#if section === 'notifications' && unreadCount > 0}
-        <IconButton icon="check" size="sm" variant="ghost" title="Mark all as read" onclick={markAllAsRead} />
+        <IconButton
+          icon="check"
+          size="sm"
+          variant="ghost"
+          title="Mark all as read"
+          onclick={markAllAsRead}
+        />
       {/if}
-      <IconButton icon="refresh-cw" size="sm" variant="ghost" title="Refresh" onclick={handleRefresh} />
+      <IconButton
+        icon="refresh-cw"
+        size="sm"
+        variant="ghost"
+        title="Refresh"
+        onclick={handleRefresh}
+      />
     {/snippet}
   </PageHeader>
   <PageBody>
     {#if loading}
       <div class="loading-state">Loading...</div>
     {:else if section === 'overview'}
-    <!-- Overview Section -->
-    {#if overviewStats || myDashboard}
-      {@const stats = overviewStats || myDashboard?.statistics}
-      <div class="section-content mx-3">
-        <CardGrid cols={4} gap="md">
-          <StatCard
-            title="My Conversations"
-            value={stats?.conversations.total ?? 0}
-            subtitle="{stats?.conversations.active ?? 0} active"
-            icon={ENTITY_SVG_ICONS.conversations}
-            onClick={navigateToConversations}
-          />
-          <StatCard
-            title="My Requirements"
-            value={stats?.requirements.total ?? 0}
-            subtitle="{stats?.requirements.draft ?? 0} draft"
-            icon={ENTITY_SVG_ICONS.requirements}
-            onClick={navigateToRequirements}
-          />
-          <StatCard
-            title="My Specs"
-            value={stats?.specs.total ?? 0}
-            subtitle="{stats?.specs.inReview ?? 0} in review"
-            icon={ENTITY_SVG_ICONS.specs}
-            onClick={navigateToSpecs}
-          />
-          <StatCard
-            title="My Glossary"
-            value={stats?.glossary?.total ?? 0}
-            subtitle="{stats?.glossary?.draft ?? 0} draft"
-            icon={ENTITY_SVG_ICONS.glossary}
-            onClick={() => setActiveActivityItem('projects', true)}
-          />
-          <StatCard
-            title="My Artifacts"
-            value={stats?.artifacts?.total ?? 0}
-            subtitle="{stats?.artifacts?.recent ?? 0} recent"
-            icon={ENTITY_SVG_ICONS.artifacts}
-            onClick={() => setActiveActivityItem('projects', true)}
-          />
-          <StatCard
-            title="My Tasks"
-            value={stats?.tasks.total ?? 0}
-            subtitle="{stats?.tasks.toDo ?? 0} to do"
-            icon={ENTITY_SVG_ICONS.tasks}
-            onClick={navigateToTasks}
-          />
-          <StatCard
-            title="My Effort"
-            value="{stats?.effort.used ?? 0}h"
-            subtitle="{stats?.effort.total ?? 0}h total"
-            icon={ENTITY_SVG_ICONS.effort}
-            onClick={navigateToEffort}
-          />
-        </CardGrid>
-
-        {#if myDashboard}
-          <div class="chart-section">
-            <LineChart data={myDashboard.myActivity} title="My Activity (Last 30 days)" />
-          </div>
-        {/if}
-
-        <!-- Phase 1 Widgets: Overview -->
-        <div class="widgets-section">
-          <h2 class="widgets-section-title">Insights</h2>
-          {#if widgetsLoading}
-            <div class="widgets-loading">Loading widgets...</div>
-          {:else if widgets}
-            <CardGrid cols={2} gap="md">
-              <SpecHealthWidget data={widgets.specHealth} />
-              <SignOffQueueWidget data={widgets.signOffQueue} />
-              <ContributionWidget data={widgets.contributionHeatmap} />
-              <ProjectSpotlightWidget data={widgets.projectSpotlight} />
-            </CardGrid>
-          {/if}
-        </div>
-      </div>
-
-    {:else}
-      <div class="empty-state">No dashboard data available</div>
-    {/if}
-
-  {:else if section === 'my-tasks'}
-    <!-- My Tasks Section -->
-    <div class="section-content mx-3">
+      <!-- Overview Section -->
       {#if overviewStats || myDashboard}
         {@const stats = overviewStats || myDashboard?.statistics}
-        <CardGrid cols={4} gap="md">
-          <StatCard
-            title="Total Tasks"
-            value={stats?.tasks.total ?? 0}
-            subtitle=""
-            icon={ENTITY_SVG_ICONS.tasks}
-                      />
-          <StatCard
-            title="To Do"
-            value={stats?.tasks.toDo ?? 0}
-            subtitle=""
-            icon="circle"
-          />
-          <StatCard
-            title="In Progress"
-            value={stats?.tasks.inProgress ?? 0}
-            subtitle=""
-            icon="loader"
-          />
-          <StatCard
-            title="Done"
-            value={stats?.tasks.done ?? 0}
-            subtitle=""
-            icon="check-circle"
-          />
-        </CardGrid>
+        <div class="section-content mx-3">
+          <CardGrid cols={4} gap="md">
+            <StatCard
+              title="My Conversations"
+              value={stats?.conversations.total ?? 0}
+              subtitle="{stats?.conversations.active ?? 0} active"
+              icon={ENTITY_SVG_ICONS.conversations}
+              onClick={navigateToConversations}
+            />
+            <StatCard
+              title="My Requirements"
+              value={stats?.requirements.total ?? 0}
+              subtitle="{stats?.requirements.draft ?? 0} draft"
+              icon={ENTITY_SVG_ICONS.requirements}
+              onClick={navigateToRequirements}
+            />
+            <StatCard
+              title="My Specs"
+              value={stats?.specs.total ?? 0}
+              subtitle="{stats?.specs.inReview ?? 0} in review"
+              icon={ENTITY_SVG_ICONS.specs}
+              onClick={navigateToSpecs}
+            />
+            <StatCard
+              title="My Glossary"
+              value={stats?.glossary?.total ?? 0}
+              subtitle="{stats?.glossary?.draft ?? 0} draft"
+              icon={ENTITY_SVG_ICONS.glossary}
+              onClick={() => setActiveActivityItem('projects', true)}
+            />
+            <StatCard
+              title="My Artifacts"
+              value={stats?.artifacts?.total ?? 0}
+              subtitle="{stats?.artifacts?.recent ?? 0} recent"
+              icon={ENTITY_SVG_ICONS.artifacts}
+              onClick={() => setActiveActivityItem('projects', true)}
+            />
+            <StatCard
+              title="My Tasks"
+              value={stats?.tasks.total ?? 0}
+              subtitle="{stats?.tasks.toDo ?? 0} to do"
+              icon={ENTITY_SVG_ICONS.tasks}
+              onClick={navigateToTasks}
+            />
+            <StatCard
+              title="My Effort"
+              value="{stats?.effort.used ?? 0}h"
+              subtitle="{stats?.effort.total ?? 0}h total"
+              icon={ENTITY_SVG_ICONS.effort}
+              onClick={navigateToEffort}
+            />
+          </CardGrid>
 
-        <!-- Phase 1 Widgets: My Tasks -->
-        {#if widgetsLoading}
-          <div class="widgets-loading">Loading task widgets...</div>
-        {:else if widgets}
-          <div class="widgets-section">
-            <DueDateWidget data={widgets.dueDateTimeline} />
-          </div>
-          <div class="widgets-section">
-            <EffortTrackerWidget data={widgets.effortTracker} />
-          </div>
-        {/if}
+          {#if myDashboard}
+            <div class="chart-section">
+              <LineChart data={myDashboard.myActivity} title="My Activity (Last 30 days)" />
+            </div>
+          {/if}
 
-        <div class="task-list-section">
-          <h2>Task List</h2>
-          <div class="placeholder-content">
-            <p>Task list will be displayed here.</p>
-            <p class="hint">Click on a task to view details or update status.</p>
+          <!-- Phase 1 Widgets: Overview -->
+          <div class="widgets-section">
+            <h2 class="widgets-section-title">Insights</h2>
+            {#if widgetsLoading}
+              <div class="widgets-loading">Loading widgets...</div>
+            {:else if widgets}
+              <CardGrid cols={2} gap="md">
+                <SpecHealthWidget data={widgets.specHealth} />
+                <SignOffQueueWidget data={widgets.signOffQueue} />
+                <ContributionWidget data={widgets.contributionHeatmap} />
+                <ProjectSpotlightWidget data={widgets.projectSpotlight} />
+              </CardGrid>
+            {/if}
           </div>
         </div>
       {:else}
-        <div class="empty-state">No task data available</div>
+        <div class="empty-state">No dashboard data available</div>
       {/if}
-    </div>
+    {:else if section === 'my-tasks'}
+      <!-- My Tasks Section -->
+      <div class="section-content mx-3">
+        {#if overviewStats || myDashboard}
+          {@const stats = overviewStats || myDashboard?.statistics}
+          <CardGrid cols={4} gap="md">
+            <StatCard
+              title="Total Tasks"
+              value={stats?.tasks.total ?? 0}
+              subtitle=""
+              icon={ENTITY_SVG_ICONS.tasks}
+            />
+            <StatCard title="To Do" value={stats?.tasks.toDo ?? 0} subtitle="" icon="circle" />
+            <StatCard
+              title="In Progress"
+              value={stats?.tasks.inProgress ?? 0}
+              subtitle=""
+              icon="loader"
+            />
+            <StatCard title="Done" value={stats?.tasks.done ?? 0} subtitle="" icon="check-circle" />
+          </CardGrid>
 
-  {:else if section === 'recent'}
-    <!-- Recent Activity Section -->
-    <div class="section-content mx-3">
-      {#if recentActivities.length > 0 || myDashboard}
-        {#if myDashboard}
-          <div class="chart-section">
-            <LineChart data={myDashboard.myActivity} title="Activity Trend (Last 30 days)" />
+          <!-- Phase 1 Widgets: My Tasks -->
+          {#if widgetsLoading}
+            <div class="widgets-loading">Loading task widgets...</div>
+          {:else if widgets}
+            <div class="widgets-section">
+              <DueDateWidget data={widgets.dueDateTimeline} />
+            </div>
+            <div class="widgets-section">
+              <EffortTrackerWidget data={widgets.effortTracker} />
+            </div>
+          {/if}
+
+          <div class="task-list-section">
+            <h2>Task List</h2>
+            <div class="placeholder-content">
+              <p>Task list will be displayed here.</p>
+              <p class="hint">Click on a task to view details or update status.</p>
+            </div>
           </div>
+        {:else}
+          <div class="empty-state">No task data available</div>
         {/if}
+      </div>
+    {:else if section === 'recent'}
+      <!-- Recent Activity Section -->
+      <div class="section-content mx-3">
+        {#if recentActivities.length > 0 || myDashboard}
+          {#if myDashboard}
+            <div class="chart-section">
+              <LineChart data={myDashboard.myActivity} title="Activity Trend (Last 30 days)" />
+            </div>
+          {/if}
 
-        <div class="activities-section">
-          <h2>All Recent Activities {#if activitiesTotal > 0}({activitiesTotal}){/if}</h2>
-          <ActivityLog activities={recentActivities.length > 0 ? recentActivities : (myDashboard?.recentActivities ?? [])} />
-        </div>
-      {:else}
-        <div class="empty-state">No activity data available</div>
-      {/if}
-    </div>
-
-  {:else if section === 'notifications'}
-    <!-- Notifications Section -->
-    <div class="section-content mx-3">
-      {#if notificationsLoading}
-        <div class="loading-state">Loading notifications...</div>
-      {:else if notifications.length === 0}
-        <div class="empty-state">No notifications</div>
-      {:else}
-        <div class="notification-list">
-          {#each notifications as notification (notification.id)}
-            <Button
-              variant="unstyled"
-              class="notification-item {notification.isRead ? '' : 'unread'}"
-              onclick={() => handleNotificationClick(notification)}
-            >
-              <div class="notification-icon">
-                <Icon name={getNotificationIcon(notification.type)} size="md" style="color: {getNotificationIconColor(notification.type)}" />
-              </div>
-              <div class="notification-content">
-                <div class="notification-title">{notification.title}</div>
-                <div class="notification-meta">{formatNotificationMeta(notification)}</div>
-              </div>
-              {#if !notification.isRead}
-                <div class="notification-actions">
-                  <IconButton
-                    icon="check"
-                    title="Mark as read"
-                    onclick={(e) => { e.stopPropagation(); markAsRead(notification.id); }}
+          <div class="activities-section">
+            <h2>
+              All Recent Activities {#if activitiesTotal > 0}({activitiesTotal}){/if}
+            </h2>
+            <ActivityLog
+              activities={recentActivities.length > 0
+                ? recentActivities
+                : (myDashboard?.recentActivities ?? [])}
+            />
+          </div>
+        {:else}
+          <div class="empty-state">No activity data available</div>
+        {/if}
+      </div>
+    {:else if section === 'notifications'}
+      <!-- Notifications Section -->
+      <div class="section-content mx-3">
+        {#if notificationsLoading}
+          <div class="loading-state">Loading notifications...</div>
+        {:else if notifications.length === 0}
+          <div class="empty-state">No notifications</div>
+        {:else}
+          <div class="notification-list">
+            {#each notifications as notification (notification.id)}
+              <Button
+                variant="unstyled"
+                class="notification-item {notification.isRead ? '' : 'unread'}"
+                onclick={() => handleNotificationClick(notification)}
+              >
+                <div class="notification-icon">
+                  <Icon
+                    name={getNotificationIcon(notification.type)}
+                    size="md"
+                    style="color: {getNotificationIconColor(notification.type)}"
                   />
                 </div>
-              {/if}
-            </Button>
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {/if}
+                <div class="notification-content">
+                  <div class="notification-title">{notification.title}</div>
+                  <div class="notification-meta">{formatNotificationMeta(notification)}</div>
+                </div>
+                {#if !notification.isRead}
+                  <div class="notification-actions">
+                    <IconButton
+                      icon="check"
+                      title="Mark as read"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notification.id);
+                      }}
+                    />
+                  </div>
+                {/if}
+              </Button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
   </PageBody>
 </PageShell>
 

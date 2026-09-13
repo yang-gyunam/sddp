@@ -61,16 +61,16 @@
   }: Props = $props();
 
   // Density-based padding
-  const paddingClass = $derived({
-    compact: 'px-3 py-2',
-    regular: 'px-3 py-3',
-    relaxed: 'px-4 py-4',
-  }[density]);
+  const paddingClass = $derived(
+    {
+      compact: 'px-3 py-2',
+      regular: 'px-3 py-3',
+      relaxed: 'px-4 py-4',
+    }[density]
+  );
 
   // Description line clamp
-  const descLineClamp = $derived(
-    descriptionLines === 1 ? 'line-clamp-1' : 'line-clamp-2'
-  );
+  const descLineClamp = $derived(descriptionLines === 1 ? 'line-clamp-1' : 'line-clamp-2');
 
   // Has footer content
   const hasFooter = $derived(!!badges || !!footerMeta);
@@ -80,7 +80,6 @@
       onclick?.(e);
     }
   }
-
 </script>
 
 <Button
@@ -88,9 +87,7 @@
   class="rich-list-item w-full text-left transition-colors cursor-pointer
     {paddingClass}
     {separator === 'border' ? 'border-b border-[var(--color-border-primary)]' : ''}
-    {selected
-      ? 'bg-[var(--color-accent-primary)]/10'
-      : 'hover:bg-[var(--color-bg-tertiary)]'}
+    {selected ? 'bg-[var(--color-accent-primary)]/10' : 'hover:bg-[var(--color-bg-tertiary)]'}
     {disabled ? 'opacity-50 cursor-not-allowed' : ''}
     {className}"
   tabindex={disabled ? -1 : undefined}
@@ -115,9 +112,7 @@
         <div class="flex items-center gap-2 min-w-0 flex-1">
           <span
             class="text-sm font-medium truncate
-              {titleLink
-                ? 'text-[var(--color-info-500)]'
-                : 'text-[var(--color-text-primary)]'}
+              {titleLink ? 'text-[var(--color-info-500)]' : 'text-[var(--color-text-primary)]'}
               {titleClass}"
           >
             {title}

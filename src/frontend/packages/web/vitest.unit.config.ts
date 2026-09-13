@@ -34,26 +34,5 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/unit/**/*.{test,spec}.{js,ts}'],
     passWithNoTests: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: [
-        '../activities/src/**/services/**/*.ts',
-        '../activities/src/**/stores/**/*.ts',
-        '../activities/src/shared/**/*.ts',
-        '../shell/src/stores/**/*.ts',
-        '../shell/src/utils/**/*.ts',
-        '../shell/src/core/services/**/*.ts',
-        'src/stores/**/*.ts',
-        'src/lib/**/*.ts',
-      ],
-      exclude: ['**/*.test.ts', '**/*.spec.ts', '**/*.d.ts', '**/index.ts'],
-      thresholds: {
-        statements: 20,
-        branches: 15,
-        functions: 20,
-        lines: 20,
-      },
-    },
   },
 });

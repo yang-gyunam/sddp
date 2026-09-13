@@ -6,17 +6,10 @@
 <script lang="ts">
   import { Icon, IconButton, Button, SearchField, Spinner } from '@sddp/ui';
   import { getAuthState } from '@sddp/shell/auth';
-  import {
-    searchEntities,
-    createRelationship,
-  } from '../../services/RelationshipService';
+  import { searchEntities, createRelationship } from '../../services/RelationshipService';
   import type { EntitySearchResult } from '../../services/RelationshipService';
   import type { EntityType, RelationType } from '../../types';
-  import {
-    ENTITY_TYPE_STYLES,
-    RELATION_TYPE_STYLES,
-    getAvailableRelationTypes,
-  } from '../../types';
+  import { ENTITY_TYPE_STYLES, RELATION_TYPE_STYLES, getAvailableRelationTypes } from '../../types';
 
   interface Props {
     entityType: EntityType;
@@ -138,8 +131,8 @@
         variant="unstyled"
         class="px-2 py-0.5 text-xs rounded-full border transition-colors
           {selectedType === ft.value
-            ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-accent-primary)]'
-            : 'bg-transparent border-[var(--color-border-secondary)] text-[var(--color-text-tertiary)] hover:border-[var(--color-border-primary)]'}"
+          ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-accent-text)]'
+          : 'bg-transparent border-[var(--color-border-secondary)] text-[var(--color-text-tertiary)] hover:border-[var(--color-border-primary)]'}"
         onclick={() => handleFilterChange(ft.value)}
       >
         {ft.label}
@@ -162,11 +155,13 @@
             variant="unstyled"
             class="w-full flex items-center gap-2 p-1.5 rounded-lg transition-colors
               {isSelected
-                ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
-                : 'hover:bg-[var(--color-bg-tertiary)] border border-transparent'}"
+              ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
+              : 'hover:bg-[var(--color-bg-tertiary)] border border-transparent'}"
             onclick={() => handleResultClick(result)}
           >
-            <div class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {style.bgColor}">
+            <div
+              class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {style.bgColor}"
+            >
               <Icon name={style.icon} size="xs" class={style.color} />
             </div>
             <div class="flex-1 min-w-0 text-left">
@@ -210,8 +205,6 @@
       {/each}
     </div>
   {:else if searchQuery.trim() && !searching}
-    <p class="text-xs text-[var(--color-text-tertiary)] text-center py-2">
-      No results found
-    </p>
+    <p class="text-xs text-[var(--color-text-tertiary)] text-center py-2">No results found</p>
   {/if}
 </div>

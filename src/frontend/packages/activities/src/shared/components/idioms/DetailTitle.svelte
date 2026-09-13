@@ -21,12 +21,7 @@
     class?: string;
   }
 
-  let {
-    title,
-    code = null,
-    children,
-    class: className = '',
-  }: Props = $props();
+  let { title, code = null, children, class: className = '' }: Props = $props();
 </script>
 
 <div class="flex items-center gap-2 min-w-0 {className}">

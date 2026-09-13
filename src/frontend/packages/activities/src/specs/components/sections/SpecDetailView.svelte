@@ -19,7 +19,13 @@
   import { config as appConfig, formatDateTime, toast } from '@sddp/shell';
 
   import type { FieldAuthor } from '../../../shared/types';
-  import type { SpecDetail as SpecDetailType, SpecStatus, SignOffRequest, SignOffSummary, SignOffDecision } from '../../types';
+  import type {
+    SpecDetail as SpecDetailType,
+    SpecStatus,
+    SignOffRequest,
+    SignOffSummary,
+    SignOffDecision,
+  } from '../../types';
   import { isEditable, getAvailableActions, SPEC_STATUS_STYLES } from '../../types';
   import {
     canSubmitForReview as calcCanSubmitForReview,
@@ -30,12 +36,16 @@
   } from '../../utils/spec-detail.utils';
   import { getSpecDocMarkdown, getSpecSummary, getFieldAuthors } from '../../services';
   import type { SpecSummaryResult } from '../../types';
-  import { getArtifactService } from '../../../artifact/services';
+  import { createArtifactService } from '../../../artifact/services';
   import type { Artifact } from '../../../artifact/types';
   import { getTermByTerm } from '../../../glossary/services/GlossaryService';
-  import type { EntityMetadata, CreateEntityMetadataRequest, UpdateEntityMetadataRequest } from '../../../entities/types';
+  import type {
+    EntityMetadata,
+    CreateEntityMetadataRequest,
+    UpdateEntityMetadataRequest,
+  } from '../../../entities/types';
   import {
-    getAiAnalysisService,
+    createAiAnalysisService,
     type AiAnalysisType,
     type AiReport,
     type AiReportStatus,
@@ -110,15 +120,7 @@
   let signOffDecision = $state<SignOffDecision | null>(null);
   let signOffConditions = $state('');
   let signOffComments = $state('');
-  const aiService = getAiAnalysisService();
-
-  function ensureAiContext(): void {
-    aiService.setContext(spec.tenantId, spec.projectId);
-  }
-
-  function ensureArtifactContext(): void {
-    artifactService.setContext(spec.tenantId, spec.projectId);
-  }
+  const aiService = $derived(createAiAnalysisService(spec.tenantId, spec.projectId));
   let analysisLoading = $state(false);
   let qualityReport = $state<AiReport | null>(null);
   let impactReport = $state<AiReport | null>(null);
@@ -132,7 +134,7 @@
   let aiEffectiveEnabled = $state(true);
   const aiFeatureFlagEnabled = appConfig.get('enableAiFeatures');
   const specSupplementaryTabsEnabled = appConfig.get('enableSpecSupplementaryTabs');
-  const artifactService = getArtifactService();
+  const artifactService = $derived(createArtifactService(spec.tenantId, spec.projectId));
   let artifacts = $state<Artifact[]>([]);
   let artifactsLoading = $state(false);
   let artifactsError = $state<string | null>(null);
@@ -177,9 +179,8 @@
   ];
 
   const selectedGeneration = new SvelteSet<GenerationOption['key']>(['backend', 'frontend']);
-  let generationProgress = $state(0);
-  let generationRunning = $state(false);
-  let generationResults = $state<Array<{ label: string; status: 'success' | 'failed'; detail: string }>>([]);
+
+  const GENERATION_AVAILABLE = false;
 
   const canEdit = $derived(isEditable(spec.status));
   const availableActions = $derived(getAvailableActions(spec.status));
@@ -188,9 +189,9 @@
   // Can current user sign off? (InReview + not already decided)
   const canSignOff = $derived(calcCanSignOff(spec, currentUserId, signOffSummary));
   const signOffComplete = $derived(calcSignOffComplete(spec, signOffSummary));
-  const hasGeneratedArtifacts = $derived(
-    artifacts.length > 0 || generationResults.length > 0
-  );
+  // Only artifacts the server actually recorded count as generated. Client-side generation state
+  // must never advance the workflow -- that is what made the fake Generation tab look complete.
+  const hasGeneratedArtifacts = $derived(artifacts.length > 0);
   const qualityParsed = $derived.by(() =>
     parseResult<QualityAnalysisResult>(qualityReport?.resultJson ?? null)
   );
@@ -221,7 +222,7 @@
     }
     tabs.push(
       { id: 'documentation', label: 'Docs', icon: 'file-text' },
-      { id: 'entity-schema', label: 'Schema', icon: 'database' },
+      { id: 'entity-schema', label: 'Schema', icon: 'database' }
     );
     return tabs;
   });
@@ -243,9 +244,12 @@
     const items: ReferenceItem[] = [];
     // Born from Conversation
     if (spec.bornFromConversationId) {
-      const icon = spec.bornFromConversationType === 'Channel' ? 'hash'
-        : spec.bornFromConversationType === 'Forum' ? 'clipboard-list'
-        : 'message-circle';
+      const icon =
+        spec.bornFromConversationType === 'Channel'
+          ? 'hash'
+          : spec.bornFromConversationType === 'Forum'
+            ? 'clipboard-list'
+            : 'message-circle';
       const prefix = spec.bornFromConversationType === 'Channel' ? '#' : '';
       const name = spec.bornFromConversationName
         ? `${prefix}${spec.bornFromConversationName}`
@@ -279,7 +283,11 @@
     // Row 1: Status | Owner (matching Requirement pattern)
     const statusStyle = SPEC_STATUS_STYLES[spec.status];
     items.push({ label: 'Status', value: statusStyle.label, class: statusStyle.textColor });
-    const ownerDisplay = spec.owners?.split(',').map(o => o.trim()).filter(Boolean).join(', ');
+    const ownerDisplay = spec.owners
+      ?.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)
+      .join(', ');
     items.push({ label: 'Owner', value: ownerDisplay || 'Unassigned' });
     // Row 2: Version | Valid From
     items.push({ label: 'Version', value: spec.version });
@@ -287,10 +295,22 @@
     if (spec.validFrom) items.push({ label: 'Valid From', value: formatDateStr(spec.validFrom) });
     if (spec.lockedAt) items.push({ label: 'Locked At', value: formatDateStr(spec.lockedAt) });
     // Row 3: Created By | Created
-    if (spec.createdBy?.name) items.push({ label: 'Created By', value: spec.createdBy.name, type: 'person', avatarUrl: spec.createdBy.avatarUrl });
+    if (spec.createdBy?.name)
+      items.push({
+        label: 'Created By',
+        value: spec.createdBy.name,
+        type: 'person',
+        avatarUrl: spec.createdBy.avatarUrl,
+      });
     if (spec.createdAt) items.push({ label: 'Created', value: formatDateStr(spec.createdAt) });
     // Row 4: Updated By | Updated
-    if (spec.updatedBy?.name) items.push({ label: 'Updated By', value: spec.updatedBy.name, type: 'person', avatarUrl: spec.updatedBy.avatarUrl });
+    if (spec.updatedBy?.name)
+      items.push({
+        label: 'Updated By',
+        value: spec.updatedBy.name,
+        type: 'person',
+        avatarUrl: spec.updatedBy.avatarUrl,
+      });
     if (spec.updatedAt) items.push({ label: 'Updated', value: formatDateStr(spec.updatedAt) });
     // Valid To (if exists)
     if (spec.validTo) items.push({ label: 'Valid To', value: formatDateStr(spec.validTo) });
@@ -520,7 +540,6 @@
     artifactsLoading = true;
     artifactsError = null;
     try {
-      ensureArtifactContext();
       artifacts = await artifactService.getArtifactsBySpec(spec.id);
     } catch (error) {
       artifactsError = error instanceof Error ? error.message : 'Failed to load artifacts';
@@ -538,56 +557,8 @@
     }
   }
 
-  function generateResultLabel(option: GenerationOption['key']): string {
-    switch (option) {
-      case 'backend':
-        return `backend/${spec.code}/api`;
-      case 'frontend':
-        return `frontend/${spec.code}/ui`;
-      case 'tests':
-        return `tests/${spec.code}.spec`;
-      case 'docs':
-        return `docs/${spec.code}.md`;
-      default:
-        return spec.code;
-    }
-  }
-
-  async function startGeneration(): Promise<void> {
-    if (generationRunning) return;
-    if (selectedGeneration.size === 0) {
-      toast.warning('Select at least one output to generate.');
-      return;
-    }
-
-    generationRunning = true;
-    generationProgress = 0;
-    generationResults = [];
-
-    const totalSteps = 20;
-    let step = 0;
-
-    await new Promise<void>((resolve) => {
-      const timer = setInterval(() => {
-        step += 1;
-        generationProgress = Math.min(100, Math.round((step / totalSteps) * 100));
-        if (step >= totalSteps) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 120);
-    });
-
-    generationResults = Array.from(selectedGeneration).map((option) => ({
-      label: generateResultLabel(option),
-      status: 'success',
-      detail: `${option.toUpperCase()} generated`,
-    }));
-
-    generationRunning = false;
-    generationProgress = 100;
-    loadArtifacts().catch((err) => console.warn('[SpecDetail] loadArtifacts after generation failed:', err));
-    toast.success('Generation completed');
+  function startGeneration(): void {
+    toast.info('Artifacts are generated by sddp-cli generate. This tab shows what it recorded.');
   }
 
   async function loadReportForType(type: AiAnalysisType): Promise<void> {
@@ -624,15 +595,11 @@
   }
 
   async function loadAnalysisReports(silent = false): Promise<void> {
-    ensureAiContext();
     if (!silent) {
       analysisLoading = true;
     }
 
-    await Promise.all([
-      loadReportForType('Quality'),
-      loadReportForType('Impact'),
-    ]);
+    await Promise.all([loadReportForType('Quality'), loadReportForType('Impact')]);
 
     if (!silent) {
       analysisLoading = false;
@@ -677,7 +644,6 @@
       toast.info('AI analysis is coming soon.');
       return;
     }
-    ensureAiContext();
     const setTriggering = (value: boolean) => {
       if (type === 'Quality') {
         qualityTriggering = value;
@@ -721,14 +687,10 @@
     if (!spec?.id) return;
     if (spec.id === lastSpecId) return;
     lastSpecId = spec.id;
-    ensureAiContext();
     qualityReport = null;
     impactReport = null;
     qualityError = null;
     impactError = null;
-    generationRunning = false;
-    generationProgress = 0;
-    generationResults = [];
     selectedGeneration.clear();
     selectedGeneration.add('backend');
     selectedGeneration.add('frontend');
@@ -768,7 +730,9 @@
     const shouldPoll = isProcessing(qualityReport?.status) || isProcessing(impactReport?.status);
     if (shouldPoll && !pollTimer) {
       pollTimer = setInterval(() => {
-        loadAnalysisReports(true).catch((err) => console.warn('[SpecDetail] analysis poll failed:', err));
+        loadAnalysisReports(true).catch((err) =>
+          console.warn('[SpecDetail] analysis poll failed:', err)
+        );
       }, 15000);
     }
     if (!shouldPoll && pollTimer) {
@@ -817,8 +781,16 @@
         {/if}
         {#if !isReadOnly && onDeactivate && spec.status !== 'Locked'}
           <Dropdown position="bottom-right">
-            {#snippet trigger()}
-              <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+            {#snippet trigger({ toggle, open })}
+              <IconButton
+                onclick={toggle}
+                ariaHasPopup
+                ariaExpanded={open}
+                icon="more-vertical"
+                variant="ghost"
+                size="sm"
+                title="More actions"
+              />
             {/snippet}
             <div class="py-1 min-w-[160px]">
               <Button
@@ -844,65 +816,64 @@
       </div>
     {:else}
       <div class="space-y-5">
+        <!-- === MAIN CONTENT: Form-Aligned CollapsibleGroups === -->
+        <SpecDetailMainSections
+          {spec}
+          {isDraft}
+          {basicExpanded}
+          {scopeExpanded}
+          {criteriaExpanded}
+          {governanceExpanded}
+          {referencesExpanded}
+          {metadataExpanded}
+          onToggleBasic={() => (basicExpanded = !basicExpanded)}
+          onToggleScope={() => (scopeExpanded = !scopeExpanded)}
+          onToggleCriteria={() => (criteriaExpanded = !criteriaExpanded)}
+          onToggleGovernance={() => (governanceExpanded = !governanceExpanded)}
+          onToggleReferences={() => (referencesExpanded = !referencesExpanded)}
+          onToggleMetadata={() => (metadataExpanded = !metadataExpanded)}
+          {getFieldAuthor}
+          {definitionSegments}
+          onGlossaryTermClick={handleGlossaryTermClick}
+          {referenceItems}
+          {metadataItems}
+        />
 
-      <!-- === MAIN CONTENT: Form-Aligned CollapsibleGroups === -->
-      <SpecDetailMainSections
-        {spec}
-        {isDraft}
-        {basicExpanded}
-        {scopeExpanded}
-        {criteriaExpanded}
-        {governanceExpanded}
-        {referencesExpanded}
-        {metadataExpanded}
-        onToggleBasic={() => (basicExpanded = !basicExpanded)}
-        onToggleScope={() => (scopeExpanded = !scopeExpanded)}
-        onToggleCriteria={() => (criteriaExpanded = !criteriaExpanded)}
-        onToggleGovernance={() => (governanceExpanded = !governanceExpanded)}
-        onToggleReferences={() => (referencesExpanded = !referencesExpanded)}
-        onToggleMetadata={() => (metadataExpanded = !metadataExpanded)}
-        {getFieldAuthor}
-        {definitionSegments}
-        onGlossaryTermClick={handleGlossaryTermClick}
-        {referenceItems}
-        {metadataItems}
-      />
-
-      <SpecDetailWorkflowSection
-        currentStatus={spec.status}
-        {workflowExpanded}
-        {workflowSteps}
-        isReadOnly={isReadOnly}
-        onToggleWorkflow={() => (workflowExpanded = !workflowExpanded)}
-        {onTransition}
-        onGenerate={startGeneration}
-        {signOffComplete}
-        {canSubmitForReview}
-        {onNewVersion}
-        {availableActions}
-        onAction={handleAction}
-        {showSignOffSection}
-        signOffSummary={signOffSummary}
-        currentUserId={currentUserId || null}
-        {canSignOff}
-        bind:signOffDecision={signOffDecision}
-        bind:signOffConditions={signOffConditions}
-        bind:signOffComments={signOffComments}
-        {signOffLoading}
-        onSignOffSubmit={handleSignOffSubmit}
-      />
+        <SpecDetailWorkflowSection
+          currentStatus={spec.status}
+          {workflowExpanded}
+          {workflowSteps}
+          {isReadOnly}
+          onToggleWorkflow={() => (workflowExpanded = !workflowExpanded)}
+          {onTransition}
+          onGenerate={startGeneration}
+          {signOffComplete}
+          {canSubmitForReview}
+          {onNewVersion}
+          {availableActions}
+          onAction={handleAction}
+          {showSignOffSection}
+          {signOffSummary}
+          currentUserId={currentUserId || null}
+          {canSignOff}
+          bind:signOffDecision
+          bind:signOffConditions
+          bind:signOffComments
+          {signOffLoading}
+          onSignOffSubmit={handleSignOffSubmit}
+        />
       </div>
 
       <SpecDetailSupplementaryTabs
         {detailTabs}
-        activeDetailTab={activeDetailTab}
+        {activeDetailTab}
         onTabChange={(id) => (activeDetailTab = id)}
         onDocumentationTabSelected={() => {
           if (!docMarkdown && !docLoading) {
             loadDocMarkdown();
           }
         }}
-        isReadOnly={isReadOnly}
+        {isReadOnly}
         {aiFeatureFlagEnabled}
         {analysisLoading}
         {qualityReport}
@@ -922,10 +893,8 @@
         {isProcessing}
         specStatus={spec.status}
         {generationOptions}
-        selectedGeneration={selectedGeneration}
-        {generationProgress}
-        {generationRunning}
-        {generationResults}
+        {selectedGeneration}
+        generationAvailable={GENERATION_AVAILABLE}
         {artifacts}
         {artifactsLoading}
         {artifactsError}
@@ -957,7 +926,7 @@
 <!-- Reject Modal -->
 <SpecDetailRejectModal
   show={showRejectModal}
-  bind:rejectReason={rejectReason}
+  bind:rejectReason
   onCancel={() => {
     showRejectModal = false;
     rejectReason = '';

@@ -57,7 +57,9 @@
 
 <div class="flex flex-col h-full {className}">
   <!-- Header -->
-  <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
+  <div
+    class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]"
+  >
     <h2 class="text-sm font-medium text-[var(--color-text-primary)]">Requirements</h2>
     <div class="flex items-center gap-1">
       <Button
@@ -73,14 +75,22 @@
         {/if}
       </Button>
       {#if onCreate}
-        <IconButton icon="plus" variant="ghost" size="sm" title="New Requirement" onclick={onCreate} />
+        <IconButton
+          icon="plus"
+          variant="ghost"
+          size="sm"
+          title="New Requirement"
+          onclick={onCreate}
+        />
       {/if}
     </div>
   </div>
 
   <!-- Filters -->
   {#if showFilters}
-    <div class="px-4 py-3 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] space-y-3">
+    <div
+      class="px-4 py-3 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] space-y-3"
+    >
       <!-- Level filter -->
       <div>
         <span class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Level</span>
@@ -121,7 +131,7 @@
         <Button
           variant="unstyled"
           onclick={clearFilters}
-          class="text-xs text-[var(--color-accent-primary)] hover:underline"
+          class="text-xs text-[var(--color-accent-text)] hover:underline"
         >
           Clear filters
         </Button>
@@ -139,8 +149,12 @@
       <EmptyState
         icon="file-text"
         heading="No requirements found"
-        subtext={hasActiveFilters() ? 'Try adjusting your filters' : 'Create a new requirement to get started'}
-        action={onCreate && !hasActiveFilters() ? { label: 'New Requirement', onclick: onCreate } : undefined}
+        subtext={hasActiveFilters()
+          ? 'Try adjusting your filters'
+          : 'Create a new requirement to get started'}
+        action={onCreate && !hasActiveFilters()
+          ? { label: 'New Requirement', onclick: onCreate }
+          : undefined}
       />
     {:else}
       <div>

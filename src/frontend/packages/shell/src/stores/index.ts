@@ -69,7 +69,13 @@ export {
 
 // Toast
 export { toastStore, toast } from './toast.store';
-export type { ToastType, ToastActionVariant, ToastAction, ToastData, ToastDataState } from './toast.store';
+export type {
+  ToastType,
+  ToastActionVariant,
+  ToastAction,
+  ToastData,
+  ToastDataState,
+} from './toast.store';
 
 // Tab State
 export {
@@ -82,3 +88,21 @@ export {
   copyTabState,
   resetTabStateStore,
 } from './tab-state.store';
+
+// Tab Close Guard
+export {
+  registerTabCloseGuard,
+  clearTabCloseGuard,
+  resetTabCloseGuards,
+  requestCloseTab,
+  requestCloseTabs,
+  setTabCloseDecider,
+} from './tab-close';
+export type { TabCloseDecider, TabCloseGuard, TabCloseOutcome, TabCloseRequest } from './tab-close';
+
+export {
+  tabClosePromptStore,
+  answerTabClosePrompt,
+  installTabClosePromptDecider,
+} from './tab-close-prompt.store';
+export type { TabClosePromptState } from './tab-close-prompt.store';

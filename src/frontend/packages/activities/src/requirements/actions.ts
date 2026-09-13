@@ -3,7 +3,7 @@
  * Mediates between Requirement stores and RequirementService
  */
 
-import { getRequirementService } from './services';
+import { createRequirementService } from './services';
 import { getRequirementSidebarState, setProjectGroups } from './stores';
 import type { ProjectRequirementGroup, RequirementSummary } from './types';
 
@@ -77,8 +77,7 @@ export async function loadRequirementsSidebar(
   options?: LoadRequirementsSidebarOptions
 ): Promise<RequirementsSidebarPageResult> {
   try {
-    const service = getRequirementService();
-    service.setContext(tenantId, projectId);
+    const service = createRequirementService(tenantId, projectId);
 
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 20;
@@ -111,13 +110,15 @@ export async function loadRequirementsSidebar(
       };
     }
 
-    const page = await service.getRequirements({ page: requestedPage, pageSize: requestedPageSize });
+    const page = await service.getRequirements({
+      page: requestedPage,
+      pageSize: requestedPageSize,
+    });
     const summaries = page.items.map(mapRequirementSummary);
     const state = getRequirementSidebarState();
     const existingGroup = state.projectGroups.find((group) => group.projectId === projectId);
-    const mergedSummaries = append && existingGroup
-      ? mergeSummaries(existingGroup.requirements, summaries)
-      : summaries;
+    const mergedSummaries =
+      append && existingGroup ? mergeSummaries(existingGroup.requirements, summaries) : summaries;
 
     setProjectGroups([buildGroup(projectId, mergedSummaries, page.totalCount)]);
 

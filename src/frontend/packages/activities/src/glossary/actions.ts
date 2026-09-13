@@ -40,17 +40,15 @@ function mapTermSummary(term: {
 }
 
 function buildCategoryGroups(groupMap: Map<TermCategory, TermSummaryItem[]>): CategoryTermGroup[] {
-  return TERM_CATEGORIES
-    .filter((category) => groupMap.has(category))
-    .map((category) => {
-      const terms = groupMap.get(category) ?? [];
-      return {
-        category,
-        terms,
-        totalCount: terms.length,
-        expanded: true,
-      };
-    });
+  return TERM_CATEGORIES.filter((category) => groupMap.has(category)).map((category) => {
+    const terms = groupMap.get(category) ?? [];
+    return {
+      category,
+      terms,
+      totalCount: terms.length,
+      expanded: true,
+    };
+  });
 }
 
 function appendTerms(
@@ -152,9 +150,8 @@ export async function loadGlossarySidebar(
     const existingMap = new Map<TermCategory, TermSummaryItem[]>(
       state.categoryGroups.map((group) => [group.category, group.terms])
     );
-    const mergedMap = append && state.categoryGroups.length > 0
-      ? appendTerms(existingMap, groupMap)
-      : groupMap;
+    const mergedMap =
+      append && state.categoryGroups.length > 0 ? appendTerms(existingMap, groupMap) : groupMap;
 
     setCategoryGroups(buildCategoryGroups(mergedMap));
 

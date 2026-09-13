@@ -8,7 +8,7 @@
   import { untrack } from 'svelte';
   import { SingleColumnLayout, PageHeader, PageShell, getTabState, setTabState } from '@sddp/shell';
   import { Icon, IconButton, Button, Spinner } from '@sddp/ui';
-  import { getRoleService, type Role } from '../../services/RoleService';
+  import { createRoleService, type Role } from '../../services/RoleService';
   import { SettingGroupHeader } from '../idioms';
 
   interface Props {
@@ -21,9 +21,21 @@
 
   // Permission categories derived from actual permission codes (resource:action)
   const permissionCategories = [
-    { resource: 'spec', label: 'Specs', actions: ['create', 'read', 'update', 'delete', 'approve', 'lock'] },
-    { resource: 'conversation', label: 'Conversations', actions: ['create', 'read', 'post', 'close'] },
-    { resource: 'requirement', label: 'Requirements', actions: ['create', 'read', 'update', 'delete'] },
+    {
+      resource: 'spec',
+      label: 'Specs',
+      actions: ['create', 'read', 'update', 'delete', 'approve', 'lock'],
+    },
+    {
+      resource: 'conversation',
+      label: 'Conversations',
+      actions: ['create', 'read', 'post', 'close'],
+    },
+    {
+      resource: 'requirement',
+      label: 'Requirements',
+      actions: ['create', 'read', 'update', 'delete'],
+    },
     { resource: 'glossary', label: 'Glossary', actions: ['create', 'read', 'update', 'deprecate'] },
     { resource: 'task', label: 'Tasks', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'project', label: 'Projects', actions: ['create', 'read', 'update', 'delete'] },
@@ -33,7 +45,7 @@
     { resource: 'audit', label: 'Audit', actions: ['read'] },
   ];
 
-  const roleService = getRoleService();
+  let roleService = $derived(createRoleService(tenantId));
 
   let roles = $state<Role[]>([]);
   let loading = $state(false);
@@ -73,7 +85,6 @@
     error = null;
 
     try {
-      roleService.setContext(tenantId);
       roles = await roleService.getRoles();
     } catch {
       error = 'Failed to load roles';
@@ -99,59 +110,65 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="Roles" {loading}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" variant="ghost" size="sm" title="Refresh" onclick={loadRoles} />
-    {/snippet}
-  </PageHeader>
+    <PageHeader title="Roles" {loading}>
+      {#snippet actions()}
+        <IconButton
+          icon="refresh-cw"
+          variant="ghost"
+          size="sm"
+          title="Refresh"
+          onclick={loadRoles}
+        />
+      {/snippet}
+    </PageHeader>
 
-  <SingleColumnLayout>
-    <SettingGroupHeader title="Role-Permission Matrix" />
-    <p class="section-desc">
-      System-defined roles and their permission assignments.
-      <span class="read-only-badge">Read-only</span>
-    </p>
+    <SingleColumnLayout>
+      <SettingGroupHeader title="Role-Permission Matrix" />
+      <p class="section-desc">
+        System-defined roles and their permission assignments.
+        <span class="read-only-badge">Read-only</span>
+      </p>
 
-    {#if roles.length > 0}
-      <div class="table-wrapper">
-        <table class="permissions-table">
-          <thead>
-            <tr>
-              <th class="col-permission">Permission</th>
-              {#each roles as role (role.id)}
-                <th class="col-role">
-                  <div class="role-name">{role.name}</div>
-                </th>
-              {/each}
-            </tr>
-          </thead>
-          <tbody>
-            {#each permissionCategories as category (category.resource)}
-              <tr class="category-row">
-                <td class="category-name" colspan={roles.length + 1}>{category.label}</td>
+      {#if roles.length > 0}
+        <div class="table-wrapper">
+          <table class="permissions-table">
+            <thead>
+              <tr>
+                <th class="col-permission">Permission</th>
+                {#each roles as role (role.id)}
+                  <th class="col-role">
+                    <div class="role-name">{role.name}</div>
+                  </th>
+                {/each}
               </tr>
-              {#each category.actions as action (action)}
-                <tr>
-                  <td class="action-name">{action}</td>
-                  {#each roles as role (role.id)}
-                    <td class="permission-cell">
-                      {#if hasPermission(role, category.resource, action)}
-                        <Icon name="check" size="xs" />
-                      {:else}
-                        <span class="no-permission">&mdash;</span>
-                      {/if}
-                    </td>
-                  {/each}
+            </thead>
+            <tbody>
+              {#each permissionCategories as category (category.resource)}
+                <tr class="category-row">
+                  <td class="category-name" colspan={roles.length + 1}>{category.label}</td>
                 </tr>
+                {#each category.actions as action (action)}
+                  <tr>
+                    <td class="action-name">{action}</td>
+                    {#each roles as role (role.id)}
+                      <td class="permission-cell">
+                        {#if hasPermission(role, category.resource, action)}
+                          <Icon name="check" size="xs" />
+                        {:else}
+                          <span class="no-permission">&mdash;</span>
+                        {/if}
+                      </td>
+                    {/each}
+                  </tr>
+                {/each}
               {/each}
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    {:else}
-      <p class="empty-state">No roles found.</p>
-    {/if}
-  </SingleColumnLayout>
+            </tbody>
+          </table>
+        </div>
+      {:else}
+        <p class="empty-state">No roles found.</p>
+      {/if}
+    </SingleColumnLayout>
   {/if}
 </PageShell>
 
@@ -254,5 +271,4 @@
     font-size: 0.8125rem;
     color: var(--color-text-tertiary, #9ca3af);
   }
-
 </style>

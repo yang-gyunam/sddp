@@ -11,8 +11,9 @@ internal static class ArtifactStatusHelper
         ArtifactTracking artifact,
         CancellationToken cancellationToken)
     {
+        // No recorded path is "there is nothing to check", not "the file was deleted".
         if (string.IsNullOrWhiteSpace(artifact.ArtifactPath))
-            return "Missing";
+            return "Unverified";
 
         try
         {
@@ -25,7 +26,7 @@ internal static class ArtifactStatusHelper
                 return "Missing";
 
             if (string.IsNullOrWhiteSpace(artifact.ContentHash) || string.IsNullOrWhiteSpace(fileInfo.Hash))
-                return "Missing";
+                return "Unverified";
 
             return string.Equals(fileInfo.Hash, artifact.ContentHash, StringComparison.OrdinalIgnoreCase)
                 ? "Valid"
@@ -33,7 +34,7 @@ internal static class ArtifactStatusHelper
         }
         catch
         {
-            return "Missing";
+            return "Unverified";
         }
     }
 

@@ -76,7 +76,10 @@
       resizeRafId = requestAnimationFrame(() => {
         // Drag left = increase right panel width
         const delta = startX - moveEvent.clientX;
-        rightPanelWidth = Math.min(maxRightPanelWidth, Math.max(minRightPanelWidth, startWidth + delta));
+        rightPanelWidth = Math.min(
+          maxRightPanelWidth,
+          Math.max(minRightPanelWidth, startWidth + delta)
+        );
         resizeRafId = null;
       });
     }
@@ -167,9 +170,7 @@
   }
 
   const artifactDetail = $derived<ArtifactDetail | null>(
-    artifactData
-      ? { ...artifactData, status: 'Valid' as const }
-      : null
+    artifactData ? { ...artifactData, status: 'Valid' as const } : null
   );
 
   const entityStyle = $derived(ENTITY_TYPE_STYLES[entityType as EntityType]);
@@ -179,7 +180,8 @@
     if (entityType === 'Requirement' && requirementData) return requirementData.title;
     if (entityType === 'Conversation' && conversationData) return conversationData.name;
     if (entityType === 'GlossaryTerm' && glossaryData) return glossaryData.term;
-    if (entityType === 'Artifact' && artifactData) return artifactData.artifactPath?.split('/').pop() ?? artifactData.entityName ?? 'Artifact';
+    if (entityType === 'Artifact' && artifactData)
+      return artifactData.artifactPath?.split('/').pop() ?? artifactData.entityName ?? 'Artifact';
     return '';
   });
 
@@ -194,10 +196,10 @@
 
   const hasData = $derived(
     specData !== null ||
-    requirementData !== null ||
-    conversationData !== null ||
-    glossaryData !== null ||
-    artifactData !== null
+      requirementData !== null ||
+      conversationData !== null ||
+      glossaryData !== null ||
+      artifactData !== null
   );
 </script>
 
@@ -241,11 +243,7 @@
             showHeader={false}
           />
         {:else if entityType === 'Requirement' && requirementData}
-          <RequirementDetailView
-            requirement={requirementData}
-            readonly={true}
-            showHeader={false}
-          />
+          <RequirementDetailView requirement={requirementData} readonly={true} showHeader={false} />
         {:else if entityType === 'Conversation' && conversationData}
           <ChannelView
             conversationId={conversationData.id}
@@ -266,10 +264,7 @@
             showHeader={false}
           />
         {:else if entityType === 'Artifact' && artifactDetail}
-          <ArtifactContent
-            artifact={artifactDetail}
-            showHeader={false}
-          />
+          <ArtifactContent artifact={artifactDetail} showHeader={false} />
         {/if}
       </div>
 
@@ -298,7 +293,11 @@
     </div>
   {:else}
     <div class="flex-1 flex flex-col items-center justify-center gap-3 px-6">
-      <Icon name={entityStyle?.icon ?? 'file'} size="lg" class="text-[var(--color-text-quaternary)]" />
+      <Icon
+        name={entityStyle?.icon ?? 'file'}
+        size="lg"
+        class="text-[var(--color-text-quaternary)]"
+      />
       <p class="text-sm text-[var(--color-text-tertiary)]">Select an entity to view details</p>
     </div>
   {/if}

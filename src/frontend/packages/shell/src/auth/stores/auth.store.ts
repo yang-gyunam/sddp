@@ -1,8 +1,7 @@
 /**
  * Auth Store - Authentication State Management
  * Stores access token in memory (NOT localStorage for security)
- * Refresh token is stored in sessionStorage for per-tab isolation
- * (sessionStorage is tab-scoped, preventing cross-tab session contamination)
+ * Refresh token is held only in a Secure, HttpOnly, SameSite cookie.
  */
 
 import { createStore, config, type Store } from '../../core/services';
@@ -13,6 +12,7 @@ const initialAuthState: AuthState = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  sessionStatus: 'checking',
 };
 
 // Create the auth store (no persistence - access token stays in memory)
@@ -21,6 +21,20 @@ const authStore: Store<AuthState> = createStore<AuthState>(initialAuthState);
 // Store access token in memory (not persisted)
 let accessToken: string | null = null;
 let tokenExpiresAt: number | null = null;
+let refreshPromise: Promise<RefreshOutcome> | null = null;
+const csrfCookieName = '__Host-sddp-csrf';
+
+function getCsrfHeader(): Record<string, string> {
+  if (typeof document === 'undefined') return {};
+
+  const prefix = `${csrfCookieName}=`;
+  const cookie = document.cookie
+    .split(';')
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(prefix));
+
+  return cookie ? { 'X-CSRF-Token': decodeURIComponent(cookie.slice(prefix.length)) } : {};
+}
 
 /**
  * Get current auth state
@@ -49,15 +63,6 @@ export function isAuthenticated(): boolean {
 }
 
 /**
- * Check if a valid session exists for this tab.
- * sessionStorage is per-tab and cleared when the tab closes,
- * so only this tab can attempt silent refresh.
- */
-export function hasSession(): boolean {
-  return sessionStorage.getItem('sddp-session') === 'active';
-}
-
-/**
  * Set loading state
  */
 export function setLoading(loading: boolean): void {
@@ -70,6 +75,13 @@ export function setLoading(loading: boolean): void {
 /**
  * Login with username and password
  */
+export class TenantSelectionRequiredError extends Error {
+  constructor(public readonly tenantIds: string[]) {
+    super('Select a tenant to continue signing in.');
+    this.name = 'TenantSelectionRequiredError';
+  }
+}
+
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   setLoading(true);
 
@@ -84,11 +96,25 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Login failed' }));
-      throw new Error(error.message || 'Login failed');
+      const error = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      const selection = error.data as { tenantIds?: unknown } | undefined;
+      if (response.status === 409 && error.errorCode === 'TENANT_SELECTION_REQUIRED' &&
+          Array.isArray(selection?.tenantIds) && selection.tenantIds.length > 1 &&
+          selection.tenantIds.every((id): id is string => typeof id === 'string')) {
+        throw new TenantSelectionRequiredError(selection.tenantIds);
+      }
+      const retryAfter = response.headers?.get?.('Retry-After');
+      const rateLimitMessage = retryAfter
+        ? `Too many sign-in attempts. Try again in ${retryAfter} seconds.`
+        : 'Too many sign-in attempts. Please try again later.';
+      const message =
+        (error.errorMessage as string | undefined) ||
+        (error.message as string | undefined) ||
+        (response.status === 429 ? rateLimitMessage : 'Login failed');
+      throw new Error(message);
     }
 
-    const json = await response.json() as Record<string, unknown>;
+    const json = (await response.json()) as Record<string, unknown>;
 
     // Handle both wrapped (ApiResponse) and direct response formats
     // Also handle both camelCase and PascalCase from backend
@@ -113,17 +139,6 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
     accessToken = accessTokenValue;
     tokenExpiresAt = Date.now() + expiresInValue * 1000;
 
-    // Store refresh token in sessionStorage (tab-scoped)
-    // Each tab keeps its own refresh token, preventing cross-tab session contamination
-    const refreshTokenValue = (data.refreshToken || data.RefreshToken) as string | undefined;
-    if (refreshTokenValue) {
-      sessionStorage.setItem('sddp-refresh-token', refreshTokenValue);
-    }
-
-    // Mark session active in sessionStorage (tab-scoped guard)
-    sessionStorage.setItem('sddp-session', 'active');
-    sessionStorage.setItem('sddp-session-user', (userData?.id || userData?.Id || '') as string);
-
     // Update auth state with user info
     // Handle both camelCase and PascalCase for user fields
     const u = userData ?? {};
@@ -139,13 +154,16 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
       updatedAt: new Date().toISOString(),
     };
 
-    const requirePasswordChange = (data.requirePasswordChange ?? data.RequirePasswordChange ?? false) as boolean;
+    const requirePasswordChange = (data.requirePasswordChange ??
+      data.RequirePasswordChange ??
+      false) as boolean;
 
     authStore.set({
       user,
       isAuthenticated: true,
       isLoading: false,
       requirePasswordChange,
+      sessionStatus: 'active',
     });
 
     return {
@@ -165,19 +183,13 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
  */
 export async function logout(): Promise<void> {
   try {
-    const storedRefreshToken = sessionStorage.getItem('sddp-refresh-token');
-
     // Call logout endpoint to invalidate refresh token
     await fetch(`${config.getBaseApiUrl()}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: accessToken ? `Bearer ${accessToken}` : '',
+        ...getCsrfHeader(),
       },
-      body: storedRefreshToken
-        ? JSON.stringify({ refreshToken: storedRefreshToken })
-        : undefined,
     });
   } catch {
     // Ignore errors during logout
@@ -185,9 +197,6 @@ export async function logout(): Promise<void> {
     // Clear local state regardless of server response
     accessToken = null;
     tokenExpiresAt = null;
-    sessionStorage.removeItem('sddp-refresh-token');
-    sessionStorage.removeItem('sddp-session');
-    sessionStorage.removeItem('sddp-session-user');
     // Use set() instead of reset() to avoid isLoading: true from initialAuthState
     // which would cause the Loading screen to show indefinitely
     authStore.set({
@@ -195,6 +204,7 @@ export async function logout(): Promise<void> {
       isAuthenticated: false,
       isLoading: false,
       requirePasswordChange: false,
+      sessionStatus: 'anonymous',
     });
   }
 }
@@ -204,49 +214,79 @@ export async function logout(): Promise<void> {
  * Used when refresh fails - no session exists to invalidate
  */
 function clearLocalAuthState(): void {
+  const sessionStatus = authStore.get().isAuthenticated ? 'expired' : 'anonymous';
   accessToken = null;
   tokenExpiresAt = null;
-  sessionStorage.removeItem('sddp-refresh-token');
-  sessionStorage.removeItem('sddp-session');
-  sessionStorage.removeItem('sddp-session-user');
   // Reset to initial state but with isLoading: false (auth check complete)
   authStore.set({
     user: null,
     isAuthenticated: false,
     isLoading: false,
     requirePasswordChange: false,
+    sessionStatus,
   });
 }
 
 /**
- * Refresh access token using refresh token stored in sessionStorage (per-tab).
- * Sends refresh token via request body instead of relying on HttpOnly cookie,
- * ensuring each tab uses its own refresh token for session isolation.
+ * Refresh the in-memory access token using the HttpOnly refresh cookie.
+ * The readable CSRF cookie is reflected in a request header; the refresh token
+ * itself is never available to JavaScript.
  */
-export async function refreshToken(): Promise<boolean> {
-  try {
-    // Read this tab's refresh token from sessionStorage
-    const storedRefreshToken = sessionStorage.getItem('sddp-refresh-token');
-    if (!storedRefreshToken) {
-      clearLocalAuthState();
-      return false;
-    }
+export type RefreshOutcome = 'authenticated' | 'rejected' | 'unavailable';
 
+/** Statuses that mean "we could not reach the server", not "your session is over". */
+function isTransientStatus(status: number): boolean {
+  // 408 request timeout, 429 rate limited, 5xx server-side. A 401 or 403 is a verdict on the
+  // credential and belongs in 'rejected'; anything else unexpected is treated as a verdict too,
+  // because keeping a session alive on an answer we cannot read is the riskier default.
+  return status === 408 || status === 429 || status >= 500;
+}
+
+/**
+ * Records that the server could not be reached, without touching the session.
+ *
+ * The access token has already expired by the time this runs, so requests keep failing -- but the
+ * user stays signed in, their tabs stay open, and the next attempt (tab wake, next 401) can
+ * succeed without a re-login.
+ */
+function markSessionUnavailable(): void {
+  authStore.update((state) => ({
+    ...state,
+    isLoading: false,
+    sessionStatus: state.isAuthenticated ? 'unavailable' : state.sessionStatus,
+  }));
+}
+
+async function performTokenRefresh(): Promise<RefreshOutcome> {
+  // Login sets the readable CSRF cookie alongside the HttpOnly refresh cookie, so its absence
+  // means there is no session to resume. Asking anyway is a guaranteed 403 — the server
+  // rejects a refresh with no CSRF header — which logged a console error on every cold load
+  // and buried real 403s in the noise.
+  const csrfHeader = getCsrfHeader();
+  if (Object.keys(csrfHeader).length === 0) {
+    // Retrying will not produce a cookie. This is "there is no session", not "cannot reach it".
+    clearLocalAuthState();
+    return 'rejected';
+  }
+
+  try {
     const response = await fetch(`${config.getBaseApiUrl()}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: csrfHeader,
       credentials: 'include',
-      body: JSON.stringify({ refreshToken: storedRefreshToken }),
     });
 
     if (!response.ok) {
+      if (isTransientStatus(response.status)) {
+        markSessionUnavailable();
+        return 'unavailable';
+      }
+
       clearLocalAuthState();
-      return false;
+      return 'rejected';
     }
 
-    const json = await response.json() as Record<string, unknown>;
+    const json = (await response.json()) as Record<string, unknown>;
 
     // Handle both wrapped (ApiResponse) and direct response formats
     const data = (json.data || json.Data) as Record<string, unknown> | undefined;
@@ -254,35 +294,27 @@ export async function refreshToken(): Promise<boolean> {
     if (!data) {
       console.error('Refresh response:', json);
       clearLocalAuthState();
-      return false;
+      return 'rejected';
     }
 
     // Handle both camelCase and PascalCase field names
     const accessTokenValue = (data.accessToken || data.AccessToken) as string | undefined;
     const expiresInValue = (data.expiresIn || data.ExpiresIn || 1800) as number;
     const userData = (data.user || data.User) as Record<string, unknown> | undefined;
-    const newRefreshToken = (data.refreshToken || data.RefreshToken) as string | undefined;
-    const requirePasswordChange = (
-      data.requirePasswordChange
-      ?? data.RequirePasswordChange
-      ?? authStore.get().requirePasswordChange
-      ?? false
-    ) as boolean;
+    const requirePasswordChange = (data.requirePasswordChange ??
+      data.RequirePasswordChange ??
+      authStore.get().requirePasswordChange ??
+      false) as boolean;
 
     if (!accessTokenValue) {
       console.error('Refresh response data:', data);
       clearLocalAuthState();
-      return false;
+      return 'rejected';
     }
 
     // Update access token in memory
     accessToken = accessTokenValue;
     tokenExpiresAt = Date.now() + expiresInValue * 1000;
-
-    // Store rotated refresh token in sessionStorage (per-tab)
-    if (newRefreshToken) {
-      sessionStorage.setItem('sddp-refresh-token', newRefreshToken);
-    }
 
     // Update user if provided
     if (userData) {
@@ -298,14 +330,12 @@ export async function refreshToken(): Promise<boolean> {
         updatedAt: new Date().toISOString(),
       };
 
-      // Update session user ID for consistency
-      sessionStorage.setItem('sddp-session-user', user.id);
-
       authStore.set({
         user,
         isAuthenticated: true,
         isLoading: false,
         requirePasswordChange,
+        sessionStatus: 'active',
       });
     } else {
       // No user data but token is valid - just mark as not loading
@@ -313,15 +343,26 @@ export async function refreshToken(): Promise<boolean> {
         ...state,
         isLoading: false,
         requirePasswordChange,
+        sessionStatus: 'active',
       }));
     }
 
-    return true;
+    return 'authenticated';
   } catch {
-    // Network error or unexpected failure - just clear local state
-    clearLocalAuthState();
-    return false;
+    markSessionUnavailable();
+    return 'unavailable';
   }
+}
+
+/** Coalesce every bootstrap, visibility and API-triggered refresh into one request. */
+export function refreshToken(): Promise<RefreshOutcome> {
+  if (!refreshPromise) {
+    refreshPromise = performTokenRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
 }
 
 /**
@@ -347,10 +388,7 @@ export function clearRequirePasswordChange(): void {
  * Change current user's password.
  * If access token is expired, refresh once and retry.
  */
-export async function changePassword(
-  currentPassword: string,
-  newPassword: string
-): Promise<void> {
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   const doRequest = (): Promise<Response> => {
     const token = getAccessToken();
     return fetch(`${config.getBaseApiUrl()}/auth/change-password`, {
@@ -367,8 +405,7 @@ export async function changePassword(
   let response = await doRequest();
 
   if (response.status === 401) {
-    const refreshed = await refreshToken();
-    if (refreshed) {
+    if ((await refreshToken()) === 'authenticated') {
       response = await doRequest();
     }
   }

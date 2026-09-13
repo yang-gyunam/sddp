@@ -3,48 +3,217 @@
   "version": "0.1.0",
   "license": "Apache-2.0",
   "type": "module",
-  "svelte": "./src/index.ts",
+  "svelte": "./dist/index.js",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "svelte": "./src/index.ts",
+      "svelte": "./dist/index.js",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./runtime": {
+      "svelte": "./dist/runtime.js",
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./reset": {
+      "svelte": "./dist/reset.js",
+      "types": "./dist/reset.d.ts",
+      "default": "./dist/reset.js"
+    },
     "./projects": {
-      "svelte": "./src/projects/index.ts",
+      "svelte": "./dist/projects/index.js",
       "types": "./dist/projects/index.d.ts",
       "default": "./dist/projects/index.js"
     },
     "./conversations": {
-      "svelte": "./src/conversations/index.ts",
+      "svelte": "./dist/conversations/index.js",
       "types": "./dist/conversations/index.d.ts",
       "default": "./dist/conversations/index.js"
     },
     "./search": {
-      "svelte": "./src/search/index.ts",
+      "svelte": "./dist/search/index.js",
       "types": "./dist/search/index.d.ts",
       "default": "./dist/search/index.js"
     },
-    "./tasks": {
-      "svelte": "./src/tasks/index.ts",
-      "types": "./dist/tasks/index.d.ts",
-      "default": "./dist/tasks/index.js"
+    "./task": {
+      "svelte": "./dist/task/index.js",
+      "types": "./dist/task/index.d.ts",
+      "default": "./dist/task/index.js"
     },
     "./dashboard": {
-      "svelte": "./src/dashboard/index.ts",
+      "svelte": "./dist/dashboard/index.js",
       "types": "./dist/dashboard/index.d.ts",
       "default": "./dist/dashboard/index.js"
     },
     "./settings": {
-      "svelte": "./src/settings/index.ts",
+      "svelte": "./dist/settings/index.js",
       "types": "./dist/settings/index.d.ts",
       "default": "./dist/settings/index.js"
+    },
+    "./requirements": {
+      "svelte": "./dist/requirements/index.js",
+      "types": "./dist/requirements/index.d.ts",
+      "default": "./dist/requirements/index.js"
+    },
+    "./specs": {
+      "svelte": "./dist/specs/index.js",
+      "types": "./dist/specs/index.d.ts",
+      "default": "./dist/specs/index.js"
+    },
+    "./glossary": {
+      "svelte": "./dist/glossary/index.js",
+      "types": "./dist/glossary/index.d.ts",
+      "default": "./dist/glossary/index.js"
+    },
+    "./relationship": {
+      "svelte": "./dist/relationship/index.js",
+      "types": "./dist/relationship/index.d.ts",
+      "default": "./dist/relationship/index.js"
+    },
+    "./ai": {
+      "svelte": "./dist/ai/index.js",
+      "types": "./dist/ai/index.d.ts",
+      "default": "./dist/ai/index.js"
+    },
+    "./artifact": {
+      "svelte": "./dist/artifact/index.js",
+      "types": "./dist/artifact/index.d.ts",
+      "default": "./dist/artifact/index.js"
+    },
+    "./knowledge": {
+      "svelte": "./dist/knowledge/index.js",
+      "types": "./dist/knowledge/index.d.ts",
+      "default": "./dist/knowledge/index.js"
+    },
+    "./effort": {
+      "svelte": "./dist/effort/index.js",
+      "types": "./dist/effort/index.d.ts",
+      "default": "./dist/effort/index.js"
+    },
+    "./conversations/components/pages": {
+      "svelte": "./dist/conversations/components/pages/index.js",
+      "types": "./dist/conversations/components/pages/index.d.ts",
+      "default": "./dist/conversations/components/pages/index.js"
+    },
+    "./conversations/components/sections": {
+      "svelte": "./dist/conversations/components/sections/index.js",
+      "types": "./dist/conversations/components/sections/index.d.ts",
+      "default": "./dist/conversations/components/sections/index.js"
+    },
+    "./conversations/types": {
+      "svelte": "./dist/conversations/types/index.js",
+      "types": "./dist/conversations/types/index.d.ts",
+      "default": "./dist/conversations/types/index.js"
+    },
+    "./projects/components/pages": {
+      "svelte": "./dist/projects/components/pages/index.js",
+      "types": "./dist/projects/components/pages/index.d.ts",
+      "default": "./dist/projects/components/pages/index.js"
+    },
+    "./projects/components/sections": {
+      "svelte": "./dist/projects/components/sections/index.js",
+      "types": "./dist/projects/components/sections/index.d.ts",
+      "default": "./dist/projects/components/sections/index.js"
+    },
+    "./projects/types": {
+      "svelte": "./dist/projects/types/index.js",
+      "types": "./dist/projects/types/index.d.ts",
+      "default": "./dist/projects/types/index.js"
+    },
+    "./projects/pages/dashboard": {
+      "svelte": "./dist/projects/pages/dashboard.js",
+      "types": "./dist/projects/pages/dashboard.d.ts",
+      "default": "./dist/projects/pages/dashboard.js"
+    },
+    "./projects/pages/conversations": {
+      "svelte": "./dist/projects/pages/conversations.js",
+      "types": "./dist/projects/pages/conversations.d.ts",
+      "default": "./dist/projects/pages/conversations.js"
+    },
+    "./projects/pages/requirements": {
+      "svelte": "./dist/projects/pages/requirements.js",
+      "types": "./dist/projects/pages/requirements.d.ts",
+      "default": "./dist/projects/pages/requirements.js"
+    },
+    "./projects/pages/specs": {
+      "svelte": "./dist/projects/pages/specs.js",
+      "types": "./dist/projects/pages/specs.d.ts",
+      "default": "./dist/projects/pages/specs.js"
+    },
+    "./projects/pages/tasks": {
+      "svelte": "./dist/projects/pages/tasks.js",
+      "types": "./dist/projects/pages/tasks.d.ts",
+      "default": "./dist/projects/pages/tasks.js"
+    },
+    "./projects/pages/glossary": {
+      "svelte": "./dist/projects/pages/glossary.js",
+      "types": "./dist/projects/pages/glossary.d.ts",
+      "default": "./dist/projects/pages/glossary.js"
+    },
+    "./projects/pages/knowledge": {
+      "svelte": "./dist/projects/pages/knowledge.js",
+      "types": "./dist/projects/pages/knowledge.d.ts",
+      "default": "./dist/projects/pages/knowledge.js"
+    },
+    "./projects/pages/artifacts": {
+      "svelte": "./dist/projects/pages/artifacts.js",
+      "types": "./dist/projects/pages/artifacts.d.ts",
+      "default": "./dist/projects/pages/artifacts.js"
+    },
+    "./projects/pages/effort": {
+      "svelte": "./dist/projects/pages/effort.js",
+      "types": "./dist/projects/pages/effort.d.ts",
+      "default": "./dist/projects/pages/effort.js"
+    },
+    "./projects/pages/traceability": {
+      "svelte": "./dist/projects/pages/traceability.js",
+      "types": "./dist/projects/pages/traceability.d.ts",
+      "default": "./dist/projects/pages/traceability.js"
+    },
+    "./settings/components/pages": {
+      "svelte": "./dist/settings/components/pages/index.js",
+      "types": "./dist/settings/components/pages/index.d.ts",
+      "default": "./dist/settings/components/pages/index.js"
+    },
+    "./settings/components/sections": {
+      "svelte": "./dist/settings/components/sections/index.js",
+      "types": "./dist/settings/components/sections/index.d.ts",
+      "default": "./dist/settings/components/sections/index.js"
+    },
+    "./settings/utils": {
+      "svelte": "./dist/settings/utils/index.js",
+      "types": "./dist/settings/utils/index.d.ts",
+      "default": "./dist/settings/utils/index.js"
+    },
+    "./task/components/pages": {
+      "svelte": "./dist/task/components/pages/index.js",
+      "types": "./dist/task/components/pages/index.d.ts",
+      "default": "./dist/task/components/pages/index.js"
+    },
+    "./task/components/sections": {
+      "svelte": "./dist/task/components/sections/index.js",
+      "types": "./dist/task/components/sections/index.d.ts",
+      "default": "./dist/task/components/sections/index.js"
+    },
+    "./task/services/TaskService": {
+      "svelte": "./dist/task/services/TaskService.js",
+      "types": "./dist/task/services/TaskService.d.ts",
+      "default": "./dist/task/services/TaskService.js"
+    },
+    "./task/stores": {
+      "svelte": "./dist/task/stores/index.js",
+      "types": "./dist/task/stores/index.d.ts",
+      "default": "./dist/task/stores/index.js"
+    },
+    "./task/types": {
+      "svelte": "./dist/task/types/index.js",
+      "types": "./dist/task/types/index.d.ts",
+      "default": "./dist/task/types/index.js"
     }
   },
   "files": [
-    "src",
     "dist"
   ],
   "scripts": {
@@ -57,19 +226,20 @@
   "dependencies": {
     "@sddp/shell": "*",
     "@sddp/ui": "*",
-    "@tiptap/core": "^3.18.0",
-    "@tiptap/extension-placeholder": "^3.18.0",
-    "@tiptap/extension-table": "^3.18.0",
-    "@tiptap/extension-table-cell": "^3.18.0",
-    "@tiptap/extension-table-header": "^3.18.0",
-    "@tiptap/extension-table-row": "^3.18.0",
-    "@tiptap/pm": "^3.18.0",
-    "@tiptap/starter-kit": "^3.18.0",
-    "@tiptap/suggestion": "^3.18.0",
+    "@tiptap/core": "3.30.5",
+    "@tiptap/extension-placeholder": "3.30.5",
+    "@tiptap/extension-table": "3.30.5",
+    "@tiptap/extension-table-cell": "3.30.5",
+    "@tiptap/extension-table-header": "3.30.5",
+    "@tiptap/extension-table-row": "3.30.5",
+    "@tiptap/pm": "3.30.5",
+    "@tiptap/starter-kit": "3.30.5",
+    "@tiptap/suggestion": "3.30.5",
     "d3-force": "^3.0.0",
     "d3-hierarchy": "^3.1.2",
     "d3-selection": "^3.0.0",
-    "d3-zoom": "^3.0.0"
+    "d3-zoom": "^3.0.0",
+    "lucide": "1.25.0"
   },
   "peerDependencies": {
     "svelte": "^5.0.0"
@@ -83,13 +253,12 @@
     "@types/d3-zoom": "^3.0.8",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
-    "@vitest/coverage-v8": "^4.0.18",
-    "eslint": "^9.39.2",
+    "eslint": "^10.8.0",
     "eslint-plugin-svelte": "^3.14.0",
     "globals": "^17.0.0",
     "svelte-check": "^4.3.4",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.32.1",
-    "vitest": "^4.0.17"
+    "vitest": "^4.1.10"
   }
 }

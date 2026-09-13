@@ -14,12 +14,7 @@
     class?: string;
   }
 
-  let {
-    items,
-    members: _members = [],
-    height = 460,
-    class: className = '',
-  }: Props = $props();
+  let { items, members: _members = [], height = 460, class: className = '' }: Props = $props();
 
   // Dynamic width from container
   let containerEl: HTMLDivElement | undefined = $state(undefined);
@@ -195,7 +190,7 @@
   function findNodeInTree(
     root: TreemapNode,
     name: string,
-    targetDepth: number,
+    targetDepth: number
   ): TreemapNode | null {
     if (root.depth === targetDepth && root.data.name === name) return root;
     if (!root.children) return null;
@@ -295,10 +290,7 @@
 
 <div class="relative {className}" bind:this={containerEl}>
   <!-- Breadcrumb -->
-  <div
-    class="flex items-center gap-1 px-2 text-xs"
-    style="height: {HEADER_HEIGHT}px;"
-  >
+  <div class="flex items-center gap-1 px-2 text-xs" style="height: {HEADER_HEIGHT}px;">
     {#each breadcrumb as crumb, i (i)}
       {#if i > 0}
         <span class="text-[var(--color-text-tertiary)]">/</span>
@@ -307,7 +299,7 @@
         <Button
           variant="ghost"
           size="sm"
-          class="!px-1 !py-0 text-[var(--color-accent-primary)] hover:underline"
+          class="!px-1 !py-0 text-[var(--color-accent-text)] hover:underline"
           onclick={() => handleBreadcrumbClick(i)}
         >
           {crumb.label}

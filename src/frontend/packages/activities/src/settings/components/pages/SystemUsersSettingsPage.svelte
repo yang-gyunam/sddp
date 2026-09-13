@@ -9,10 +9,22 @@
 
   import { untrack } from 'svelte';
   import { UserDetailPanel } from '../sections';
-  import { toast, getAuthState, subscribeAuth, PageHeader, PageShell, SidebarDetailLayout, Dropdown, RichListItem, getTabState, setTabState, Avatar } from '@sddp/shell';
+  import {
+    toast,
+    getAuthState,
+    subscribeAuth,
+    PageHeader,
+    PageShell,
+    SidebarDetailLayout,
+    Dropdown,
+    RichListItem,
+    getTabState,
+    setTabState,
+    Avatar,
+  } from '@sddp/shell';
   import { Icon, Input, IconButton, Button, Spinner } from '@sddp/ui';
   import type { SystemUser } from '../../types';
-  import { getUserManagementService } from '../../services';
+  import { createUserManagementService } from '../../services';
   import { ALL_ROLES, getRoleLabel } from '../../../shared/types';
 
   interface Props {
@@ -37,7 +49,7 @@
     }
   });
 
-  const userService = getUserManagementService();
+  let userService = $derived(createUserManagementService(effectiveTenantId));
 
   let users = $state<SystemUser[]>([]);
   let loading = $state(false);
@@ -219,7 +231,6 @@
     }
 
     try {
-      userService.setContext(effectiveTenantId);
       const result = await userService.getUsers({
         search: searchQuery.trim() || undefined,
         role: filterRole !== 'all' ? filterRole : undefined,
@@ -281,7 +292,6 @@
   async function loadUserDetail(userId: string) {
     loadingDetail = true;
     try {
-      userService.setContext(effectiveTenantId);
       selectedUser = await userService.getUserById(userId);
     } catch {
       toast.error('Failed to load user details');
@@ -361,12 +371,12 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="Users" {loading}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" title="Refresh" onclick={() => loadUsers()} />
-      <IconButton icon="plus" title="New User" onclick={openCreate} />
-    {/snippet}
-  </PageHeader>
+    <PageHeader title="Users" {loading}>
+      {#snippet actions()}
+        <IconButton icon="refresh-cw" title="Refresh" onclick={() => loadUsers()} />
+        <IconButton icon="plus" title="New User" onclick={openCreate} />
+      {/snippet}
+    </PageHeader>
     <SidebarDetailLayout
       showRightPanel={false}
       sidebarWidth={360}
@@ -376,7 +386,9 @@
       {#snippet sidebar()}
         <div class="flex flex-col h-full min-h-0 bg-[var(--color-bg-primary)]">
           <!-- Sidebar Header: Search + Actions (GlossarySidebar pattern) -->
-          <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+          <div
+            class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+          >
             <div class="flex items-center gap-1 w-full">
               <!-- Search Input -->
               <div class="relative flex-1">
@@ -399,12 +411,22 @@
 
               <!-- Filter Dropdown -->
               <Dropdown position="bottom-right">
-                {#snippet trigger()}
-                  <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+                {#snippet trigger({ toggle, open })}
+                  <IconButton
+                    onclick={toggle}
+                    ariaHasPopup
+                    ariaExpanded={open}
+                    icon="more-vertical"
+                    size="sm"
+                    variant="ghost"
+                    title="Filter options"
+                  />
                 {/snippet}
                 <div class="py-1 min-w-[180px]">
                   <!-- Role Filter -->
-                  <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                  <div
+                    class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                  >
                     Role
                   </div>
                   {#each roleFilterOptions as option (option.value)}
@@ -414,10 +436,14 @@
                              hover:bg-[var(--color-bg-tertiary)] transition-colors"
                       onclick={() => (filterRole = option.value)}
                     >
-                      <Icon name={option.icon} size="sm" class="text-[var(--color-text-tertiary)]" />
+                      <Icon
+                        name={option.icon}
+                        size="sm"
+                        class="text-[var(--color-text-tertiary)]"
+                      />
                       <span class="flex-1">{option.label}</span>
                       {#if filterRole === option.value}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                     </Button>
                   {/each}
@@ -425,7 +451,9 @@
                   <div class="my-1 border-t border-[var(--color-border-primary)]"></div>
 
                   <!-- Status Filter -->
-                  <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                  <div
+                    class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                  >
                     Status
                   </div>
                   {#each statusFilterOptions as option (option.value)}
@@ -435,10 +463,14 @@
                              hover:bg-[var(--color-bg-tertiary)] transition-colors"
                       onclick={() => (filterStatus = option.value)}
                     >
-                      <Icon name={option.icon} size="sm" class="text-[var(--color-text-tertiary)]" />
+                      <Icon
+                        name={option.icon}
+                        size="sm"
+                        class="text-[var(--color-text-tertiary)]"
+                      />
                       <span class="flex-1">{option.label}</span>
                       {#if filterStatus === option.value}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                     </Button>
                   {/each}
@@ -462,14 +494,20 @@
                 {/snippet}
                 {#snippet trailing()}
                   <div class="flex items-center gap-1.5 ml-auto flex-shrink-0">
-                    <span class="inline-block px-1.5 py-px rounded text-[0.6875rem]
+                    <span
+                      class="inline-block px-1.5 py-px rounded text-[0.6875rem]
                                  {user.globalRole === 'Admin'
-                                   ? 'bg-purple-500/10 text-purple-500'
-                                   : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}">
+                        ? 'bg-purple-500/10 text-purple-500'
+                        : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+                    >
                       {getRoleLabel(user.globalRole)}
                     </span>
-                    <span class="w-1.5 h-1.5 rounded-full
-                                 {user.status === 'active' ? 'bg-green-500' : 'bg-[var(--color-text-tertiary)]'}"></span>
+                    <span
+                      class="w-1.5 h-1.5 rounded-full
+                                 {user.status === 'active'
+                        ? 'bg-green-500'
+                        : 'bg-[var(--color-text-tertiary)]'}"
+                    ></span>
                   </div>
                 {/snippet}
               </RichListItem>
@@ -494,6 +532,7 @@
           <div class="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>
         {:else if panelMode === 'create'}
           <UserDetailPanel
+            tenantId={effectiveTenantId}
             mode="create"
             user={null}
             onClose={closePanel}
@@ -504,6 +543,7 @@
           />
         {:else if panelMode === 'edit' && selectedUser}
           <UserDetailPanel
+            tenantId={effectiveTenantId}
             mode="edit"
             user={selectedUser}
             onClose={closePanel}
@@ -514,9 +554,14 @@
           />
         {:else if panelMode === 'view' && selectedUser}
           <UserDetailPanel
+            tenantId={effectiveTenantId}
             mode="view"
             user={selectedUser}
-            onClose={() => { selectedUserId = null; selectedUser = null; panelMode = null; }}
+            onClose={() => {
+              selectedUserId = null;
+              selectedUser = null;
+              panelMode = null;
+            }}
             onEdit={openEdit}
             onCreated={handleCreated}
             onSaved={handleSaved}

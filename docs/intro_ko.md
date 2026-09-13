@@ -86,7 +86,7 @@ SDDP는 그 "왜"를 보존하는 플랫폼입니다.
 
 ---
 
-*SDDP는 오픈소스 프로젝트입니다. [GitHub](https://github.com/user/sddp)에서 확인할 수 있습니다.*
+*SDDP는 오픈소스 프로젝트입니다. [GitHub](https://github.com/yang-gyunam/sddp)에서 확인할 수 있습니다.*
 
 <!--
   Image Placeholders (스크린샷/일러스트 교체 가이드)

@@ -4,7 +4,13 @@
   import { formatDateWithOptions } from '@sddp/shell';
   import type { DailyEffort } from '../../types';
   import { formatHours, getUtilizationGrade } from '../../stores';
-  import { getWeekBoundaries, getDateRange, parseDate, isWeekend, formatDate } from '../../services';
+  import {
+    getWeekBoundaries,
+    getDateRange,
+    parseDate,
+    isWeekend,
+    formatDate,
+  } from '../../services';
 
   interface Props {
     dailyEffort: DailyEffort[];
@@ -110,11 +116,16 @@
             class="monthly-timesheet__day"
             class:monthly-timesheet__day--outside={!day.isInMonth}
             class:monthly-timesheet__day--today={isToday(day.date)}
-            class:monthly-timesheet__day--offday={day.effort ? !day.effort.isWorkingDay : isWeekend(day.date)}
+            class:monthly-timesheet__day--offday={day.effort
+              ? !day.effort.isWorkingDay
+              : isWeekend(day.date)}
           >
             <div class="monthly-timesheet__day-number">{formatDayNumber(day.date)}</div>
             {#if day.effort}
-              <div class="monthly-timesheet__day-hours" style="color: {getUtilizationColor(day.effort)}">
+              <div
+                class="monthly-timesheet__day-hours"
+                style="color: {getUtilizationColor(day.effort)}"
+              >
                 <span>{formatHours(day.effort.spentHours)}</span>
                 <span class="monthly-timesheet__day-sep">/</span>
                 <span>{formatHours(day.effort.allocatedHours)}</span>
@@ -132,7 +143,11 @@
 <style>
   .monthly-timesheet {
     width: 100%;
-    --monthly-today-border: color-mix(in srgb, var(--color-accent-primary) 45%, var(--color-border-secondary));
+    --monthly-today-border: color-mix(
+      in srgb,
+      var(--color-accent-primary) 45%,
+      var(--color-border-secondary)
+    );
     --monthly-today-ring: color-mix(in srgb, var(--color-accent-primary) 28%, transparent);
   }
 

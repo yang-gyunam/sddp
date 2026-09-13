@@ -32,16 +32,14 @@
   }
 </script>
 
-<div
-  class="flex {isUser ? 'justify-end' : 'justify-start'} {className}"
->
+<div class="flex {isUser ? 'justify-end' : 'justify-start'} {className}">
   <div
     class="max-w-[85%] rounded-lg px-3 py-2
       {isUser
-        ? 'bg-blue-600 text-white'
-        : isSystem
-          ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm italic'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'}
+      ? 'bg-blue-600 text-white'
+      : isSystem
+        ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm italic'
+        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'}
       {isError ? 'border border-red-300 dark:border-red-700' : ''}"
   >
     <!-- Role indicator for assistant -->
@@ -52,7 +50,8 @@
         {#if message.metadata?.analysisType}
           <span>·</span>
           <AiAnalysisTypeBadge
-            type={message.metadata.analysisType as import('../../../ai/types/base.types').AiAnalysisType}
+            type={message.metadata
+              .analysisType as import('../../../ai/types/base.types').AiAnalysisType}
             size="sm"
             showLabel={false}
           />

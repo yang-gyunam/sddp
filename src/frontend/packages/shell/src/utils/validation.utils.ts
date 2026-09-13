@@ -116,7 +116,7 @@ export function validateField<T>(value: T, rules: ValidationRule<T>[]): string[]
 /** Validate an entire object against a schema */
 export function validate<T extends Record<string, unknown>>(
   data: T,
-  schema: ValidationSchema<T>,
+  schema: ValidationSchema<T>
 ): ValidationResult {
   const errors: Record<string, string[]> = {};
   let valid = true;

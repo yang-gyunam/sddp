@@ -88,7 +88,9 @@ export const Body1: Story = {
   render: (args) => ({
     Component: Typography,
     props: args,
-    slots: { default: 'Body 1 - This is the default body text style for paragraphs and general content.' },
+    slots: {
+      default: 'Body 1 - This is the default body text style for paragraphs and general content.',
+    },
   }),
 };
 

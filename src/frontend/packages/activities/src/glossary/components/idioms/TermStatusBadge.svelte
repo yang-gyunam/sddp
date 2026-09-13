@@ -16,12 +16,7 @@
     class?: string;
   }
 
-  let {
-    status,
-    size = 'md',
-    showIcon = true,
-    class: className = '',
-  }: Props = $props();
+  let { status, size = 'md', showIcon = true, class: className = '' }: Props = $props();
 
   // Cast domain styles to BadgeStyleConfig (they are compatible)
   const styles = TERM_STATUS_STYLES as unknown as Record<GlossaryTermStatus, BadgeStyleConfig>;

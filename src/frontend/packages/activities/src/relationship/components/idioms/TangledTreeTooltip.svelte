@@ -21,16 +21,17 @@
   style="left: {x + 12}px; top: {y - 8}px;"
 >
   <div class="flex items-center gap-1.5 mb-1">
-    <span
-      class="w-2 h-2 rounded-full shrink-0"
-      style="background-color: {nodeColor}"
-    ></span>
+    <span class="w-2 h-2 rounded-full shrink-0" style="background-color: {nodeColor}"></span>
     <span class="font-medium text-[var(--color-text-primary)]">
       {style?.label ?? node.entityType}
     </span>
   </div>
   <div class="flex items-center gap-1 mb-0.5">
-    <Icon name={style?.icon ?? 'circle'} size="xs" class="text-[var(--color-text-tertiary)] shrink-0" />
+    <Icon
+      name={style?.icon ?? 'circle'}
+      size="xs"
+      class="text-[var(--color-text-tertiary)] shrink-0"
+    />
     <span class="text-[var(--color-text-secondary)] truncate max-w-[200px]">{node.label}</span>
   </div>
   {#if node.code}

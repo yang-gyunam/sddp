@@ -352,7 +352,7 @@ CREATE TABLE roles (
  code VARCHAR(50) NOT NULL, -- Role (: ADMIN)
  name VARCHAR(100) NOT NULL, -- (: "System Manage")
  description TEXT,
- type INT NOT NULL DEFAULT 0, -- RoleType enum (0=PO, 1=DomainExpert, 2=Developer, 3=Reviewer, 4=QA, 5=SysOp, 6=AI)
+ type INT NOT NULL DEFAULT 0, -- RoleType enum (0=PO, 1=DomainExpert, 2=Developer, 3=Reviewer, 4=QA, 5=Admin)
 
  -- Category
  role_type VARCHAR(20) NOT NULL DEFAULT 'PROJECT', -- SYSTEM, PROJECT
@@ -630,7 +630,7 @@ CREATE TABLE sign_offs (
 
  -- Relationship(Decision)
  stakeholder_id UUID NOT NULL,
- role INT NOT NULL, -- RoleType enum (0=PO, 1=DomainExpert, 2=Developer, 3=Reviewer, 4=QA, 5=SysOp, 6=AI)
+ role INT NOT NULL, -- RoleType enum (0=PO, 1=DomainExpert, 2=Developer, 3=Reviewer, 4=QA, 5=Admin)
 
  -- Decision (codes Table FK)
  decision_code_id UUID NOT NULL DEFAULT '00000000-0000-0000-0006-000015000001', -- SIGNOFF_DECISION/PENDING
@@ -1333,7 +1333,6 @@ END $$;
 
 -- NOTE: tenant_id has no FK — tenants table not yet implemented.
 -- Tenant isolation is enforced at application layer (TenantContextMiddleware).
--- See docs/deploy/database.md "Tenant " for details.
 
 -- -----------------------------------------------------------------------------
 -- Projects
@@ -1361,7 +1360,8 @@ CREATE TABLE projects (
  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
- --
+ -- Constraints
+ CONSTRAINT uq_projects_scope_id UNIQUE (tenant_id, id),
  CONSTRAINT uq_projects_tenant_code UNIQUE (tenant_id, code),
  CONSTRAINT fk_projects_status_code FOREIGN KEY (status_code_id) REFERENCES codes(id)
 );
@@ -2524,6 +2524,135 @@ COMMENT ON COLUMN notifications.entity_type IS 'task | conversation';
 
 -- <<< end bundled from scripts/db/25-schema-notification.sql <<<
 
+\echo '[26] Creating Knowledge Hub Schema...'
+
+-- >>> bundled from scripts/db/26-schema-knowledge.sql >>>
+-- =============================================================================
+-- 26-schema-knowledge.sql
+-- Knowledge Hub: editable project wiki pages, immutable versions, entity links
+-- =============================================================================
+
+CREATE TABLE knowledge_pages (
+ id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+ tenant_id UUID NOT NULL,
+ project_id UUID NOT NULL,
+ parent_id UUID,
+ title VARCHAR(200) NOT NULL,
+ slug VARCHAR(200) NOT NULL,
+ content_json JSONB NOT NULL DEFAULT '{"type":"doc","content":[]}'::jsonb,
+ content_text TEXT NOT NULL DEFAULT '',
+ tags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+ status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+ position INTEGER NOT NULL DEFAULT 10,
+ revision INTEGER NOT NULL DEFAULT 1,
+ created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+ updated_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+ published_by UUID REFERENCES users(id) ON DELETE RESTRICT,
+ published_at TIMESTAMPTZ,
+ archived_at TIMESTAMPTZ,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ is_active BOOLEAN NOT NULL DEFAULT TRUE,
+ CONSTRAINT ck_knowledge_pages_status
+  CHECK (status IN ('Draft', 'Published', 'Archived')),
+ CONSTRAINT ck_knowledge_pages_position CHECK (position >= 0),
+ CONSTRAINT ck_knowledge_pages_revision CHECK (revision >= 1),
+ CONSTRAINT ck_knowledge_pages_not_self_parent CHECK (parent_id IS NULL OR parent_id <> id),
+ CONSTRAINT uq_knowledge_pages_scope_id UNIQUE (tenant_id, project_id, id),
+ CONSTRAINT fk_knowledge_pages_project_scope
+  FOREIGN KEY (tenant_id, project_id)
+  REFERENCES projects(tenant_id, id) ON DELETE RESTRICT,
+ CONSTRAINT fk_knowledge_pages_parent_scope
+  FOREIGN KEY (tenant_id, project_id, parent_id)
+  REFERENCES knowledge_pages(tenant_id, project_id, id) ON DELETE RESTRICT
+);
+
+CREATE TABLE knowledge_page_versions (
+ id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+ tenant_id UUID NOT NULL,
+ project_id UUID NOT NULL,
+ page_id UUID NOT NULL,
+ revision INTEGER NOT NULL,
+ title VARCHAR(200) NOT NULL,
+ slug VARCHAR(200) NOT NULL,
+ content_json JSONB NOT NULL,
+ content_text TEXT NOT NULL DEFAULT '',
+ tags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+ status VARCHAR(20) NOT NULL,
+ change_summary VARCHAR(500),
+ created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ is_active BOOLEAN NOT NULL DEFAULT TRUE,
+ CONSTRAINT ck_knowledge_page_versions_status
+  CHECK (status IN ('Draft', 'Published', 'Archived')),
+ CONSTRAINT ck_knowledge_page_versions_revision CHECK (revision >= 1),
+ CONSTRAINT uq_knowledge_page_versions_revision UNIQUE (page_id, revision),
+ CONSTRAINT fk_knowledge_page_versions_page_scope
+  FOREIGN KEY (tenant_id, project_id, page_id)
+  REFERENCES knowledge_pages(tenant_id, project_id, id) ON DELETE RESTRICT
+);
+
+CREATE TABLE knowledge_page_links (
+ id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+ tenant_id UUID NOT NULL,
+ project_id UUID NOT NULL,
+ page_id UUID NOT NULL,
+ target_type VARCHAR(40) NOT NULL,
+ target_id UUID NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ is_active BOOLEAN NOT NULL DEFAULT TRUE,
+ CONSTRAINT ck_knowledge_page_links_target_type
+  CHECK (target_type IN ('Spec', 'Requirement', 'Decision', 'Artifact')),
+ CONSTRAINT fk_knowledge_page_links_page_scope
+  FOREIGN KEY (tenant_id, project_id, page_id)
+  REFERENCES knowledge_pages(tenant_id, project_id, id) ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_knowledge_pages_tree
+ ON knowledge_pages(tenant_id, project_id, parent_id, position)
+ WHERE is_active = TRUE;
+CREATE INDEX idx_knowledge_pages_status_updated
+ ON knowledge_pages(tenant_id, project_id, status, updated_at DESC)
+ WHERE is_active = TRUE;
+CREATE UNIQUE INDEX uq_knowledge_pages_root_slug
+ ON knowledge_pages(tenant_id, project_id, LOWER(slug))
+ WHERE parent_id IS NULL AND is_active = TRUE;
+CREATE UNIQUE INDEX uq_knowledge_pages_child_slug
+ ON knowledge_pages(tenant_id, project_id, parent_id, LOWER(slug))
+ WHERE parent_id IS NOT NULL AND is_active = TRUE;
+CREATE INDEX idx_knowledge_pages_search
+ ON knowledge_pages
+ USING GIN (to_tsvector(
+  'simple',
+  COALESCE(title, '') || ' ' || COALESCE(content_text, '') || ' ' || COALESCE(tags_json::text, '')
+ ))
+ WHERE is_active = TRUE;
+CREATE INDEX idx_knowledge_pages_title_trgm
+ ON knowledge_pages USING GIN (title gin_trgm_ops)
+ WHERE is_active = TRUE;
+CREATE INDEX idx_knowledge_pages_tags_trgm
+ ON knowledge_pages USING GIN ((tags_json::text) gin_trgm_ops)
+ WHERE is_active = TRUE;
+CREATE INDEX idx_knowledge_page_versions_scope
+ ON knowledge_page_versions(tenant_id, project_id, page_id, revision DESC);
+CREATE UNIQUE INDEX uq_knowledge_page_links_active
+ ON knowledge_page_links(page_id, target_type, target_id)
+ WHERE is_active = TRUE;
+CREATE INDEX idx_knowledge_page_links_backlink
+ ON knowledge_page_links(tenant_id, project_id, target_type, target_id)
+ WHERE is_active = TRUE;
+
+COMMENT ON TABLE knowledge_pages IS
+ 'Editable project wiki pages with hierarchy, publication state, and optimistic revision';
+COMMENT ON TABLE knowledge_page_versions IS
+ 'Immutable Knowledge Page revision snapshots';
+COMMENT ON TABLE knowledge_page_links IS
+ 'Current SDDP entity mentions extracted from Knowledge Page content';
+
+-- <<< end bundled from scripts/db/26-schema-knowledge.sql <<<
+
 -- -----------------------------------------------------------------------------
 -- Indexes (30-49)
 -- -----------------------------------------------------------------------------
@@ -2633,6 +2762,17 @@ CREATE INDEX idx_audit_logs_project_chrono
 -- -----------------------------------------------------------------------------
 CREATE INDEX idx_artifact_trackings_by_spec
  ON artifact_trackings(tenant_id, project_id, spec_id, is_active);
+
+-- -----------------------------------------------------------------------------
+-- artifact_trackings: one row per tracked artifact
+--
+-- The generator's tracking writer upserts through ON CONFLICT, which can only infer this index if
+-- the predicate matches. Partial on is_active so a retired row does not block re-tracking the same
+-- artifact.
+-- -----------------------------------------------------------------------------
+CREATE UNIQUE INDEX ux_artifact_trackings_identity
+ ON artifact_trackings(tenant_id, project_id, spec_id, artifact_path)
+ WHERE is_active;
 
 -- -----------------------------------------------------------------------------
 -- glossary_terms: Read
@@ -3267,8 +3407,8 @@ END $$;
 -- =============================================================================
 
 -- Permission : {resource}:{action}
--- Resources: spec, conversation, requirement, generation, glossary, user, role, audit, project, task
--- Actions: create, read, update, delete, approve, lock, execute, rollback, manage, assign, post, close, deprecate
+-- Resources: spec, conversation, requirement, generation, glossary, user, role, audit, project, task, knowledge
+-- Actions: create, read, update, delete, approve, lock, execute, rollback, manage, assign, post, close, deprecate, archive, publish, admin
 
 INSERT INTO permissions (id, code, name, description, resource_type, action, is_system)
 VALUES
@@ -3321,7 +3461,15 @@ VALUES
  ('00000000-0000-0000-0003-000000000081', 'task:create', 'Create Task', 'Task Create', 'task', 'create', TRUE),
  ('00000000-0000-0000-0003-000000000082', 'task:read', 'Read Task', 'Task Read', 'task', 'read', TRUE),
  ('00000000-0000-0000-0003-000000000083', 'task:update', 'Update Task', 'Task Update', 'task', 'update', TRUE),
- ('00000000-0000-0000-0003-000000000084', 'task:delete', 'Delete Task', 'Task Delete', 'task', 'delete', TRUE)
+ ('00000000-0000-0000-0003-000000000084', 'task:delete', 'Delete Task', 'Task Delete', 'task', 'delete', TRUE),
+
+ -- Knowledge permissions (6)
+ ('00000000-0000-0000-0003-000000000091', 'knowledge:read', 'Read Knowledge', 'Read knowledge pages', 'knowledge', 'read', TRUE),
+ ('00000000-0000-0000-0003-000000000092', 'knowledge:create', 'Create Knowledge', 'Create knowledge pages', 'knowledge', 'create', TRUE),
+ ('00000000-0000-0000-0003-000000000093', 'knowledge:update', 'Update Knowledge', 'Update knowledge pages', 'knowledge', 'update', TRUE),
+ ('00000000-0000-0000-0003-000000000094', 'knowledge:archive', 'Archive Knowledge', 'Archive knowledge pages', 'knowledge', 'archive', TRUE),
+ ('00000000-0000-0000-0003-000000000095', 'knowledge:publish', 'Publish Knowledge', 'Publish knowledge pages', 'knowledge', 'publish', TRUE),
+ ('00000000-0000-0000-0003-000000000096', 'knowledge:admin', 'Administer Knowledge', 'Administer project knowledge', 'knowledge', 'admin', TRUE)
 
 ON CONFLICT (code) DO UPDATE SET
  name = EXCLUDED.name,
@@ -3345,12 +3493,6 @@ END $$;
 
 \echo '[54] Mapping Role-Permissions...'
 
--- >>> bundled from scripts/db/54-data-role-permissions.sql >>>
--- =============================================================================
--- 54-data-role-permissions.sql
--- Role-Permission
--- Source of Truth: docs/business/user-roles.md Role-Permission
--- =============================================================================
 
 -- Role IDs (from 52-data-roles.sql)
 -- ADMIN: 00000000-0000-0000-0002-000000000001
@@ -3360,7 +3502,7 @@ END $$;
 -- REVIEWER: 00000000-0000-0000-0002-000000000005
 -- QA_TESTER: 00000000-0000-0000-0002-000000000006
 -- -----------------------------------------------------------------------------
--- ADMIN: Permission (31)
+-- ADMIN: Permission (37)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -3371,7 +3513,7 @@ WHERE is_system = TRUE
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
--- PRODUCT_OWNER: project:delete (30)
+-- PRODUCT_OWNER: project:delete and user:manage excluded by public role contract (35)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -3379,12 +3521,12 @@ SELECT
  id
 FROM permissions
 WHERE is_system = TRUE
- AND code NOT IN ('project:delete')
+ AND code NOT IN ('project:delete', 'user:manage')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
 -- DOMAIN_EXPERT: Spec CRU, Conversation , Requirement CRU, Glossary ,
--- Project , Task CRU (18)
+-- Project , Task CRU, Knowledge read/create/update/publish (22)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -3398,13 +3540,14 @@ WHERE is_system = TRUE
  'requirement:create', 'requirement:read', 'requirement:update',
  'glossary:create', 'glossary:read', 'glossary:update', 'glossary:deprecate',
  'project:read',
- 'task:create', 'task:read', 'task:update'
+ 'task:create', 'task:read', 'task:update',
+ 'knowledge:read', 'knowledge:create', 'knowledge:update', 'knowledge:publish'
  )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
 -- DEVELOPER: Spec CRU, Conversation , Requirement CRU, Generation execute,
--- Glossary CRU, Project , Task CRU (18)
+-- Glossary CRU, Project , Task CRU, Knowledge read/create/update (21)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -3419,12 +3562,13 @@ WHERE is_system = TRUE
  'generation:execute',
  'glossary:create', 'glossary:read', 'glossary:update',
  'project:read',
- 'task:create', 'task:read', 'task:update'
+ 'task:create', 'task:read', 'task:update',
+ 'knowledge:read', 'knowledge:create', 'knowledge:update'
  )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
--- REVIEWER: + spec:approve + Conversation (10)
+-- REVIEWER: + spec:approve + Conversation + Knowledge read/publish (12)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -3438,12 +3582,13 @@ WHERE is_system = TRUE
  'requirement:read',
  'glossary:read',
  'project:read',
- 'task:read'
+ 'task:read',
+ 'knowledge:read', 'knowledge:publish'
  )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
--- QA_TESTER: + Conversation create/post + Task CRU (10)
+-- QA_TESTER: + Conversation create/post + Task CRU + Knowledge read (11)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -3457,7 +3602,8 @@ WHERE is_system = TRUE
  'requirement:read',
  'glossary:read',
  'project:read',
- 'task:create', 'task:read', 'task:update'
+ 'task:create', 'task:read', 'task:update',
+ 'knowledge:read'
  )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 

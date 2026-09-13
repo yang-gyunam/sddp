@@ -120,7 +120,11 @@
         {/if}
         {#if channel}
           <Badge
-            variant={channel.status === 'Active' ? 'success' : channel.status === 'Concluded' ? 'warning' : 'secondary'}
+            variant={channel.status === 'Active'
+              ? 'success'
+              : channel.status === 'Concluded'
+                ? 'warning'
+                : 'secondary'}
           >
             {channel.status}
           </Badge>
@@ -146,13 +150,7 @@
           onclick={onOpenSettings}
         />
         {#if onClose}
-          <IconButton
-            icon="x"
-            size="sm"
-            variant="ghost"
-            title="Close"
-            onclick={onClose}
-          />
+          <IconButton icon="x" size="sm" variant="ghost" title="Close" onclick={onClose} />
         {/if}
       {/snippet}
     </DetailHeader>
@@ -166,9 +164,7 @@
       {:else if !hasMessages}
         <div class="flex flex-col items-center justify-center h-full text-center">
           <Icon name="message-circle" size="xl" class="text-[var(--color-text-tertiary)] mb-3" />
-          <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-1">
-            No messages yet
-          </h3>
+          <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-1">No messages yet</h3>
           <p class="text-sm text-[var(--color-text-tertiary)]">
             Start the conversation by sending a message.
           </p>
@@ -177,7 +173,7 @@
         <!-- Load More Button -->
         <Button
           variant="unstyled"
-          class="w-full py-2 mb-4 text-sm text-[var(--color-accent-primary)]
+          class="w-full py-2 mb-4 text-sm text-[var(--color-accent-text)]
             hover:bg-[var(--color-bg-secondary)] rounded transition-colors"
           onclick={onLoadMore}
         >
@@ -237,7 +233,7 @@
             variant="unstyled"
             class="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors
               {selectedMessageType === type.value
-              ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+              ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
               : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-secondary)]'}"
             onclick={() => (selectedMessageType = type.value)}
             title={type.label}

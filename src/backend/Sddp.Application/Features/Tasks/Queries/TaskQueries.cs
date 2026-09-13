@@ -69,12 +69,10 @@ public sealed class GetTasksQueryHandler : IRequestHandler<GetTasksQuery, TaskIt
     }
 }
 
-/// <summary>
-/// task get (ID)
-/// </summary>
 public sealed record GetTaskByIdQuery(
     GlobalUniqueId TenantId,
-    GlobalUniqueId TaskId) : IQuery<TaskItemDetailDto?>;
+    GlobalUniqueId TaskId,
+    GlobalUniqueId UserId) : IQuery<TaskItemDetailDto?>;
 
 public sealed class GetTaskByIdQueryHandler : IRequestHandler<GetTaskByIdQuery, TaskItemDetailDto?>
 {
@@ -91,6 +89,13 @@ public sealed class GetTaskByIdQueryHandler : IRequestHandler<GetTaskByIdQuery, 
 
         var task = await (taskRepo.GetByIdAsync(request.TaskId, cancellationToken)).ConfigureAwait(false);
         if (task is null || task.TenantId != request.TenantId || !task.IsActive)
+        {
+            return null;
+        }
+
+        // Somebody else's personal task reads as absent, not as forbidden: telling the caller it
+        // exists would answer a question they are not allowed to ask.
+        if (!PersonalTaskAccess.IsPermitted(task, request.UserId))
         {
             return null;
         }
@@ -206,18 +211,24 @@ public sealed class GetBacklogSummaryQueryHandler : IRequestHandler<GetBacklogSu
         var projectRepo = _unitOfWork.Repository<Project>();
         var taskRepo = _unitOfWork.Repository<TaskItem>();
 
-        // Find all projects where user is a member
-        var memberships = await (memberRepo.FindAsync(
-            m => m.UserId == request.UserId && m.IsActive,
-            cancellationToken)).ConfigureAwait(false);
+        // Owners participate without a ProjectMember row; include both access paths once.
+        var memberships = await memberRepo.FindAsync(
+            m => m.UserId == request.UserId && m.IsActive, cancellationToken).ConfigureAwait(false);
+        var ownedProjects = await projectRepo.FindAsync(
+            p => p.TenantId == request.TenantId && p.OwnerId == request.UserId && p.IsActive,
+            cancellationToken).ConfigureAwait(false);
+        var ownedById = ownedProjects.ToDictionary(p => p.Id);
+        var projectIds = memberships.Select(m => m.ProjectId).Concat(ownedById.Keys).Distinct();
 
         var projectSummaries = new List<BacklogProjectSummaryDto>();
         var totalTasks = 0;
 
-        foreach (var membership in memberships)
+        foreach (var projectId in projectIds)
         {
-            var project = await (projectRepo.GetByIdAsync(membership.ProjectId, cancellationToken)).ConfigureAwait(false);
-            if (project is null || project.TenantId != request.TenantId) continue;
+            var project = ownedById.TryGetValue(projectId, out var ownedProject)
+                ? ownedProject
+                : await projectRepo.GetByIdAsync(projectId, cancellationToken).ConfigureAwait(false);
+            if (project is null || project.TenantId != request.TenantId || !project.IsActive) continue;
 
             var isOwner = project.OwnerId.HasValue && project.OwnerId.Value == request.UserId;
 

@@ -18,7 +18,7 @@
   function getRoleColor(role: string): string {
     switch (role.toLowerCase()) {
       case 'productowner':
-        return 'bg-[var(--color-bg-secondary)] text-[var(--color-accent-primary)] border border-[var(--color-border-secondary)]';
+        return 'bg-[var(--color-bg-secondary)] text-[var(--color-accent-text)] border border-[var(--color-border-secondary)]';
       case 'domainexpert':
         return 'bg-[var(--color-bg-secondary)] text-[var(--color-info-600)] border border-[var(--color-border-secondary)]';
       case 'developer':
@@ -48,7 +48,9 @@
     <!-- AI Agents -->
     {#if aiParticipants.length > 0}
       <div class="px-4 py-2">
-        <h4 class="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+        <h4
+          class="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-2"
+        >
           AI Agents
         </h4>
         <ul class="space-y-2">
@@ -56,7 +58,7 @@
             <li class="flex items-center gap-3">
               <div class="relative">
                 <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-accent-primary)] text-[var(--color-accent-primary)]"
+                  class="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-accent-primary)] text-[var(--color-accent-text)]"
                 >
                   <Icon name="bot" size="sm" />
                 </div>
@@ -73,7 +75,9 @@
                   {participant.user.name}
                 </p>
                 <span
-                  class="inline-block text-xs px-1.5 py-0.5 rounded {getRoleColor(participant.role)}"
+                  class="inline-block text-xs px-1.5 py-0.5 rounded {getRoleColor(
+                    participant.role
+                  )}"
                 >
                   {participant.role}
                 </span>
@@ -87,7 +91,9 @@
     <!-- Human Participants -->
     {#if humanParticipants.length > 0}
       <div class="px-4 py-2">
-        <h4 class="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+        <h4
+          class="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-2"
+        >
           Team Members
         </h4>
         <ul class="space-y-2">
@@ -112,7 +118,9 @@
                   {participant.user.name}
                 </p>
                 <span
-                  class="inline-block text-xs px-1.5 py-0.5 rounded {getRoleColor(participant.role)}"
+                  class="inline-block text-xs px-1.5 py-0.5 rounded {getRoleColor(
+                    participant.role
+                  )}"
                 >
                   {participant.role}
                 </span>

@@ -43,7 +43,10 @@ export class ForceDirectedLayout implements LayoutEngine {
           .distance(config.linkDistance)
       )
       .force('charge', forceManyBody<SimulationNode>().strength(config.chargeStrength))
-      .force('center', forceCenter<SimulationNode>(width / 2, height / 2).strength(config.centerStrength))
+      .force(
+        'center',
+        forceCenter<SimulationNode>(width / 2, height / 2).strength(config.centerStrength)
+      )
       .force('collide', forceCollide<SimulationNode>(config.collideRadius))
       .alphaDecay(config.alphaDecay)
       .velocityDecay(config.velocityDecay)
@@ -84,7 +87,10 @@ export class ForceDirectedLayout implements LayoutEngine {
     if (!this.simulation) return;
 
     if (config.chargeStrength !== undefined) {
-      this.simulation.force('charge', forceManyBody<SimulationNode>().strength(config.chargeStrength));
+      this.simulation.force(
+        'charge',
+        forceManyBody<SimulationNode>().strength(config.chargeStrength)
+      );
     }
     if (config.linkDistance !== undefined) {
       this.simulation.force(

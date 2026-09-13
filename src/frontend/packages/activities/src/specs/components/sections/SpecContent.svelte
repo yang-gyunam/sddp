@@ -146,12 +146,16 @@
       <!-- Decision -->
       {#if spec.decision}
         <section class="mb-6">
-          <h2 class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+          <h2
+            class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2"
+          >
             <Icon name="lightbulb" size="xs" />
             Decision
           </h2>
-          <div class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+          <div
+            class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
+                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]"
+          >
             {spec.decision}
           </div>
         </section>
@@ -160,12 +164,16 @@
       <!-- Description -->
       {#if spec.description}
         <section class="mb-6">
-          <h2 class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+          <h2
+            class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2"
+          >
             <Icon name="note" size="xs" />
             Description
           </h2>
-          <div class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+          <div
+            class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
+                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]"
+          >
             {spec.description}
           </div>
         </section>
@@ -174,12 +182,16 @@
       <!-- Context -->
       {#if spec.context}
         <section class="mb-6">
-          <h2 class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+          <h2
+            class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2"
+          >
             <Icon name="info" size="xs" />
             Context
           </h2>
-          <div class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+          <div
+            class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
+                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]"
+          >
             {spec.context}
           </div>
         </section>
@@ -188,12 +200,16 @@
       <!-- Acceptance Criteria -->
       {#if spec.acceptanceCriteria}
         <section class="mb-6">
-          <h2 class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+          <h2
+            class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2"
+          >
             <Icon name="check-circle" size="xs" />
             Acceptance Criteria
           </h2>
-          <div class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+          <div
+            class="prose prose-sm dark:prose-invert max-w-none p-3 rounded
+                      bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]"
+          >
             {spec.acceptanceCriteria}
           </div>
         </section>
@@ -202,7 +218,9 @@
       <!-- Linked Requirement -->
       {#if spec.requirementId}
         <section class="mb-6">
-          <h2 class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+          <h2
+            class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2"
+          >
             <Icon name="link" size="xs" />
             Linked Requirement
           </h2>
@@ -215,7 +233,9 @@
 
       <!-- Metadata -->
       <section class="mb-6">
-        <h2 class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+        <h2
+          class="text-sm font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2"
+        >
           <Icon name="info" size="xs" />
           Metadata
         </h2>
@@ -243,7 +263,11 @@
     <!-- Empty State -->
     <div class="flex-1 flex items-center justify-center">
       <div class="text-center">
-        <Icon name="file-code" size="xl" class="mx-auto mb-3 text-[var(--color-text-tertiary)] opacity-50" />
+        <Icon
+          name="file-code"
+          size="xl"
+          class="mx-auto mb-3 text-[var(--color-text-tertiary)] opacity-50"
+        />
         <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a spec</p>
         <p class="text-xs text-[var(--color-text-secondary)] mt-1">
           Choose a spec from the sidebar to view details.

@@ -141,14 +141,18 @@
     <div
       bind:this={modalRef}
       tabindex="-1"
-      class="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg shadow-xl overflow-hidden {sizeClasses[size]} {className}"
+      class="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg shadow-xl overflow-hidden {sizeClasses[
+        size
+      ]} {className}"
       transition:scale={{ duration: 150, start: 0.95 }}
     >
       <!-- Header -->
       {#if header}
         {@render header()}
       {:else if title || closable}
-        <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+        <div
+          class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]"
+        >
           {#if title}
             <h2 id="modal-title" class="text-lg font-semibold text-[var(--color-text-primary)]">
               {title}

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Sddp.Domain.Entities;
+using Sddp.Abstractions.ValueObjects;
 using Sddp.Infrastructure.Persistence.Contexts;
 using Sddp.Infrastructure.Persistence.Projections;
 
@@ -28,9 +29,9 @@ public class OutboxProcessor : IOutboxProcessor
     public async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken = default)
     {
         var messages = await (_context.OutboxMessages
-            .Where(m => m.ProcessedAt == null && m.IsActive)
+            .Where(m => m.ProcessedAt == null && m.IsActive && m.RetryCount == 0)
             .OrderBy(m => m.CreatedAt)
-.Take(100) // layout 
+            .Take(100)
             .ToListAsync(cancellationToken)).ConfigureAwait(false);
 
         foreach (var message in messages)
@@ -41,11 +42,13 @@ public class OutboxProcessor : IOutboxProcessor
 
     public async Task RetryFailedMessagesAsync(CancellationToken cancellationToken = default)
     {
+        var retryBefore = Timestamp.FromDateTimeOffset(DateTimeOffset.UtcNow.AddMinutes(-1));
         var messages = await (_context.OutboxMessages
             .Where(m => m.ProcessedAt == null
                 && m.IsActive
                 && m.RetryCount > 0
-                && m.RetryCount < OutboxMessage.MaxRetryCount)
+                && m.RetryCount < OutboxMessage.MaxRetryCount
+                && m.UpdatedAt <= retryBefore)
             .OrderBy(m => m.CreatedAt)
             .Take(50)
             .ToListAsync(cancellationToken)).ConfigureAwait(false);
@@ -62,9 +65,10 @@ public class OutboxProcessor : IOutboxProcessor
         {
             await (_messageHandler.HandleAsync(message, cancellationToken)).ConfigureAwait(false);
             message.MarkAsProcessed();
-            _logger.LogInformation(
-                "Outbox message {MessageId} processed successfully. EventType: {EventType}",
-                message.Id, message.EventType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -76,6 +80,12 @@ public class OutboxProcessor : IOutboxProcessor
         }
 
         await (_context.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+        if (message.IsProcessed)
+            _logger.LogInformation("Outbox message {MessageId} processed successfully. EventType: {EventType}",
+                message.Id, message.EventType);
+        else if (!message.CanRetry)
+            _logger.LogError("Outbox message {MessageId} exhausted {RetryCount} attempts. EventType: {EventType}",
+                message.Id, message.RetryCount, message.EventType);
     }
 }
 

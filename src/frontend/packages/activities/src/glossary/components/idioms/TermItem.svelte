@@ -24,8 +24,13 @@
   }
 </script>
 
-<ListItem {selected} onclick={handleClick} role="treeitem"
-  aria-selected={selected} class="group {className}">
+<ListItem
+  {selected}
+  onclick={handleClick}
+  role="treeitem"
+  aria-selected={selected}
+  class="group {className}"
+>
   <div class="flex items-center gap-2 w-full min-w-0">
     <Icon
       name={statusStyle.icon}

@@ -67,6 +67,7 @@
 
   const generatedId = `input-${Math.random().toString(36).substring(2, 9)}`;
   const inputId = $derived(id ?? generatedId);
+  const descriptionId = $derived(error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined);
 
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',
@@ -93,7 +94,7 @@
 {#if unstyled}
   <input
     {type}
-    id={id}
+    {id}
     {name}
     {placeholder}
     {disabled}
@@ -120,7 +121,7 @@
       <label for={inputId} class="block text-xs text-[var(--color-text-secondary)] mb-1">
         {label}
         {#if required}
-          <span class="text-red-500">*</span>
+          <span class="text-red-500" aria-hidden="true">*</span>
         {/if}
       </label>
     {/if}
@@ -145,11 +146,13 @@
       {onblur}
       {onkeydown}
       {oncontextmenu}
-      class="{baseInputClasses} {sizeClasses[size]} {error ? errorClasses : normalClasses} {mono ? 'font-mono' : ''} {className}"
+      class="{baseInputClasses} {sizeClasses[size]} {error ? errorClasses : normalClasses} {mono
+        ? 'font-mono'
+        : ''} {className}"
       {style}
       aria-required={required ? 'true' : undefined}
       aria-invalid={error ? 'true' : undefined}
-      aria-describedby={error ? `${inputId}-error` : undefined}
+      aria-describedby={descriptionId}
     />
 
     {#if error}
@@ -157,7 +160,7 @@
         {error}
       </p>
     {:else if hint}
-      <p class="text-xs text-[var(--color-text-secondary)] mt-1">
+      <p id="{inputId}-hint" class="text-xs text-[var(--color-text-secondary)] mt-1">
         {hint}
       </p>
     {/if}

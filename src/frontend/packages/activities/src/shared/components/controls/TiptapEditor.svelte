@@ -20,6 +20,7 @@
     onUpdate?: (html: string) => void;
     onFocus?: () => void;
     onBlur?: () => void;
+    ariaLabel?: string;
     class?: string;
   }
 
@@ -31,6 +32,7 @@
     onUpdate,
     onFocus,
     onBlur,
+    ariaLabel = 'Rich text editor',
     class: className = '',
   }: Props = $props();
 
@@ -58,6 +60,14 @@
       ],
       content,
       editable,
+      editorProps: {
+        attributes: {
+          role: 'textbox',
+          'aria-label': ariaLabel,
+          'aria-multiline': 'true',
+          'aria-readonly': editable ? 'false' : 'true',
+        },
+      },
       onUpdate: ({ editor: e }) => {
         onUpdate?.(e.getHTML());
       },
@@ -83,6 +93,8 @@
   $effect(() => {
     if (editor) {
       editor.setEditable(editable);
+      editor.view.dom.setAttribute('aria-label', ariaLabel);
+      editor.view.dom.setAttribute('aria-readonly', editable ? 'false' : 'true');
     }
   });
 

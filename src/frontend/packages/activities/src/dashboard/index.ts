@@ -43,7 +43,11 @@ export {
   getDashboardHubService,
   resetDashboardHubService,
 } from './services/DashboardHubService';
-export type { SpecStatusChangedPayload, NotificationPayload, DashboardHubCallbacks } from './services/DashboardHubService';
+export type {
+  SpecStatusChangedPayload,
+  NotificationPayload,
+  DashboardHubCallbacks,
+} from './services/DashboardHubService';
 
 // Stores
 export * from './stores';

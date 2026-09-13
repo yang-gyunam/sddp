@@ -16,13 +16,7 @@
     class?: string;
   }
 
-  let {
-    level,
-    title,
-    code,
-    onclick,
-    class: className = '',
-  }: Props = $props();
+  let { level, title, code, onclick, class: className = '' }: Props = $props();
 </script>
 
 <Button

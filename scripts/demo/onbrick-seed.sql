@@ -1,19 +1,3 @@
--- =============================================================================
--- onbrick-seed.sql
--- OnBrick Brownfield Migration Scenario seed data (docs/test/onbrick-startup.md)
--- =============================================================================
--- OnBrick is a brownfield scenario that reverse-imports an existing system
--- (Confluence documents and legacy code) into SDDP.
--- It validates the reverse flow from Spec -> Requirement -> Gap discovery.
---
--- Usage:
---   Run after `make db-provision` (inserts the OnBrick demo dataset)
---   docker compose exec -T sddp-db psql -U sddp -d sddp < scripts/demo/onbrick-seed.sql
---
--- Prerequisites:
---   90-data-test-tenants.sql  (OnBrick Tenant/Project)
---   91-data-test-persons.sql  (4 OnBrick users: minjun.park, soojin.yoon, hyunwoo.kim, jieun.lee)
--- =============================================================================
 
 -- Well-known IDs
 -- Tenant:  00000000-0000-0000-0010-000000000001

@@ -23,7 +23,12 @@
     SystemHealthPage,
   } from './pages';
   import { SystemDashboardPage } from '../../dashboard/components/pages';
-  import { settingsNavigationStore, loadSettingsNavigation, setActiveCategory, setActiveProjectCategory } from '../stores/settingsNavigation.store';
+  import {
+    settingsNavigationStore,
+    loadSettingsNavigation,
+    setActiveCategory,
+    setActiveProjectCategory,
+  } from '../stores/settingsNavigation.store';
   import { getProjects } from '../../projects';
   import { canAccessSettingsProject, getVisibleSettingsProjects } from '../utils';
 
@@ -47,9 +52,7 @@
 
   // Check admin role from auth store
   const isAdmin = $derived(hasRole('Admin'));
-  const isProductOwner = $derived(
-    hasRole('ProductOwner') || hasRole('PRODUCT_OWNER')
-  );
+  const isProductOwner = $derived(hasRole('ProductOwner') || hasRole('PRODUCT_OWNER'));
 
   // Load owned projects from API
   let ownedProjects = $state<Array<{ id: string; name: string }>>([]);
@@ -139,12 +142,16 @@
     {#if activeCategory === 'profile' || activeCategory.startsWith('profile:')}
       <ProfileSettingsPage />
 
-    <!-- Project Settings -->
+      <!-- Project Settings -->
     {:else if section === 'project' && selectedProjectId}
       {#if subCategory === 'general'}
         <ProjectGeneralSettingsPage {tenantId} projectId={selectedProjectId} />
       {:else if subCategory === 'members'}
-        <ProjectMembersSettingsPage {tenantId} projectId={selectedProjectId} projectName="Project Alpha" />
+        <ProjectMembersSettingsPage
+          {tenantId}
+          projectId={selectedProjectId}
+          projectName="Project Alpha"
+        />
       {:else if subCategory === 'roles'}
         <ProjectRolesSettingsPage {tenantId} projectId={selectedProjectId} />
       {:else if subCategory === 'integrations'}
@@ -153,7 +160,7 @@
         <ProjectGeneralSettingsPage {tenantId} projectId={selectedProjectId} />
       {/if}
 
-    <!-- System Settings (Admin) -->
+      <!-- System Settings (Admin) -->
     {:else if activeCategory === 'system:users'}
       <SystemUsersSettingsPage {tenantId} />
     {:else if activeCategory === 'system:projects'}
@@ -167,7 +174,7 @@
     {:else if activeCategory === 'system:dashboard'}
       <SystemDashboardPage section="system-stats" />
 
-    <!-- Fallback -->
+      <!-- Fallback -->
     {:else}
       <div class="placeholder-page">
         <h1>Settings</h1>

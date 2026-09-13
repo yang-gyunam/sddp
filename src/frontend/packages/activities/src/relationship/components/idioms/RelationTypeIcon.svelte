@@ -14,12 +14,7 @@
     class?: string;
   }
 
-  let {
-    type,
-    size = 'md',
-    showTooltip = true,
-    class: className = '',
-  }: Props = $props();
+  let { type, size = 'md', showTooltip = true, class: className = '' }: Props = $props();
 
   const style = $derived(RELATION_TYPE_STYLES[type]);
   const iconSize = $derived(size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md');

@@ -9,10 +9,21 @@
 
   import { untrack } from 'svelte';
   import { ProjectDetailPanel } from '../sections';
-  import { toast, getAuthState, subscribeAuth, PageHeader, PageShell, SidebarDetailLayout, Dropdown, RichListItem, getTabState, setTabState } from '@sddp/shell';
+  import {
+    toast,
+    getAuthState,
+    subscribeAuth,
+    PageHeader,
+    PageShell,
+    SidebarDetailLayout,
+    Dropdown,
+    RichListItem,
+    getTabState,
+    setTabState,
+  } from '@sddp/shell';
   import { Icon, Input, IconButton, Button, Spinner } from '@sddp/ui';
   import type { Project, ProjectDetail } from '../../../projects/types/project.types';
-  import { getProjectService } from '../../../projects/services/ProjectService';
+  import { createProjectService } from '../../../projects/services/ProjectService';
 
   interface Props {
     tenantId?: string;
@@ -36,7 +47,7 @@
     }
   });
 
-  const projectService = getProjectService();
+  let projectService = $derived(createProjectService(effectiveTenantId));
 
   let projects = $state<Project[]>([]);
   let loading = $state(false);
@@ -60,10 +71,7 @@
   const filteredProjects = $derived(
     projects.filter((p) => {
       const query = searchQuery.toLowerCase();
-      return (
-        p.name.toLowerCase().includes(query) ||
-        p.code.toLowerCase().includes(query)
-      );
+      return p.name.toLowerCase().includes(query) || p.code.toLowerCase().includes(query);
     })
   );
 
@@ -142,7 +150,6 @@
     }
 
     try {
-      projectService.setContext(effectiveTenantId);
       const page = await projectService.getProjectsPage(nextPageNumber, PAGE_SIZE);
       if (requestId !== latestProjectsRequestId) return;
 
@@ -168,7 +175,6 @@
   async function loadProjectDetail(projectId: string) {
     loadingDetail = true;
     try {
-      projectService.setContext(effectiveTenantId);
       selectedProject = await projectService.getProjectById(projectId);
     } catch {
       toast.error('Failed to load project details');
@@ -213,7 +219,16 @@
   }
 
   function handleSaved(detail: ProjectDetail) {
-    projects = projects.map((p) => (p.id === detail.id ? { ...p, name: detail.name, description: detail.description, status: detail.status as 'planning' | 'active' | 'concluded' | 'archived' } : p));
+    projects = projects.map((p) =>
+      p.id === detail.id
+        ? {
+            ...p,
+            name: detail.name,
+            description: detail.description,
+            status: detail.status as 'planning' | 'active' | 'concluded' | 'archived',
+          }
+        : p
+    );
     selectedProject = detail;
     panelMode = 'view';
   }
@@ -245,12 +260,12 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="Projects" {loading}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" title="Refresh" onclick={() => loadProjects()} />
-      <IconButton icon="plus" title="New Project" onclick={openCreate} />
-    {/snippet}
-  </PageHeader>
+    <PageHeader title="Projects" {loading}>
+      {#snippet actions()}
+        <IconButton icon="refresh-cw" title="Refresh" onclick={() => loadProjects()} />
+        <IconButton icon="plus" title="New Project" onclick={openCreate} />
+      {/snippet}
+    </PageHeader>
     <SidebarDetailLayout
       showRightPanel={false}
       sidebarWidth={360}
@@ -260,7 +275,9 @@
       {#snippet sidebar()}
         <div class="flex flex-col h-full min-h-0 bg-[var(--color-bg-primary)]">
           <!-- Sidebar Header: Search -->
-          <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+          <div
+            class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+          >
             <div class="flex items-center gap-1 w-full">
               <div class="relative flex-1">
                 <Icon
@@ -282,8 +299,16 @@
 
               <!-- Filter Dropdown -->
               <Dropdown position="bottom-right">
-                {#snippet trigger()}
-                  <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+                {#snippet trigger({ toggle, open })}
+                  <IconButton
+                    onclick={toggle}
+                    ariaHasPopup
+                    ariaExpanded={open}
+                    icon="more-vertical"
+                    size="sm"
+                    variant="ghost"
+                    title="Filter options"
+                  />
                 {/snippet}
                 <div class="py-1 min-w-[180px]">
                   <Button
@@ -293,7 +318,7 @@
                   >
                     <Icon name="folder" size="sm" class="text-[var(--color-text-tertiary)]" />
                     <span class="flex-1">All Projects</span>
-                    <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                    <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                   </Button>
                 </div>
               </Dropdown>
@@ -311,13 +336,23 @@
                 onclick={() => selectProject(project)}
               >
                 {#snippet leading()}
-                  <div class="w-8 h-8 rounded-lg bg-[var(--color-accent-primary)] text-white flex items-center justify-center flex-shrink-0">
+                  <div
+                    class="w-8 h-8 rounded-lg bg-[var(--color-accent-primary)] text-white flex items-center justify-center flex-shrink-0"
+                  >
                     <Icon name="project" size="sm" />
                   </div>
                 {/snippet}
                 {#snippet footerMeta()}
-                  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0
-                               {project.status === 'planning' ? 'bg-blue-500' : project.status === 'active' ? 'bg-green-500' : project.status === 'concluded' ? 'bg-yellow-500' : 'bg-[var(--color-text-tertiary)]'}"></span>
+                  <span
+                    class="w-1.5 h-1.5 rounded-full flex-shrink-0
+                               {project.status === 'planning'
+                      ? 'bg-blue-500'
+                      : project.status === 'active'
+                        ? 'bg-green-500'
+                        : project.status === 'concluded'
+                          ? 'bg-yellow-500'
+                          : 'bg-[var(--color-text-tertiary)]'}"
+                  ></span>
                 {/snippet}
               </RichListItem>
             {:else}
@@ -342,6 +377,7 @@
           <div class="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>
         {:else if panelMode === 'create'}
           <ProjectDetailPanel
+            tenantId={effectiveTenantId}
             mode="create"
             project={null}
             onClose={closePanel}
@@ -349,6 +385,7 @@
           />
         {:else if panelMode === 'edit' && selectedProject}
           <ProjectDetailPanel
+            tenantId={effectiveTenantId}
             mode="edit"
             project={selectedProject}
             onClose={closePanel}
@@ -357,6 +394,7 @@
           />
         {:else if panelMode === 'view' && selectedProject}
           <ProjectDetailPanel
+            tenantId={effectiveTenantId}
             mode="view"
             project={selectedProject}
             onClose={closePanel}

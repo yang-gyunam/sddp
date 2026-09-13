@@ -2,9 +2,12 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Artifacts.Commands;
 using Sddp.Application.Features.Artifacts.Queries;
 
@@ -59,6 +62,8 @@ public class ArtifactsController : BaseApiController
     }
 
     [HttpGet]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScopeExempt("Listing endpoint with no resource id in the route; the handler filters artifacts by the requested tenant and project, so a spec id from another project returns nothing.")]
     public async Task<IActionResult> GetArtifactsBySpec(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -86,6 +91,8 @@ public class ArtifactsController : BaseApiController
     }
 
     [HttpGet("search")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScopeExempt("Search endpoint with no resource id in the route; results are filtered by the requested tenant and project.")]
     public async Task<IActionResult> SearchArtifacts(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -109,7 +116,9 @@ public class ArtifactsController : BaseApiController
         return Ok(ApiResponse<IEnumerable<ArtifactSearchResultDto>>.Ok(result));
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScope<ArtifactTracking>("id")]
     public async Task<IActionResult> GetArtifactById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -141,7 +150,95 @@ public class ArtifactsController : BaseApiController
         return Ok(ApiResponse<ArtifactTrackingDto>.Ok(result));
     }
 
+    /// <summary>
+    /// The artifact's descriptor — what this file was supposed to be, per the Spec it was
+    /// generated from. Projected from the database, so it is available even when the YAML
+    /// file has not been materialized.
+    /// </summary>
+    [HttpGet("{id}/descriptor")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScope<ArtifactTracking>("id")]
+    public async Task<IActionResult> GetArtifactDescriptor(
+        Guid id,
+        [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
+        [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
+        CancellationToken cancellationToken = default)
+    {
+        var headerError = RequireTenantAndProject(
+            tenantIdHeader,
+            projectIdHeader,
+            out var tenantId,
+            out var projectId,
+            ApiErrorCodes.Header.MissingHeaders,
+            "X-Tenant-Id and X-Project-Id headers are required");
+        if (headerError is not null)
+        {
+            return headerError;
+        }
+
+        var result = await _sender.Send(new GetArtifactDescriptorQuery(
+            tenantId,
+            projectId,
+            GlobalUniqueId.FromGuid(id)), cancellationToken);
+
+        if (result is null)
+        {
+            return NotFound(ApiResponse<object>.Fail(ApiErrorCodes.Crud.NotFound, "Artifact not found"));
+        }
+
+        return Ok(ApiResponse<ArtifactDescriptorDto>.Ok(result));
+    }
+
+    /// <summary>
+    /// The artifact file's actual contents, for reviewing it against the descriptor.
+    /// </summary>
+    [HttpGet("{id}/content")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScope<ArtifactTracking>("id")]
+    public async Task<IActionResult> GetArtifactContent(
+        Guid id,
+        [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
+        [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
+        CancellationToken cancellationToken = default)
+    {
+        var headerError = RequireTenantAndProject(
+            tenantIdHeader,
+            projectIdHeader,
+            out var tenantId,
+            out var projectId,
+            ApiErrorCodes.Header.MissingHeaders,
+            "X-Tenant-Id and X-Project-Id headers are required");
+        if (headerError is not null)
+        {
+            return headerError;
+        }
+
+        var result = await _sender.Send(new GetArtifactContentQuery(
+            tenantId,
+            projectId,
+            GlobalUniqueId.FromGuid(id)), cancellationToken);
+
+        if (result is null)
+        {
+            return NotFound(ApiResponse<object>.Fail(
+                ApiErrorCodes.Crud.NotFound, "Artifact file not found"));
+        }
+
+        if (result.TooLarge)
+        {
+            return StatusCode(
+                StatusCodes.Status413PayloadTooLarge,
+                ApiResponse<object>.Fail(
+                    ApiErrorCodes.Artifact.TooLarge,
+                    $"Artifact is {result.SizeBytes} bytes, above the {result.MaxBytes} byte limit for reading over the API."));
+        }
+
+        return Ok(ApiResponse<ArtifactContentDto>.Ok(result));
+    }
+
     [HttpGet("by-path")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScopeExempt("Lookup by path with no resource id in the route; the handler matches the path only within the requested tenant and project.")]
     public async Task<IActionResult> GetArtifactByPath(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -175,6 +272,8 @@ public class ArtifactsController : BaseApiController
     }
 
     [HttpPost]
+    [ResourceScopeExempt("Upsert endpoint: the artifact id, when present, arrives in the body rather than the route, and the handler ignores an artifact whose ProjectId differs from the requested project.")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
     [Authorize]
     public async Task<IActionResult> UpsertArtifact(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -222,39 +321,25 @@ public class ArtifactsController : BaseApiController
         return Ok(ApiResponse<ArtifactTrackingDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/regenerate")]
+    [HttpPost("{id}/regenerate")]
+    [ResourceScopeExempt("Gone: the action reads no resource and returns 410 for every id, so there is nothing to scope. Removing the route entirely would drop a surface external users have had since v0.1.0.")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
     [Authorize]
-    public async Task<IActionResult> RegenerateArtifact(
-        Guid id,
-        [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
-        [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
-        CancellationToken cancellationToken = default)
+    public IActionResult RegenerateArtifact(Guid id)
     {
-        if (!_isArtifactMaintenanceEnabled)
-        {
-            return ArtifactMaintenanceDisabled();
-        }
-
-        var headerError = RequireTenantAndProject(
-            tenantIdHeader,
-            projectIdHeader,
-            out var tenantId,
-            out var projectId,
-            ApiErrorCodes.Header.MissingHeaders,
-            "X-Tenant-Id and X-Project-Id headers are required");
-        if (headerError is not null)
-        {
-            return headerError;
-        }
-
-        var result = await _sender.Send(new RegenerateArtifactCommand(
-            tenantId,
-            projectId,
-            GlobalUniqueId.FromGuid(id)), cancellationToken);
-        return Ok(ApiResponse<ArtifactRegenerateResult>.Ok(result));
+        _ = id;
+        return StatusCode(
+            StatusCodes.Status410Gone,
+            ApiResponse<object>.Fail(
+                "GENERATION_VIA_CLI",
+                "Artifact regeneration is not available over HTTP. Generation tools are not included in this installation. "
+                + "Contact your deployment operator for separately managed generation; this API displays artifacts already "
+                + "produced."));
     }
 
     [HttpPost("verify")]
+    [ResourceScopeExempt("Verification endpoint: the artifact id arrives in the body rather than the route, and the handler refuses an artifact whose ProjectId differs from the requested project.")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
     [Authorize]
     public async Task<IActionResult> VerifyArtifact(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -291,7 +376,9 @@ public class ArtifactsController : BaseApiController
     /// <summary>
     /// Artifact (soft delete)
     /// </summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
+    [ResourceScope<ArtifactTracking>("id")]
+    [RequirePermission(PermissionCodes.GenerationRollback)]
     [Authorize]
     public async Task<IActionResult> DeactivateArtifact(
         Guid id,
@@ -325,7 +412,9 @@ public class ArtifactsController : BaseApiController
     /// <summary>
     /// Artifact ()
     /// </summary>
-    [HttpPut("{id:guid}/activate")]
+    [HttpPut("{id}/activate")]
+    [ResourceScope<ArtifactTracking>("id")]
+    [RequirePermission(PermissionCodes.GenerationRollback)]
     [Authorize]
     public async Task<IActionResult> ActivateArtifact(
         Guid id,
@@ -361,6 +450,8 @@ public class ArtifactsController : BaseApiController
     // =========================================================================
 
     [HttpGet("mappings")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScopeExempt("Listing endpoint with no resource id in the route; the handler returns only mappings of the requested tenant and project.")]
     public async Task<IActionResult> GetProjectMappings(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -378,6 +469,8 @@ public class ArtifactsController : BaseApiController
     }
 
     [HttpGet("mappings/by-spec")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScopeExempt("Listing endpoint with no resource id in the route; the spec id is a query filter and the handler restricts mappings to the requested tenant and project.")]
     public async Task<IActionResult> GetMappingsBySpec(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -397,6 +490,8 @@ public class ArtifactsController : BaseApiController
     }
 
     [HttpGet("mappings/by-path")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScopeExempt("Listing endpoint with no resource id in the route; the handler matches the path only within the requested tenant and project.")]
     public async Task<IActionResult> GetMappingsByPath(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -419,7 +514,9 @@ public class ArtifactsController : BaseApiController
         return Ok(ApiResponse<IReadOnlyList<ArtifactToSpecMappingDto>>.Ok(result));
     }
 
-    [HttpGet("mappings/{id:guid}")]
+    [HttpGet("mappings/{id}")]
+    [RequirePermission(PermissionCodes.ProjectRead)]
+    [ResourceScope<ArtifactToSpecMapping>("id")]
     public async Task<IActionResult> GetMappingById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -444,6 +541,9 @@ public class ArtifactsController : BaseApiController
     }
 
     [HttpPost("mappings")]
+    [ResourceScopeExempt("Creation endpoint: the mapping does not exist yet, so there is nothing to resolve a project from.")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
+    [Authorize]
     public async Task<IActionResult> CreateMapping(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -471,7 +571,10 @@ public class ArtifactsController : BaseApiController
         return CreatedResponse($"api/artifacts/mappings/{result.Id}", result);
     }
 
-    [HttpPut("mappings/{id:guid}/source")]
+    [HttpPut("mappings/{id}/source")]
+    [ResourceScope<ArtifactToSpecMapping>("id")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
+    [Authorize]
     public async Task<IActionResult> UpdateMappingSource(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -498,7 +601,10 @@ public class ArtifactsController : BaseApiController
         return Ok(ApiResponse<ArtifactToSpecMappingDto>.Ok(result));
     }
 
-    [HttpDelete("mappings/{id:guid}")]
+    [HttpDelete("mappings/{id}")]
+    [ResourceScope<ArtifactToSpecMapping>("id")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
+    [Authorize]
     public async Task<IActionResult> DeleteMapping(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

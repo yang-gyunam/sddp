@@ -1,7 +1,13 @@
 <!-- Section: ArtifactContent — Artifacts > Global, Projects > Artifacts -->
 <script lang="ts">
   import { Button, Icon, IconButton, Spinner } from '@sddp/ui';
-  import { CollapsibleGroup, Dropdown, truncate, formatDateTime, formatFileSize } from '@sddp/shell';
+  import {
+    CollapsibleGroup,
+    Dropdown,
+    truncate,
+    formatDateTime,
+    formatFileSize,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import DetailField from '../../../shared/components/idioms/DetailField.svelte';
@@ -11,6 +17,7 @@
   import type { MetadataItem } from '../../../shared/components/idioms/MetadataSection.svelte';
   import type { ArtifactDetail, ArtifactSummary } from '../../types';
   import { ARTIFACT_TYPE_STYLES, ARTIFACT_STATUS_STYLES, getFileName } from '../../types';
+  import ArtifactTypeIcon from '../idioms/ArtifactTypeIcon.svelte';
 
   interface Props {
     artifact: (ArtifactDetail | ArtifactSummary) | null;
@@ -38,7 +45,9 @@
   }: Props = $props();
 
   const typeStyle = $derived(artifact ? ARTIFACT_TYPE_STYLES[artifact.artifactType] : null);
-  const statusStyle = $derived(artifact ? (ARTIFACT_STATUS_STYLES[artifact.status] ?? ARTIFACT_STATUS_STYLES.Unverified) : null);
+  const statusStyle = $derived(
+    artifact ? (ARTIFACT_STATUS_STYLES[artifact.status] ?? ARTIFACT_STATUS_STYLES.Unverified) : null
+  );
   const fileName = $derived(artifact ? getFileName(artifact.artifactPath) : '');
 
   // CollapsibleGroup expanded states
@@ -55,7 +64,11 @@
     if (!artifact) return [];
     const items: ReferenceItem[] = [];
     // Source Conversation (ArtifactSummary provides name)
-    if (artifact.sourceConversationId && 'sourceConversationName' in artifact && artifact.sourceConversationName) {
+    if (
+      artifact.sourceConversationId &&
+      'sourceConversationName' in artifact &&
+      artifact.sourceConversationName
+    ) {
       items.push({
         icon: 'hash',
         label: 'Source Conversation',
@@ -63,7 +76,11 @@
       });
     }
     // Source Requirement (ArtifactSummary provides code)
-    if (artifact.sourceRequirementId && 'sourceRequirementCode' in artifact && artifact.sourceRequirementCode) {
+    if (
+      artifact.sourceRequirementId &&
+      'sourceRequirementCode' in artifact &&
+      artifact.sourceRequirementCode
+    ) {
       items.push({
         icon: 'clipboard-check',
         label: 'Source Requirement',
@@ -75,7 +92,8 @@
       items.push({
         icon: 'file-code',
         label: 'Source Spec',
-        value: artifact.specTitle || artifact.specCode || ('specId' in artifact ? artifact.specId : ''),
+        value:
+          artifact.specTitle || artifact.specCode || ('specId' in artifact ? artifact.specId : ''),
         sublabel: artifact.specCode ?? undefined,
         onClick: () => onViewSpec?.(),
       });
@@ -95,11 +113,24 @@
   const metadataItems = $derived.by(() => {
     if (!artifact) return [];
     const items: MetadataItem[] = [];
-    items.push({ label: 'Status', value: statusStyle?.label ?? artifact.status, class: statusStyle?.color ?? '' });
-    items.push({ label: 'Type', value: typeStyle?.label ?? artifact.artifactType, class: typeStyle?.color ?? '' });
+    items.push({
+      label: 'Status',
+      value: statusStyle?.label ?? artifact.status,
+      class: statusStyle?.color ?? '',
+    });
+    items.push({
+      label: 'Type',
+      value: typeStyle?.label ?? artifact.artifactType,
+      class: typeStyle?.color ?? '',
+    });
     // Owner (ArtifactSummary)
     if ('owner' in artifact && artifact.owner?.name) {
-      items.push({ label: 'Owner', value: artifact.owner.name, type: 'person', avatarUrl: artifact.owner.avatarUrl });
+      items.push({
+        label: 'Owner',
+        value: artifact.owner.name,
+        type: 'person',
+        avatarUrl: artifact.owner.avatarUrl,
+      });
     }
     if (artifact.generatorVersion) {
       items.push({ label: 'Generator', value: artifact.generatorVersion });
@@ -118,14 +149,24 @@
     }
     // Created By (ArtifactSummary)
     if ('createdBy' in artifact && artifact.createdBy?.name) {
-      items.push({ label: 'Created By', value: artifact.createdBy.name, type: 'person', avatarUrl: artifact.createdBy.avatarUrl });
+      items.push({
+        label: 'Created By',
+        value: artifact.createdBy.name,
+        type: 'person',
+        avatarUrl: artifact.createdBy.avatarUrl,
+      });
     }
     if (artifact.createdAt) {
       items.push({ label: 'Created', value: formatDateStr(artifact.createdAt) });
     }
     // Updated By (ArtifactSummary)
     if ('updatedBy' in artifact && artifact.updatedBy?.name) {
-      items.push({ label: 'Updated By', value: artifact.updatedBy.name, type: 'person', avatarUrl: artifact.updatedBy.avatarUrl });
+      items.push({
+        label: 'Updated By',
+        value: artifact.updatedBy.name,
+        type: 'person',
+        avatarUrl: artifact.updatedBy.avatarUrl,
+      });
     }
     items.push({ label: 'Updated', value: formatDateStr(artifact.updatedAt) });
     return items;
@@ -143,7 +184,11 @@
   {:else if !artifact}
     <div class="flex items-center justify-center h-full">
       <div class="text-center">
-        <Icon name="package" size="xl" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-50" />
+        <Icon
+          name="package"
+          size="xl"
+          class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-50"
+        />
         <p class="text-sm font-medium text-[var(--color-text-primary)]">Select an artifact</p>
         <p class="text-xs text-[var(--color-text-secondary)] mt-1">
           Choose an artifact from the sidebar to view details.
@@ -154,9 +199,7 @@
     {#if showHeader}
       <DetailHeader>
         {#snippet leading()}
-          <span class={typeStyle?.color}>
-            <Icon name={typeStyle?.icon || 'file'} size="md" />
-          </span>
+          <ArtifactTypeIcon type={artifact.artifactType} size={20} />
         {/snippet}
         <DetailTitle title={fileName}>
           <span class="flex items-center gap-1 text-xs flex-shrink-0 {statusStyle?.color}">
@@ -166,18 +209,44 @@
         </DetailTitle>
         {#snippet actions()}
           {#if artifact.status === 'Modified' && onRegenerate}
-            <IconButton icon="refresh-cw" variant="primary" size="sm" title="Regenerate" onclick={onRegenerate} />
+            <IconButton
+              icon="refresh-cw"
+              variant="primary"
+              size="sm"
+              title="Regenerate"
+              onclick={onRegenerate}
+            />
           {/if}
           {#if onVerify}
-            <IconButton icon="shield-check" variant="ghost" size="sm" title="Verify" onclick={onVerify} />
+            <IconButton
+              icon="shield-check"
+              variant="ghost"
+              size="sm"
+              title="Verify"
+              onclick={onVerify}
+            />
           {/if}
           {#if onViewSource}
-            <IconButton icon="code" variant="ghost" size="sm" title="View Source" onclick={onViewSource} />
+            <IconButton
+              icon="code"
+              variant="ghost"
+              size="sm"
+              title="View Source"
+              onclick={onViewSource}
+            />
           {/if}
           {#if onDeactivate}
             <Dropdown position="bottom-right">
-              {#snippet trigger()}
-                <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+              {#snippet trigger({ toggle, open })}
+                <IconButton
+                  onclick={toggle}
+                  ariaHasPopup
+                  ariaExpanded={open}
+                  icon="more-vertical"
+                  variant="ghost"
+                  size="sm"
+                  title="More actions"
+                />
               {/snippet}
               <div class="py-1 min-w-[160px]">
                 <Button
@@ -203,19 +272,23 @@
           title="Basic Information"
           variant="plain"
           expanded={basicExpanded}
-          onToggle={() => basicExpanded = !basicExpanded}
+          onToggle={() => (basicExpanded = !basicExpanded)}
         >
           <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
             <DetailField label="Type">
-              <span class="inline-flex items-center gap-1.5 text-sm px-2 py-1 rounded {typeStyle?.bgColor} {typeStyle?.color} border {typeStyle?.borderColor}">
-                <Icon name={typeStyle?.icon || 'file'} size="xs" />
+              <span
+                class="inline-flex items-center gap-1.5 text-sm px-2 py-1 rounded {typeStyle?.bgColor} {typeStyle?.color} border {typeStyle?.borderColor}"
+              >
+                <ArtifactTypeIcon type={artifact.artifactType} size={12} />
                 {typeStyle?.label}
               </span>
             </DetailField>
 
             <DetailField label="Path">
-              <code class="block p-3 bg-[var(--color-bg-secondary)] rounded-lg text-sm font-mono
-                text-[var(--color-text-secondary)] break-all">
+              <code
+                class="block p-3 bg-[var(--color-bg-secondary)] rounded-lg text-sm font-mono
+                text-[var(--color-text-secondary)] break-all"
+              >
                 {artifact.artifactPath}
               </code>
             </DetailField>
@@ -235,7 +308,7 @@
             variant="plain"
             badge={referenceItems.length}
             expanded={referencesExpanded}
-            onToggle={() => referencesExpanded = !referencesExpanded}
+            onToggle={() => (referencesExpanded = !referencesExpanded)}
           >
             <div class="pl-5 pt-2 pb-3">
               <ReferencesSection items={referenceItems} title="" />
@@ -252,7 +325,8 @@
             </h3>
             <p class="text-sm text-[var(--color-text-secondary)]">
               {#if artifact.status === 'Modified'}
-                This file has been manually modified. The content hash no longer matches the generated version.
+                This file has been manually modified. The content hash no longer matches the
+                generated version.
               {:else}
                 This file is missing from the expected location.
               {/if}
@@ -271,7 +345,7 @@
           title="Metadata"
           variant="plain"
           expanded={metadataExpanded}
-          onToggle={() => metadataExpanded = !metadataExpanded}
+          onToggle={() => (metadataExpanded = !metadataExpanded)}
         >
           <div class="pl-5 pt-2 pb-3">
             <MetadataSection items={metadataItems} />

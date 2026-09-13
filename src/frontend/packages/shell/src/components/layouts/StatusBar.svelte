@@ -22,7 +22,9 @@
 
   const problemIds = ['errors', 'warnings', 'infos'];
   const problemItems = $derived(items.filter((item) => problemIds.includes(item.id)));
-  const leftItems = $derived(items.filter((item) => item.position !== 'right' && !problemIds.includes(item.id)));
+  const leftItems = $derived(
+    items.filter((item) => item.position !== 'right' && !problemIds.includes(item.id))
+  );
   const rightItems = $derived(items.filter((item) => item.position === 'right'));
   const statusIconStyle = 'stroke-width: 1.9';
 
@@ -65,7 +67,7 @@
     return `animation: status-flash 1s ease-out; --flash-bg: ${flashColors[itemId] ?? 'transparent'}`;
   }
 
-  function getItemClass(item: StatusItem, hasClick: boolean): string {
+  function getItemClass(hasClick: boolean): string {
     const base = 'flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors';
     const hover = hasClick ? 'hover:bg-[var(--color-neutral-50)]/10 cursor-pointer' : '';
     return `${base} ${hover} text-[var(--color-text-on-accent)]`;
@@ -85,7 +87,7 @@
         <Button
           variant="unstyled"
           onclick={item.onClick}
-          class={getItemClass(item, true)}
+          class={getItemClass(true)}
           title={item.tooltip ?? item.text}
         >
           {#if item.icon}
@@ -94,10 +96,7 @@
           <span>{item.text}</span>
         </Button>
       {:else}
-        <span
-          class={getItemClass(item, false)}
-          title={item.tooltip ?? item.text}
-        >
+        <span class={getItemClass(false)} title={item.tooltip ?? item.text}>
           {#if item.icon}
             <Icon name={item.icon} size="xs" style={statusIconStyle} />
           {/if}
@@ -115,7 +114,7 @@
               <Button
                 variant="unstyled"
                 onclick={item.onClick}
-                class={getItemClass(item, true)}
+                class={getItemClass(true)}
                 title={item.tooltip ?? item.text}
               >
                 {#if item.icon}
@@ -125,7 +124,7 @@
               </Button>
             {:else}
               <span
-                class={getItemClass(item, false)}
+                class={getItemClass(false)}
                 style={getFlashStyle(item.id)}
                 title={item.tooltip ?? item.text}
               >
@@ -152,7 +151,7 @@
         <Button
           variant="unstyled"
           onclick={item.onClick}
-          class={getItemClass(item, true)}
+          class={getItemClass(true)}
           title={item.tooltip ?? item.text}
         >
           {#if item.icon}
@@ -161,10 +160,7 @@
           <span>{item.text}</span>
         </Button>
       {:else}
-        <span
-          class={getItemClass(item, false)}
-          title={item.tooltip ?? item.text}
-        >
+        <span class={getItemClass(false)} title={item.tooltip ?? item.text}>
           {#if item.icon}
             <Icon name={item.icon} size="xs" style={statusIconStyle} />
           {/if}

@@ -18,6 +18,8 @@ make demo-onbrick
 - `scripts/demo/onbrick-seed.sql`: optional OnBrick showcase seed
 
 These files are copied into the generated public output as the release DB entrypoints.
+The base bundle includes the editable Knowledge Hub schema and its project-scoped
+`knowledge:*` role permissions.
 
 ## Notes
 
@@ -27,5 +29,5 @@ These files are copied into the generated public output as the release DB entryp
 
 ## Related Files
 
-- [../../../docs/public-guide.md](../../../docs/public-guide.md)
+- [../../docs/public-guide.md](../../docs/public-guide.md)
 - [../../../README.md](../../../README.md)

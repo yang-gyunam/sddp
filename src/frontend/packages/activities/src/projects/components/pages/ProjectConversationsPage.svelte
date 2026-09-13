@@ -2,8 +2,28 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-  import { Icon, Input, IconButton, Button, CardGrid, Checkbox, Spinner, SearchField } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, CollapsibleGroup, SidebarDetailLayout, SIDEBAR_DETAIL_LAYOUT, getTabState, setTabState, toast, Avatar } from '@sddp/shell';
+  import {
+    Icon,
+    Input,
+    IconButton,
+    Button,
+    CardGrid,
+    Checkbox,
+    Spinner,
+    SearchField,
+  } from '@sddp/ui';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    CollapsibleGroup,
+    SidebarDetailLayout,
+    SIDEBAR_DETAIL_LAYOUT,
+    getTabState,
+    setTabState,
+    toast,
+    Avatar,
+  } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
   import { consumePendingEntityId } from '../../stores';
   import type { ProjectDetail, ProjectMember } from '../../types';
@@ -13,8 +33,15 @@
     ConversationMember,
     DirectMessageInfo,
   } from '../../../conversations/types';
-  import { getConversationService, getConversationHubService } from '../../../conversations/services';
-  import type { ConversationSummaryDto, InvitableUser } from '../../../conversations/services';
+  import {
+    createConversationService,
+    getConversationHubService,
+  } from '../../../conversations/services';
+  import type {
+    ConversationService,
+    ConversationSummaryDto,
+    InvitableUser,
+  } from '../../../conversations/services';
   import {
     subscribeConversation,
     getConversationStoreState,
@@ -106,12 +133,10 @@
   let dmFallbackMembers = $state<ProjectMember[]>([]);
   let pendingSelectionId = $state<string | null>(null);
 
-  function ensureConversationContext(svc?: ReturnType<typeof getConversationService>): ReturnType<typeof getConversationService> {
-    const service = svc ?? getConversationService();
+  function ensureConversationContext(svc?: ConversationService): ConversationService {
     const authState = getAuthState();
     const resolvedTenantId = tenantId ?? authState.user?.tenantId ?? '';
-    service.setContext(resolvedTenantId, projectId);
-    return service;
+    return svc ?? createConversationService(resolvedTenantId, projectId);
   }
 
   const isCreateFormValid = $derived(
@@ -157,18 +182,22 @@
   });
 
   // Derived data
-  const allConversations = $derived.by(() => categories.flatMap((category) => category.conversations));
-  const selectedConversation = $derived(allConversations.find((c) => c.id === selectedConversationId) ?? null);
+  const allConversations = $derived.by(() =>
+    categories.flatMap((category) => category.conversations)
+  );
+  const selectedConversation = $derived(
+    allConversations.find((c) => c.id === selectedConversationId) ?? null
+  );
   const selectedConversationKind = $derived.by(() => {
     if (selectedDmId) return 'dm' as const;
     if (!selectedConversation) return null;
-    return selectedConversation.type === 'Forum' ? 'forum' as const : 'channel' as const;
+    return selectedConversation.type === 'Forum' ? ('forum' as const) : ('channel' as const);
   });
   // ChannelView sourceType domain glossary(Channel/Forum) DTO.
   // 'channel' uses channel-specific DTO (MessagesPage), 'conversation' uses generic DTO (ConversationMessagesPage).
   // API (/conversations/{id}/messages).
   const selectedConversationSource = $derived(
-    selectedConversation?.type === 'Forum' ? 'conversation' as const : 'channel' as const
+    selectedConversation?.type === 'Forum' ? ('conversation' as const) : ('channel' as const)
   );
   const directMessagesWithPresence = $derived.by(() =>
     directMessages.map((dm) => ({
@@ -176,7 +205,9 @@
       isOnline: dm.otherUserId ? onlineUsers.has(dm.otherUserId) : (dm.isOnline ?? false),
     }))
   );
-  const selectedDm = $derived(directMessagesWithPresence.find((dm) => dm.id === selectedDmId) ?? null);
+  const selectedDm = $derived(
+    directMessagesWithPresence.find((dm) => dm.id === selectedDmId) ?? null
+  );
 
   const filteredCategories = $derived.by(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -253,7 +284,7 @@
   const dmCount = $derived(directMessagesWithPresence.length);
   const totalUnreadCount = $derived(
     allConversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0) +
-    directMessages.reduce((sum, dm) => sum + (dm.unreadCount ?? 0), 0)
+      directMessages.reduce((sum, dm) => sum + (dm.unreadCount ?? 0), 0)
   );
 
   // Participants data (loaded from API per conversation)
@@ -266,7 +297,11 @@
     return [
       {
         id: 'participant-self',
-        user: { id: currentUserId ?? 'current-user', name: getAuthState().user?.displayName ?? 'You', avatarUrl: null },
+        user: {
+          id: currentUserId ?? 'current-user',
+          name: getAuthState().user?.displayName ?? 'You',
+          avatarUrl: null,
+        },
         type: 'Human' as const,
         role: 'Member',
         joinedAt: now,
@@ -285,14 +320,17 @@
 
   const activeParticipants = $derived.by<ConversationMember[]>(() => {
     // DM: API,
-    if (selectedDm) return channelParticipants.length > 0 ? channelParticipants : (dmParticipants ?? []);
+    if (selectedDm)
+      return channelParticipants.length > 0 ? channelParticipants : (dmParticipants ?? []);
     if (selectedConversation && selectedConversation.type !== 'Forum') return channelParticipants;
     return [];
   });
 
   /** Whether current user is the Owner of the selected conversation (can remove members) */
   const isConversationOwner = $derived(
-    activeParticipants.some((p) => p.user.id === currentUserId && (p.role ?? '').toLowerCase() === 'owner')
+    activeParticipants.some(
+      (p) => p.user.id === currentUserId && (p.role ?? '').toLowerCase() === 'owner'
+    )
   );
 
   function isOwnerRole(role: string | null | undefined): boolean {
@@ -301,9 +339,8 @@
 
   /** Project members used for create-mode participant selection */
   const projectParticipants = $derived.by(() => {
-    const members = (project?.members && project.members.length > 0)
-      ? project.members
-      : dmFallbackMembers;
+    const members =
+      project?.members && project.members.length > 0 ? project.members : dmFallbackMembers;
     return members.map((member) => ({
       id: member.userId,
       user: { id: member.userId, name: member.displayName, avatarUrl: null },
@@ -385,8 +422,7 @@
     if (!tenantId || !selectedConversationId) return;
     inviteSearching = true;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, '');
+      const service = createConversationService(tenantId);
       inviteSearchResults = await service.getInvitableUsers(selectedConversationId, query);
     } catch {
       inviteSearchResults = [];
@@ -439,10 +475,7 @@
     }));
   }
 
-  function handleDirectMessageStatusChange(
-    dmId: string,
-    status: 'Active' | 'Concluded'
-  ): void {
+  function handleDirectMessageStatusChange(dmId: string, status: 'Active' | 'Concluded'): void {
     // status (Concluded /)
     // user X MemberRemoved
     directMessages = directMessages.map((dm) =>
@@ -719,9 +752,7 @@
     };
   }
 
-  function buildCategories(
-    conversations: ConversationSummaryDto[],
-  ): Category[] {
+  function buildCategories(conversations: ConversationSummaryDto[]): Category[] {
     const allChannels = conversations.filter((c) => c.conversationType === 'Channel');
     const forums = conversations.filter((c) => c.conversationType === 'Forum');
 
@@ -731,14 +762,18 @@
         name: 'CHANNELS',
         isCollapsed: false,
         conversations: allChannels.map(mapChannelConversation),
-        actions: [{ id: 'add-channel', icon: 'plus', label: 'New Channel', onClick: handleCreateChannel }],
+        actions: [
+          { id: 'add-channel', icon: 'plus', label: 'New Channel', onClick: handleCreateChannel },
+        ],
       },
       {
         id: 'cat-forums',
         name: 'FORUMS',
         isCollapsed: false,
         conversations: forums.map(mapChannelConversation),
-        actions: [{ id: 'add-forum', icon: 'plus', label: 'New Forum', onClick: handleCreateTopic }],
+        actions: [
+          { id: 'add-forum', icon: 'plus', label: 'New Forum', onClick: handleCreateTopic },
+        ],
       },
     ];
   }
@@ -775,10 +810,10 @@
     const requestId = ++latestConversationRequestId;
     const nextConversationPage = reset
       ? 1
-      : hasMoreConversations ? conversationPageNumber + 1 : conversationPageNumber;
-    const nextDmPage = reset
-      ? 1
-      : hasMoreDirectMessages ? dmPageNumber + 1 : dmPageNumber;
+      : hasMoreConversations
+        ? conversationPageNumber + 1
+        : conversationPageNumber;
+    const nextDmPage = reset ? 1 : hasMoreDirectMessages ? dmPageNumber + 1 : dmPageNumber;
 
     if (reset) {
       loading = true;
@@ -803,18 +838,20 @@
       currentUserId = authState.user.id ?? null;
       const service = ensureConversationContext();
 
-      const conversationPageRequest = reset || hasMoreConversations
-        ? service.getConversationsPage({
-            pageNumber: nextConversationPage,
-            pageSize: CONVERSATION_PAGE_SIZE,
-          })
-        : Promise.resolve(null);
-      const dmPageRequest = reset || hasMoreDirectMessages
-        ? service.getDMChannelsPage({
-            pageNumber: nextDmPage,
-            pageSize: CONVERSATION_PAGE_SIZE,
-          })
-        : Promise.resolve(null);
+      const conversationPageRequest =
+        reset || hasMoreConversations
+          ? service.getConversationsPage({
+              pageNumber: nextConversationPage,
+              pageSize: CONVERSATION_PAGE_SIZE,
+            })
+          : Promise.resolve(null);
+      const dmPageRequest =
+        reset || hasMoreDirectMessages
+          ? service.getDMChannelsPage({
+              pageNumber: nextDmPage,
+              pageSize: CONVERSATION_PAGE_SIZE,
+            })
+          : Promise.resolve(null);
 
       const [convResult, dmResult] = await Promise.allSettled([
         conversationPageRequest,
@@ -826,23 +863,26 @@
 
       allConversationDtos = conversationPage
         ? mergeById(reset ? [] : allConversationDtos, conversationPage.items)
-        : (reset ? [] : allConversationDtos);
+        : reset
+          ? []
+          : allConversationDtos;
       allDmChannels = dmPage
         ? mergeById(reset ? [] : allDmChannels, dmPage.items)
-        : (reset ? [] : allDmChannels);
+        : reset
+          ? []
+          : allDmChannels;
 
       if (conversationPage) {
         conversationPageNumber = conversationPage.pageNumber ?? nextConversationPage;
-        hasMoreConversations = conversationPage.hasNextPage
-          ?? allConversationDtos.length < conversationPage.totalCount;
+        hasMoreConversations =
+          conversationPage.hasNextPage ?? allConversationDtos.length < conversationPage.totalCount;
       } else if (reset) {
         hasMoreConversations = false;
       }
 
       if (dmPage) {
         dmPageNumber = dmPage.pageNumber ?? nextDmPage;
-        hasMoreDirectMessages = dmPage.hasNextPage
-          ?? allDmChannels.length < dmPage.totalCount;
+        hasMoreDirectMessages = dmPage.hasNextPage ?? allDmChannels.length < dmPage.totalCount;
       } else if (reset) {
         hasMoreDirectMessages = false;
       }
@@ -915,11 +955,17 @@
     if (detail.projectId !== projectId) return;
 
     if (detail.conversationKind === 'dm') {
-      upsertPendingDirectMessage(detail.conversationId, detail.participantName, detail.channelStatus);
+      upsertPendingDirectMessage(
+        detail.conversationId,
+        detail.participantName,
+        detail.channelStatus
+      );
       selectedDmId = detail.conversationId;
       selectedConversationId = null;
     } else {
-      selectedConversationId = allConversations.some((conversation) => conversation.id === detail.conversationId)
+      selectedConversationId = allConversations.some(
+        (conversation) => conversation.id === detail.conversationId
+      )
         ? detail.conversationId
         : null;
       selectedDmId = null;
@@ -958,34 +1004,28 @@
       'sddp:project-conversation-select',
       handleExternalConversationSelection
     );
-    window.addEventListener(
-      'sddp:dm-concluded',
-      handleExternalDirectMessageConcluded
-    );
+    window.addEventListener('sddp:dm-concluded', handleExternalDirectMessageConcluded);
 
     return () => {
       window.removeEventListener(
         'sddp:project-conversation-select',
         handleExternalConversationSelection
       );
-      window.removeEventListener(
-        'sddp:dm-concluded',
-        handleExternalDirectMessageConcluded
-      );
+      window.removeEventListener('sddp:dm-concluded', handleExternalDirectMessageConcluded);
     };
   });
 </script>
 
 <PageShell class="h-full {className}">
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
-      {#snippet actions()}
-        <IconButton
-          icon="refresh-cw"
-          size="sm"
-          variant="ghost"
-          title="Refresh"
-          onclick={() => loadConversationData()}
-        />
+    {#snippet actions()}
+      <IconButton
+        icon="refresh-cw"
+        size="sm"
+        variant="ghost"
+        title="Refresh"
+        onclick={() => loadConversationData()}
+      />
     {/snippet}
   </PageHeader>
 
@@ -1002,7 +1042,9 @@
       {#snippet sidebar()}
         <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
           <!-- Header with Search -->
-          <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+          <div
+            class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+          >
             <div class="relative flex-1">
               <Icon
                 name="search"
@@ -1021,92 +1063,102 @@
             </div>
           </div>
 
-        <div
-          class="flex-1 min-h-0 flex flex-col overflow-y-auto pb-1"
-          onscroll={handleSidebarScroll}
-        >
-          {#if loading}
-            <div class="flex-1 flex items-center justify-center">
-              <!-- <Spinner size="lg" /> -->
-            </div>
-          {:else if error}
-            <div class="px-3 py-4 text-sm text-red-500">
-              {error}
-            </div>
-          {:else}
-            <!-- All sections at the same level: CHANNELS, FORUMS, DIRECT MESSAGES -->
-            {#each filteredCategories as category (category.id)}
-              <CollapsibleGroup
-                title={category.name}
-                actions={category.actions}
-                expanded={!category.isCollapsed}
-                onToggle={() => {
-                  categories = categories.map((c) =>
-                    c.id === category.id ? { ...c, isCollapsed: !c.isCollapsed } : c
-                  );
-                }}
-              >
-                <div class="bg-[var(--color-bg-primary)]">
-                  {#each category.conversations as conversation (conversation.id)}
-                    <Button
-                      variant="unstyled"
-                      class="w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
+          <div
+            class="flex-1 min-h-0 flex flex-col overflow-y-auto pb-1"
+            onscroll={handleSidebarScroll}
+          >
+            {#if loading}
+              <div class="flex-1 flex items-center justify-center">
+                <!-- <Spinner size="lg" /> -->
+              </div>
+            {:else if error}
+              <div class="px-3 py-4 text-sm text-red-500">
+                {error}
+              </div>
+            {:else}
+              <!-- All sections at the same level: CHANNELS, FORUMS, DIRECT MESSAGES -->
+              {#each filteredCategories as category (category.id)}
+                <CollapsibleGroup
+                  title={category.name}
+                  actions={category.actions}
+                  expanded={!category.isCollapsed}
+                  onToggle={() => {
+                    categories = categories.map((c) =>
+                      c.id === category.id ? { ...c, isCollapsed: !c.isCollapsed } : c
+                    );
+                  }}
+                >
+                  <div class="bg-[var(--color-bg-primary)]">
+                    {#each category.conversations as conversation (conversation.id)}
+                      <Button
+                        variant="unstyled"
+                        class="w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
                         transition-colors duration-150
                         border-b border-[var(--color-border-primary)]
                         {selectedConversationId === conversation.id
                           ? 'bg-[var(--color-accent-primary)]/10'
                           : 'hover:bg-[var(--color-bg-tertiary)]'}"
-                      onclick={() => handleConversationSelect(conversation)}
-                    >
-                      <Icon
-                        name={conversation.type === 'Forum' ? 'list' : conversation.isPrivate ? 'lock' : 'hash'}
-                        size="sm"
-                        class="flex-shrink-0 text-[var(--color-text-tertiary)]"
-                      />
-                      <span class="flex-1 text-left text-sm truncate text-[var(--color-text-primary)]">
-                        {conversation.name}
-                      </span>
-                      {#if (conversation.unreadCount ?? 0) > 0}
+                        onclick={() => handleConversationSelect(conversation)}
+                      >
+                        <Icon
+                          name={conversation.type === 'Forum'
+                            ? 'list'
+                            : conversation.isPrivate
+                              ? 'lock'
+                              : 'hash'}
+                          size="sm"
+                          class="flex-shrink-0 text-[var(--color-text-tertiary)]"
+                        />
                         <span
-                          class="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-medium
-                            rounded-full bg-[var(--color-accent-primary)] text-white"
+                          class="flex-1 text-left text-sm truncate text-[var(--color-text-primary)]"
                         >
-                          {(conversation.unreadCount ?? 0) > 99 ? '99+' : conversation.unreadCount}
+                          {conversation.name}
                         </span>
-                      {/if}
-                    </Button>
-                  {/each}
-                  {#if category.conversations.length === 0}
-                    <div class="px-2 py-2 text-center text-sm text-[var(--color-text-tertiary)]">
-                      No {category.name.toLowerCase()}
-                    </div>
-                  {/if}
+                        {#if (conversation.unreadCount ?? 0) > 0}
+                          <span
+                            class="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-medium
+                            rounded-full bg-[var(--color-accent-primary)] text-white"
+                          >
+                            {(conversation.unreadCount ?? 0) > 99
+                              ? '99+'
+                              : conversation.unreadCount}
+                          </span>
+                        {/if}
+                      </Button>
+                    {/each}
+                    {#if category.conversations.length === 0}
+                      <div class="px-2 py-2 text-center text-sm text-[var(--color-text-tertiary)]">
+                        No {category.name.toLowerCase()}
+                      </div>
+                    {/if}
+                  </div>
+                </CollapsibleGroup>
+              {/each}
+
+              <!-- DIRECT MESSAGES Section -->
+              <CollapsibleGroup
+                title="DIRECT MESSAGES"
+                actions={[
+                  { id: 'add-dm', icon: 'plus', label: 'New Message', onClick: handleCreateDM },
+                ]}
+                expanded={dmExpanded}
+                onToggle={() => (dmExpanded = !dmExpanded)}
+              >
+                <div class="bg-[var(--color-bg-primary)]">
+                  <DirectMessageList
+                    items={filteredDms}
+                    selectedId={selectedDmId}
+                    onSelect={handleDmSelect}
+                  />
                 </div>
               </CollapsibleGroup>
-            {/each}
 
-            <!-- DIRECT MESSAGES Section -->
-            <CollapsibleGroup
-              title="DIRECT MESSAGES"
-              actions={[{ id: 'add-dm', icon: 'plus', label: 'New Message', onClick: handleCreateDM }]}
-              expanded={dmExpanded}
-              onToggle={() => (dmExpanded = !dmExpanded)}
-            >
-              <div class="bg-[var(--color-bg-primary)]">
-                <DirectMessageList
-                  items={filteredDms}
-                  selectedId={selectedDmId}
-                  onSelect={handleDmSelect}
-                />
-              </div>
-            </CollapsibleGroup>
-
-            {#if loadingMore}
-              <div class="flex items-center justify-center py-3">
-                <Spinner size="sm" />
-              </div>
+              {#if loadingMore}
+                <div class="flex items-center justify-center py-3">
+                  <Spinner size="sm" />
+                </div>
+              {/if}
             {/if}
-          {/if}
           </div>
         </div>
       {/snippet}
@@ -1130,8 +1182,12 @@
           {#if createMode === 'private-channel'}
             <div class="space-y-2">
               <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-[var(--color-text-primary)]">Participants</span>
-                <span class="text-xs text-[var(--color-text-tertiary)]">{selectedParticipantCount} selected</span>
+                <span class="text-sm font-medium text-[var(--color-text-primary)]"
+                  >Participants</span
+                >
+                <span class="text-xs text-[var(--color-text-tertiary)]"
+                  >{selectedParticipantCount} selected</span
+                >
               </div>
               <div class="relative">
                 <Icon
@@ -1149,7 +1205,9 @@
                     focus:outline-none focus:border-[var(--color-accent-primary)]"
                 />
               </div>
-              <div class="max-h-48 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]">
+              <div
+                class="max-h-48 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
+              >
                 {#if selectableParticipants.length === 0}
                   <div class="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
                     No matching participants.
@@ -1199,7 +1257,9 @@
       {:else if createMode === 'dm'}
         <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
           <!-- Header -->
-          <div class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]">
+          <div
+            class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]"
+          >
             <div class="flex items-center">
               <Icon
                 name="message-square"
@@ -1242,7 +1302,9 @@
                       focus:outline-none focus:border-[var(--color-accent-primary)]"
                   />
                 </div>
-                <div class="max-h-80 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]">
+                <div
+                  class="max-h-80 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
+                >
                   {#if createPanelLoading}
                     <div class="flex items-center justify-center py-6">
                       <Spinner size="md" />
@@ -1267,13 +1329,17 @@
                             size="sm"
                           />
                           <span
-                            class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-primary)] {onlineUsers.has(participant.user.id)
+                            class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-primary)] {onlineUsers.has(
+                              participant.user.id
+                            )
                               ? 'bg-[var(--color-success-500)]'
                               : 'bg-[var(--color-neutral-400)]'}"
                           ></span>
                         </div>
                         <div class="flex-1 min-w-0">
-                          <div class="font-medium text-sm text-[var(--color-text-primary)] truncate">
+                          <div
+                            class="font-medium text-sm text-[var(--color-text-primary)] truncate"
+                          >
                             {participant.user.name}
                           </div>
                           <div class="text-xs text-[var(--color-text-tertiary)] truncate">
@@ -1293,81 +1359,95 @@
           </div>
         </div>
       {:else if selectedConversation && selectedConversation.type === 'Forum'}
-          <ForumView
-            tenantId={tenantId ?? ''}
-            {projectId}
-            conversationId={selectedConversation.id}
-            conversationName={selectedConversation.name}
-            class="h-full"
-          />
+        <ForumView
+          tenantId={tenantId ?? ''}
+          {projectId}
+          conversationId={selectedConversation.id}
+          conversationName={selectedConversation.name}
+          class="h-full"
+        />
       {:else if selectedConversation}
-          <ChannelView
-            conversationId={selectedConversation.id}
-            conversationName={selectedConversation.name}
-            conversationDescription={selectedConversation.description}
-            headerIcon="hash"
-            sourceType={selectedConversationSource}
-            conversationType={selectedConversation.type}
-            tenantId={tenantId ?? undefined}
-            {projectId}
-            channelStatus={selectedConversation.channelStatus}
-            allowRequirementExtract={selectedConversationSource === 'channel'}
-            hideParticipantPanel={true}
-            onStatusChange={(status) => handleConversationStatusChange(selectedConversation.id, status)}
-            onMembersChanged={(conversationId, members) => {
-              if (conversationId !== selectedConversationId) return;
-              currentUserId = getAuthState().user?.id ?? null;
-              channelParticipants = members;
-            }}
-            onClose={() => { selectedConversationId = null; }}
-            class="h-full"
-          />
-        {:else if selectedDm}
-          <ChannelView
-            conversationId={selectedDm.id}
-            conversationName={selectedDm.name}
-            headerIcon="message-circle"
-            sourceType="conversation"
-            conversationType="DirectMessage"
-            tenantId={tenantId ?? undefined}
-            {projectId}
-            channelStatus={selectedDm.channelStatus}
-            allowRequirementExtract={false}
-            hideParticipantPanel={true}
-            onStatusChange={(status) => handleDirectMessageStatusChange(selectedDm.id, status)}
-            onMembersChanged={(convId, members) => {
-              if (convId !== selectedDmId) return;
-              currentUserId = getAuthState().user?.id ?? null;
-              channelParticipants = members;
-            }}
-            onClose={() => { selectedDmId = null; }}
-            class="h-full"
-          />
-        {:else}
-          <!-- Overview -->
-          <PageShell class="h-full">
-            <PageHeader title="Overview" />
-            <PageBody padded={false} class="p-3 space-y-3">
-              <CardGrid cols={4} gap="md">
-                <StatCard title="Unread" value={totalUnreadCount} icon="bell" />
-                <StatCard title="Channels" value={channelCount} icon="hash" />
-                <StatCard title="Forums" value={forumCount} icon="message-square" />
-                <StatCard title="DMs" value={dmCount} icon="user" />
-              </CardGrid>
+        <ChannelView
+          conversationId={selectedConversation.id}
+          conversationName={selectedConversation.name}
+          conversationDescription={selectedConversation.description}
+          headerIcon="hash"
+          sourceType={selectedConversationSource}
+          conversationType={selectedConversation.type}
+          tenantId={tenantId ?? undefined}
+          {projectId}
+          channelStatus={selectedConversation.channelStatus}
+          allowRequirementExtract={selectedConversationSource === 'channel'}
+          hideParticipantPanel={true}
+          onStatusChange={(status) =>
+            handleConversationStatusChange(selectedConversation.id, status)}
+          onMembersChanged={(conversationId, members) => {
+            if (conversationId !== selectedConversationId) return;
+            currentUserId = getAuthState().user?.id ?? null;
+            channelParticipants = members;
+          }}
+          onClose={() => {
+            selectedConversationId = null;
+          }}
+          class="h-full"
+        />
+      {:else if selectedDm}
+        <ChannelView
+          conversationId={selectedDm.id}
+          conversationName={selectedDm.name}
+          headerIcon="message-circle"
+          sourceType="conversation"
+          conversationType="DirectMessage"
+          tenantId={tenantId ?? undefined}
+          {projectId}
+          channelStatus={selectedDm.channelStatus}
+          allowRequirementExtract={false}
+          hideParticipantPanel={true}
+          onStatusChange={(status) => handleDirectMessageStatusChange(selectedDm.id, status)}
+          onMembersChanged={(convId, members) => {
+            if (convId !== selectedDmId) return;
+            currentUserId = getAuthState().user?.id ?? null;
+            channelParticipants = members;
+          }}
+          onClose={() => {
+            selectedDmId = null;
+          }}
+          class="h-full"
+        />
+      {:else}
+        <!-- Overview -->
+        <PageShell class="h-full">
+          <PageHeader title="Overview" />
+          <PageBody padded={false} class="p-3 space-y-3">
+            <CardGrid cols={4} gap="md">
+              <StatCard title="Unread" value={totalUnreadCount} icon="bell" />
+              <StatCard title="Channels" value={channelCount} icon="hash" />
+              <StatCard title="Forums" value={forumCount} icon="message-square" />
+              <StatCard title="DMs" value={dmCount} icon="user" />
+            </CardGrid>
 
-              <p class="text-sm text-[var(--color-text-secondary)] text-center">
-                Select a channel, forum, or DM from the sidebar to start chatting.
-              </p>
-            </PageBody>
-          </PageShell>
-        {/if}
+            <p class="text-sm text-[var(--color-text-secondary)] text-center">
+              Select a channel, forum, or DM from the sidebar to start chatting.
+            </p>
+          </PageBody>
+        </PageShell>
+      {/if}
 
       {#snippet rightPanel()}
         <div class="flex flex-col h-full bg-[var(--color-bg-secondary)] overflow-y-auto">
           <!-- Participants Section -->
           <CollapsibleGroup
             title="Participants ({activeParticipants.length})"
-            actions={canInvite ? [{ id: 'invite', icon: 'plus', label: 'Invite Members', onClick: toggleInviteSearch }] : []}
+            actions={canInvite
+              ? [
+                  {
+                    id: 'invite',
+                    icon: 'plus',
+                    label: 'Invite Members',
+                    onClick: toggleInviteSearch,
+                  },
+                ]
+              : []}
             expanded={participantsExpanded}
             onToggle={() => (participantsExpanded = !participantsExpanded)}
           >
@@ -1396,8 +1476,12 @@
                       >
                         <Avatar name={user.displayName} isAI={user.isAi} size="sm" />
                         <div class="flex-1 min-w-0">
-                          <span class="text-sm text-[var(--color-text-primary)] truncate block">{user.displayName}</span>
-                          <span class="text-xs text-[var(--color-text-tertiary)] truncate block">{user.email}</span>
+                          <span class="text-sm text-[var(--color-text-primary)] truncate block"
+                            >{user.displayName}</span
+                          >
+                          <span class="text-xs text-[var(--color-text-tertiary)] truncate block"
+                            >{user.email}</span
+                          >
                         </div>
                         {#if sendingUserId === user.id}
                           <Spinner size="sm" />
@@ -1406,14 +1490,18 @@
                     {/each}
                   </div>
                 {:else if inviteSearchQuery.length >= 2}
-                  <div class="text-xs text-[var(--color-text-tertiary)] mt-2 mb-1 text-center">No users found</div>
+                  <div class="text-xs text-[var(--color-text-tertiary)] mt-2 mb-1 text-center">
+                    No users found
+                  </div>
                 {/if}
               </div>
             {/if}
 
             <div class="px-2 py-2">
               {#each activeParticipants as participant (participant.id)}
-                <div class="group relative flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors">
+                <div
+                  class="group relative flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                >
                   <div class="relative flex-shrink-0">
                     <Avatar
                       name={participant.user.name ?? 'Unknown'}
@@ -1422,28 +1510,36 @@
                       size="sm"
                     />
                     <span
-                      class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-secondary)] {onlineUsers.has(participant.user.id)
+                      class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-secondary)] {onlineUsers.has(
+                        participant.user.id
+                      )
                         ? 'bg-[var(--color-success-500)]'
                         : 'bg-[var(--color-neutral-400)]'}"
                     ></span>
                   </div>
                   <span class="text-sm text-[var(--color-text-primary)] truncate flex-1">
-                    {participant.user.name ?? 'Unknown'}{#if participant.user.id === currentUserId} <span class="text-[var(--color-text-tertiary)]">(you)</span>{/if}
+                    {participant.user.name ?? 'Unknown'}{#if participant.user.id === currentUserId}
+                      <span class="text-[var(--color-text-tertiary)]">(you)</span>{/if}
                   </span>
                   {#if participant.type === 'AI'}
-                    <Icon name="bot" size="xs" class="text-[var(--color-accent-primary)]" />
+                    <Icon name="bot" size="xs" class="text-[var(--color-accent-text)]" />
                   {/if}
-                  {#if selectedDm
-                    ? participant.user.id === currentUserId
-                    : (!isOwnerRole(participant.role) && (isConversationOwner || participant.user.id === currentUserId))}
+                  {#if selectedDm ? participant.user.id === currentUserId : !isOwnerRole(participant.role) && (isConversationOwner || participant.user.id === currentUserId)}
                     <Button
                       variant="unstyled"
                       class="absolute right-1 top-1/2 -translate-y-1/2
                         w-5 h-5 flex items-center justify-center rounded
                         text-[var(--color-text-tertiary)] hover:text-[var(--color-error-500)]
                         hover:bg-[var(--color-error-50)] transition-colors"
-                      title={participant.user.id === currentUserId ? (selectedDm ? 'Leave conversation' : 'Leave channel') : 'Remove member'}
-                      onclick={(e) => { e.stopPropagation(); handleRemoveParticipant(participant); }}
+                      title={participant.user.id === currentUserId
+                        ? selectedDm
+                          ? 'Leave conversation'
+                          : 'Leave channel'
+                        : 'Remove member'}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveParticipant(participant);
+                      }}
                     >
                       <Icon name="x" size="xs" />
                     </Button>

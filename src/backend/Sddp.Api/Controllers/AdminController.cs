@@ -1,9 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Admin.Commands;
 
 namespace Sddp.Api.Controllers;
@@ -27,6 +30,9 @@ public class AdminController : BaseApiController
     /// POST /api/admin/projects/{id}/reset
     /// </summary>
     [HttpPost("projects/{id}/reset")]
+    [ResourceScope<Project>("id")]
+    [RequirePermission(PermissionCodes.UserManage)]
+    [Authorize]
     public async Task<IActionResult> ResetProjectData(
         string id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -55,6 +61,9 @@ public class AdminController : BaseApiController
     /// POST /api/admin/tenants/reset
     /// </summary>
     [HttpPost("tenants/reset")]
+    [ResourceScopeExempt("Tenant-wide operation with no resource id in the route; RequireAdmin resolves roles against the tenant in TenantContext, so it cannot reach another tenant.")]
+    [RequirePermission(PermissionCodes.UserManage)]
+    [Authorize]
     public async Task<IActionResult> ResetTenantData(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromBody] ResetTenantDataDto dto,

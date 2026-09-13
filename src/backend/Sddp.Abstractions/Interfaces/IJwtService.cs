@@ -11,7 +11,11 @@ public interface IJwtService
     /// <summary>
     /// Access Token create
     /// </summary>
-    string GenerateAccessToken(GlobalUniqueId userId, string username, GlobalUniqueId tenantId, IEnumerable<string> roles, IEnumerable<string> permissions, string? displayName = null);
+    string GenerateAccessToken(
+        GlobalUniqueId userId,
+        string username,
+        GlobalUniqueId tenantId,
+        string? displayName = null);
 
     /// <summary>
     /// Refresh Token create

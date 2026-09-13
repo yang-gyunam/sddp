@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.AuditLogs.Queries;
 using Sddp.Application.Features.Requirements.Commands;
 using Sddp.Application.Features.Requirements.Queries;
@@ -26,6 +29,7 @@ public class RequirementsController : BaseApiController
     }
 
     [HttpGet]
+    [ResourceScopeExempt("Listing endpoint: no resource id in the route, and results are already filtered to the tenant and the requested project.")]
     public async Task<IActionResult> GetRequirements(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -52,6 +56,7 @@ public class RequirementsController : BaseApiController
     }
 
     [HttpGet("search")]
+    [ResourceScopeExempt("Search endpoint: no resource id in the route, and the query filters to the tenant and the requested project.")]
     public async Task<IActionResult> SearchRequirements(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -83,6 +88,7 @@ public class RequirementsController : BaseApiController
     }
 
     [HttpGet("tree")]
+    [ResourceScopeExempt("Project-wide aggregate with no resource id in the route; the tree is built from the requested project only.")]
     public async Task<IActionResult> GetRequirementTree(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -104,7 +110,8 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse<IEnumerable<RequirementTreeNodeDto>>.Ok(result));
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
+    [ResourceScope<Requirement>("id")]
     public async Task<IActionResult> GetRequirementById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -135,6 +142,7 @@ public class RequirementsController : BaseApiController
     }
 
     [HttpGet("code/{code}")]
+    [ResourceScopeExempt("Lookup by human code, not a database id: the query resolves the code inside the requested project, so it cannot reach another one.")]
     public async Task<IActionResult> GetRequirementByCode(
         string code,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -163,7 +171,8 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse<RequirementDetailDto>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/versions")]
+    [HttpGet("{id}/versions")]
+    [ResourceScope<Requirement>("id")]
     public async Task<IActionResult> GetVersionHistory(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -190,7 +199,8 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse<List<RequirementVersionDto>>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/children")]
+    [HttpGet("{id}/children")]
+    [ResourceScope<Requirement>("id")]
     public async Task<IActionResult> GetChildren(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -216,6 +226,8 @@ public class RequirementsController : BaseApiController
     }
 
     [HttpPost]
+    [ResourceScopeExempt("Creation endpoint: the requirement does not exist yet, so there is no owning project to resolve from.")]
+    [RequirePermission(PermissionCodes.RequirementCreate)]
     [Authorize]
     public async Task<IActionResult> CreateRequirement(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -251,7 +263,9 @@ public class RequirementsController : BaseApiController
         return Created($"/api/requirements/{result.Id}", ApiResponse<RequirementDetailDto>.Ok(result));
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
+    [ResourceScope<Requirement>("id")]
+    [RequirePermission(PermissionCodes.RequirementUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateRequirement(
         Guid id,
@@ -290,7 +304,9 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse<RequirementDetailDto>.Ok(result));
     }
 
-    [HttpPatch("{id:guid}/status")]
+    [HttpPatch("{id}/status")]
+    [ResourceScope<Requirement>("id")]
+    [RequirePermission(PermissionCodes.RequirementUpdate)]
     [Authorize]
     public async Task<IActionResult> TransitionStatus(
         Guid id,
@@ -330,7 +346,9 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse<RequirementDto>.Ok(result));
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
+    [ResourceScope<Requirement>("id")]
+    [RequirePermission(PermissionCodes.RequirementDelete)]
     [Authorize]
     public async Task<IActionResult> DeleteRequirement(
         Guid id,
@@ -362,7 +380,9 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse.Ok());
     }
 
-    [HttpPost("{id:guid}/link-conversation")]
+    [HttpPost("{id}/link-conversation")]
+    [ResourceScope<Requirement>("id")]
+    [RequirePermission(PermissionCodes.RequirementUpdate)]
     [Authorize]
     public async Task<IActionResult> LinkConversation(
         Guid id,
@@ -406,7 +426,9 @@ public class RequirementsController : BaseApiController
         return Ok(ApiResponse<RequirementDto>.Ok(result));
     }
 
-    [HttpDelete("{id:guid}/link-conversation")]
+    [HttpDelete("{id}/link-conversation")]
+    [ResourceScope<Requirement>("id")]
+    [RequirePermission(PermissionCodes.RequirementUpdate)]
     [Authorize]
     public async Task<IActionResult> UnlinkConversation(
         Guid id,
@@ -447,7 +469,8 @@ public class RequirementsController : BaseApiController
     /// <summary>
     /// requirement update get
     /// </summary>
-    [HttpGet("{id:guid}/field-authors")]
+    [HttpGet("{id}/field-authors")]
+    [ResourceScope<Requirement>("id")]
     public async Task<IActionResult> GetFieldAuthors(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

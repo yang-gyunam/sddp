@@ -10,12 +10,18 @@
   import { ConversationHeader } from '../idioms';
   import ParticipantsPanel from './ParticipantsPanel.svelte';
   import { getAuthState } from '@sddp/shell/auth';
-  import { getConversationService } from '../../services';
-  import type { Message, CreateMessageRequest, ChannelDetail, ConversationMember, LinkedRequirement } from '../../types';
+  import { createConversationService } from '../../services';
+  import type {
+    Message,
+    CreateMessageRequest,
+    ChannelDetail,
+    ConversationMember,
+    LinkedRequirement,
+  } from '../../types';
   import type { ChannelEntryStatus } from '../../types';
   import RequirementForm from '../../../requirements/components/idioms/RequirementForm.svelte';
   import type { CreateRequirementRequest, RequirementLevel } from '../../../requirements/types';
-  import { getRequirementService } from '../../../requirements/services';
+  import { createRequirementService } from '../../../requirements/services';
   import {
     getConversationViewMode,
     subscribeConversationView,
@@ -83,7 +89,9 @@
 
   const draftKey = $derived(tabId ? `${tabId}:${conversationId}` : conversationId);
 
-  const service = getConversationService();
+  let service = $derived(
+    createConversationService(tenantId ?? getAuthState().user?.tenantId ?? '', projectId ?? '')
+  );
   const hubService = getConversationHubService();
   let messages = $state<Message[]>([]);
   let loading = $state(false);
@@ -106,7 +114,6 @@
   let extractLoading = $state(false);
   let extractError = $state<string | null>(null);
 
-
   // Right panel (Participants) resize state
   let participantsPanelWidth = $state(224); // default w-56 = 224px
   const minParticipantsWidth = 180;
@@ -128,7 +135,10 @@
       participantsRafId = requestAnimationFrame(() => {
         // Reverse direction: drag left = increase width
         const delta = startX - moveEvent.clientX;
-        participantsPanelWidth = Math.min(maxParticipantsWidth, Math.max(minParticipantsWidth, startWidth + delta));
+        participantsPanelWidth = Math.min(
+          maxParticipantsWidth,
+          Math.max(minParticipantsWidth, startWidth + delta)
+        );
         participantsRafId = null;
       });
     }
@@ -198,7 +208,10 @@
       return;
     }
 
-    if ((conversationType === 'DirectMessage' || conversationType === 'Channel') && channelStatus == null) {
+    if (
+      (conversationType === 'DirectMessage' || conversationType === 'Channel') &&
+      channelStatus == null
+    ) {
       channelStatus = 'Active';
     }
   });
@@ -211,20 +224,20 @@
 
   /** Whether status controls should be shown (Channels via sourceType or conversationType, DMs via conversationType) */
   const hasStatusControls = $derived(
-    sourceType === 'conversation' || conversationType === 'Channel' || conversationType === 'DirectMessage'
+    sourceType === 'conversation' ||
+      conversationType === 'Channel' ||
+      conversationType === 'DirectMessage'
   );
   const isDirectMessage = $derived(conversationType === 'DirectMessage');
   const isChannelReadOnly = $derived(
     isReadOnlyProp || (hasStatusControls && channelStatus != null && channelStatus !== 'Active')
   );
   const canConclude = $derived(
-    hasStatusControls
-      && channelStatus === 'Active'
-      && (isDirectMessage || currentUserRole.toLowerCase() === 'owner')
+    hasStatusControls &&
+      channelStatus === 'Active' &&
+      (isDirectMessage || currentUserRole.toLowerCase() === 'owner')
   );
-  const canCloseFromHeader = $derived(
-    !!onClose || !!tabId
-  );
+  const canCloseFromHeader = $derived(!!onClose || !!tabId);
 
   function handleHeaderClose(): void {
     if (onClose) {
@@ -436,8 +449,7 @@
         throw new Error('Missing project context');
       }
 
-      const requirementService = getRequirementService();
-      requirementService.setContext(tenant, projectId);
+      const requirementService = createRequirementService(tenant, projectId);
       const detail = await requirementService.createRequirement(data);
 
       if (sourceType === 'channel') {
@@ -472,11 +484,9 @@
     const authState = getAuthState();
     currentUserId = authState.user?.id ?? null;
     const resolvedTenantId = tenantId ?? authState.user?.tenantId ?? '';
-    const resolvedProjectId = projectId ?? '';
     if (!resolvedTenantId) {
       throw new Error('Missing tenant ID');
     }
-    service.setContext(resolvedTenantId, resolvedProjectId);
   }
 
   async function loadMessages(reset = false): Promise<void> {
@@ -485,9 +495,12 @@
     error = null;
     try {
       await ensureContext();
-      const cursor = reset ? undefined : nextCursor ?? undefined;
+      const cursor = reset ? undefined : (nextCursor ?? undefined);
       if (sourceType === 'conversation') {
-        const page = await service.getConversationMessages(targetConversationId, { cursor, limit: 50 });
+        const page = await service.getConversationMessages(targetConversationId, {
+          cursor,
+          limit: 50,
+        });
         if (targetConversationId !== conversationId) {
           return;
         }
@@ -654,7 +667,11 @@
     }
     if (conversationId === prevConversationId) return;
     prevConversationId = conversationId;
-    untrack(() => { loadMessages(true); loadMembers(); loadLinkedRequirements(); });
+    untrack(() => {
+      loadMessages(true);
+      loadMembers();
+      loadLinkedRequirements();
+    });
   });
 
   $effect(() => {
@@ -668,7 +685,9 @@
       },
       onMessageEdited: (message) => {
         if (message.conversationId !== conversationId) return;
-        messages = messages.map((item) => (item.id === message.id ? normalizeMessage(message) : item));
+        messages = messages.map((item) =>
+          item.id === message.id ? normalizeMessage(message) : item
+        );
       },
       onMessageDeleted: (messageId) => {
         messages = messages.filter((item) => item.id !== messageId);
@@ -714,12 +733,15 @@
 
         if (Date.now() < suppressClosedToastUntil) return;
         const concludedBy = event.concludedBy?.trim();
-        const defaultClosedMessage = conversationType === 'DirectMessage'
-          ? 'This direct message has been concluded'
-          : 'This channel has been concluded';
-        toast.info(concludedBy
-          ? `${concludedBy} concluded this ${conversationType === 'DirectMessage' ? 'direct message' : 'channel'}`
-          : defaultClosedMessage);
+        const defaultClosedMessage =
+          conversationType === 'DirectMessage'
+            ? 'This direct message has been concluded'
+            : 'This channel has been concluded';
+        toast.info(
+          concludedBy
+            ? `${concludedBy} concluded this ${conversationType === 'DirectMessage' ? 'direct message' : 'channel'}`
+            : defaultClosedMessage
+        );
       },
       onConnectionStateChange: (connected) => {
         hubConnected = connected;
@@ -732,7 +754,8 @@
       },
     });
 
-    hubService.connect()
+    hubService
+      .connect()
       .then(() => hubService.joinConversation(conversationId))
       .catch((err) => {
         hubError = err instanceof Error ? err.message : 'Failed to connect to live updates';
@@ -740,7 +763,9 @@
 
     return () => {
       unsubscribe();
-      hubService.leaveConversation(conversationId).catch((err) => console.warn('[ChannelView] leaveConversation cleanup failed:', err));
+      hubService
+        .leaveConversation(conversationId)
+        .catch((err) => console.warn('[ChannelView] leaveConversation cleanup failed:', err));
     };
   });
 
@@ -750,7 +775,6 @@
     extractInitialData = null;
     extractError = null;
   });
-
 </script>
 
 {#snippet headerActions()}
@@ -765,13 +789,7 @@
     />
   {/if}
   {#if canCloseFromHeader}
-    <IconButton
-      icon="x"
-      size="sm"
-      variant="ghost"
-      title="Close"
-      onclick={handleHeaderClose}
-    />
+    <IconButton icon="x" size="sm" variant="ghost" title="Close" onclick={handleHeaderClose} />
   {/if}
 {/snippet}
 
@@ -792,17 +810,25 @@
     <div class="flex-1 flex flex-col min-w-0 min-h-0">
       <!-- Channel Status Banner -->
       {#if channelStatus === 'Concluded'}
-        <div class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-[var(--color-warning-50)] border-b border-[var(--color-warning-200)] text-[var(--color-warning-700)]">
+        <div
+          class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-[var(--color-warning-50)] border-b border-[var(--color-warning-200)] text-[var(--color-warning-700)]"
+        >
           <Icon name="check-circle" size="sm" />
-          <span class="text-sm">This channel has been concluded. No new messages can be posted.</span>
+          <span class="text-sm"
+            >This channel has been concluded. No new messages can be posted.</span
+          >
         </div>
       {/if}
 
       {#if extractingMessage}
-        <div class="flex-shrink-0 border-b border-[var(--color-border-primary)] bg-[var(--color-surface-100)]">
+        <div
+          class="flex-shrink-0 border-b border-[var(--color-border-primary)] bg-[var(--color-surface-100)]"
+        >
           <div class="flex items-center justify-between px-3 py-2">
             <div>
-              <div class="text-sm font-medium text-[var(--color-text-primary)]">Extract Requirement</div>
+              <div class="text-sm font-medium text-[var(--color-text-primary)]">
+                Extract Requirement
+              </div>
               <div class="text-xs text-[var(--color-text-tertiary)]">
                 Drafted from a decision in {displayName}
               </div>
@@ -847,7 +873,7 @@
           {#if hasMore}
             <Button
               variant="unstyled"
-              class="w-full py-2 text-sm text-[var(--color-accent-primary)]
+              class="w-full py-2 text-sm text-[var(--color-accent-text)]
                 hover:bg-[var(--color-surface-200)] rounded transition-colors"
               onclick={handleLoadMore}
             >
@@ -858,7 +884,7 @@
           {#each uniqueMessages as message, index (message.id)}
             <MessageBubble
               {message}
-              viewMode={viewMode}
+              {viewMode}
               {projectId}
               isOwn={currentUserId ? message.sender?.id === currentUserId : false}
               isLast={index === uniqueMessages.length - 1}
@@ -888,12 +914,14 @@
             onTypingStart={handleTypingStart}
             onTypingStop={handleTypingStop}
             placeholder="Message #{displayName}"
-            draftKey={draftKey}
+            {draftKey}
             disabled={sending}
           />
         </div>
       {:else if isReadOnlyProp}
-        <div class="border-t border-[var(--color-border-primary)] bg-[var(--color-surface-100)] px-4 py-2">
+        <div
+          class="border-t border-[var(--color-border-primary)] bg-[var(--color-surface-100)] px-4 py-2"
+        >
           <p class="text-xs text-[var(--color-text-muted)] text-center">
             <Icon name="eye" size="xs" class="inline-block mr-1 align-text-bottom" />
             Read-only view

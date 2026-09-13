@@ -210,10 +210,14 @@
   }}
 />
 
-<div class="spec-editor rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] {className}">
+<div
+  class="spec-editor rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] {className}"
+>
   <!-- Toolbar -->
   {#if !readonly}
-    <div class="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+    <div
+      class="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
+    >
       <!-- Undo/Redo -->
       <div class="flex items-center gap-0.5 pr-2 border-r border-[var(--color-border-subtle)]">
         <Button
@@ -240,7 +244,7 @@
           variant="unstyled"
           onclick={toggleBold}
           class="p-1.5 rounded transition-colors {activeBold
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Bold (Ctrl+B)"
         >
@@ -250,7 +254,7 @@
           variant="unstyled"
           onclick={toggleItalic}
           class="p-1.5 rounded transition-colors {activeItalic
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Italic (Ctrl+I)"
         >
@@ -260,7 +264,7 @@
           variant="unstyled"
           onclick={toggleStrike}
           class="p-1.5 rounded transition-colors {activeStrike
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Strikethrough"
         >
@@ -270,7 +274,7 @@
           variant="unstyled"
           onclick={toggleCode}
           class="p-1.5 rounded transition-colors {activeCode
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Inline Code"
         >
@@ -284,7 +288,7 @@
           variant="unstyled"
           onclick={() => toggleHeading(1)}
           class="p-1.5 rounded text-xs font-bold transition-colors {activeH1
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Heading 1"
         >
@@ -294,7 +298,7 @@
           variant="unstyled"
           onclick={() => toggleHeading(2)}
           class="p-1.5 rounded text-xs font-bold transition-colors {activeH2
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Heading 2"
         >
@@ -304,7 +308,7 @@
           variant="unstyled"
           onclick={() => toggleHeading(3)}
           class="p-1.5 rounded text-xs font-bold transition-colors {activeH3
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Heading 3"
         >
@@ -318,7 +322,7 @@
           variant="unstyled"
           onclick={toggleBulletList}
           class="p-1.5 rounded transition-colors {activeBulletList
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Bullet List"
         >
@@ -328,7 +332,7 @@
           variant="unstyled"
           onclick={toggleOrderedList}
           class="p-1.5 rounded transition-colors {activeOrderedList
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Numbered List"
         >
@@ -342,7 +346,7 @@
           variant="unstyled"
           onclick={toggleBlockquote}
           class="p-1.5 rounded transition-colors {activeBlockquote
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Quote"
         >
@@ -352,7 +356,7 @@
           variant="unstyled"
           onclick={toggleCodeBlock}
           class="p-1.5 rounded transition-colors {activeCodeBlock
-            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
             : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'}"
           title="Code Block"
         >
@@ -412,8 +416,12 @@
               >
                 <span class="text-lg">✅</span>
                 <div>
-                  <div class="text-sm font-medium text-[var(--color-text-primary)]">Acceptance Criteria</div>
-                  <div class="text-xs text-[var(--color-text-muted)]">Given/When/Then checklist</div>
+                  <div class="text-sm font-medium text-[var(--color-text-primary)]">
+                    Acceptance Criteria
+                  </div>
+                  <div class="text-xs text-[var(--color-text-muted)]">
+                    Given/When/Then checklist
+                  </div>
                 </div>
               </Button>
               <Button
@@ -424,7 +432,9 @@
                 <span class="text-lg">⚠️</span>
                 <div>
                   <div class="text-sm font-medium text-[var(--color-text-primary)]">Risk</div>
-                  <div class="text-xs text-[var(--color-text-muted)]">Document a risk assessment</div>
+                  <div class="text-xs text-[var(--color-text-muted)]">
+                    Document a risk assessment
+                  </div>
                 </div>
               </Button>
             </div>
@@ -441,6 +451,7 @@
       {content}
       {placeholder}
       editable={!readonly}
+      ariaLabel="Specification content editor"
       extensions={customExtensions}
       {onUpdate}
       onFocus={handleFocus}

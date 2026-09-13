@@ -4,21 +4,24 @@ using Sddp.Abstractions.Interfaces;
 using Sddp.Application.Requests;
 using Sddp.Application.Telemetry;
 using Sddp.Application.Utilities;
+using System.Text.Json;
+using Sddp.Abstractions.Events;
+using Sddp.Domain.Entities;
 
 namespace Sddp.Application.Behaviors;
 
 public sealed class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    private readonly IAuditLogService _auditLogService;
-    private readonly ITimelineNotificationService? _timelineNotification;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public AuditBehavior(
-        IAuditLogService auditLogService,
-        ITimelineNotificationService? timelineNotification = null)
+    private readonly IAuditLogService _auditLogService;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public AuditBehavior(IAuditLogService auditLogService, IUnitOfWork unitOfWork)
     {
         _auditLogService = auditLogService;
-        _timelineNotification = timelineNotification;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<TResponse> Handle(
@@ -38,19 +41,7 @@ public sealed class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequ
             {
                 activity?.SetTag("audit.action", audit.Action);
                 activity?.SetTag("audit.resource_type", audit.ResourceType);
-                await (_auditLogService.LogAsync(
-                    audit.ActorId,
-                    audit.Action,
-                    audit.ResourceType,
-                    audit.ResourceId,
-                    audit.Payload,
-                    audit.TenantId,
-                    audit.ProjectId,
-                    cancellationToken)).ConfigureAwait(false);
-
-                // SignalR broadcast (auth)
-                if (_timelineNotification is not null
-                    && !string.Equals(audit.ResourceType, "auth", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(audit.ResourceType, "auth", StringComparison.OrdinalIgnoreCase))
                 {
                     var dto = new AuditLogDto(
                         Id: audit.ResourceId.ToString(),
@@ -63,12 +54,29 @@ public sealed class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequ
                         IpAddress: "",
                         Details: AuditPayloadDetailsMapper.Map(audit.Payload));
 
-                    await (_timelineNotification.NotifyActivityCreatedAsync(
+                    var timelineEvent = new TimelineActivityCreatedEvent(
                         audit.TenantId?.ToString() ?? "",
                         audit.ProjectId?.ToString(),
-                        dto,
+                        dto);
+
+                    await (_unitOfWork.Repository<OutboxMessage>().AddAsync(
+                        OutboxMessage.Create(
+                            nameof(TimelineActivityCreatedEvent),
+                            audit.ResourceType,
+                            audit.ResourceId,
+                            JsonSerializer.Serialize(timelineEvent, JsonOptions)),
                         cancellationToken)).ConfigureAwait(false);
                 }
+
+                await (_auditLogService.LogAsync(
+                    audit.ActorId,
+                    audit.Action,
+                    audit.ResourceType,
+                    audit.ResourceId,
+                    audit.Payload,
+                    audit.TenantId,
+                    audit.ProjectId,
+                    cancellationToken)).ConfigureAwait(false);
             }
         }
 

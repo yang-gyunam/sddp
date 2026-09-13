@@ -75,6 +75,7 @@ export {
   convertToConversationEntry,
   // Service class
   ConversationService,
+  createConversationService,
   getConversationService,
   resetConversationService,
 } from './services';

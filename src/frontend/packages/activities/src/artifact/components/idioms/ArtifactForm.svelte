@@ -7,13 +7,19 @@
   import type { ArtifactType } from '../../types';
   import { ARTIFACT_TYPES, ARTIFACT_TYPE_STYLES } from '../../types';
   import type { UpsertArtifactRequest } from '../../services/ArtifactService';
-  import { Icon, Button, Input, Combobox } from '@sddp/ui';
+  import { Button, Input, Combobox } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
   import { CollapsibleGroup } from '@sddp/shell';
+  import ArtifactTypeIcon from './ArtifactTypeIcon.svelte';
 
   interface Props {
     loading?: boolean;
-    initialData?: Partial<UpsertArtifactRequest> & { sourceConversationId?: string; sourceRequirementId?: string; glossaryTermId?: string; ownerUserId?: string };
+    initialData?: Partial<UpsertArtifactRequest> & {
+      sourceConversationId?: string;
+      sourceRequirementId?: string;
+      glossaryTermId?: string;
+      ownerUserId?: string;
+    };
     memberCandidates?: ComboboxOption[];
     conversationCandidates?: ComboboxOption[];
     conversationSearchLoading?: boolean;
@@ -86,8 +92,8 @@
 
   const isFormValid = $derived(
     formData.specId.trim().length > 0 &&
-    formData.artifactPath.trim().length > 0 &&
-    formData.entityName.trim().length > 0
+      formData.artifactPath.trim().length > 0 &&
+      formData.entityName.trim().length > 0
   );
 
   function handleSubmit() {
@@ -111,14 +117,22 @@
   }
 </script>
 
-<form id={formId} novalidate class="flex flex-col gap-4 {className}" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+<form
+  id={formId}
+  novalidate
+  class="flex flex-col gap-4 {className}"
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSubmit();
+  }}
+>
   <!-- Basic Information -->
   <CollapsibleGroup
     title="Basic Information"
     variant="plain"
     allowOverflow
     expanded={basicExpanded}
-    onToggle={() => basicExpanded = !basicExpanded}
+    onToggle={() => (basicExpanded = !basicExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <!-- Entity Name -->
@@ -155,7 +169,7 @@
                 ? `${style.bgColor} ${style.color} ${style.borderColor}`
                 : 'border-transparent'}"
             >
-              <Icon name={style.icon} size="sm" class="inline mr-1 {formData.artifactType !== type ? style.color : ''}" />
+              <ArtifactTypeIcon {type} size={16} class="inline mr-1" />
               {style.label}
             </Button>
           {/each}
@@ -180,7 +194,7 @@
     variant="plain"
     allowOverflow
     expanded={referencesExpanded}
-    onToggle={() => referencesExpanded = !referencesExpanded}
+    onToggle={() => (referencesExpanded = !referencesExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <!-- Source Conversation -->
@@ -229,5 +243,4 @@
       />
     </div>
   </CollapsibleGroup>
-
 </form>

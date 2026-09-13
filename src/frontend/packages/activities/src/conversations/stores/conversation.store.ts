@@ -44,7 +44,8 @@ const initialState: ConversationStoreState = {
 };
 
 // Create the store
-const conversationStoreInstance: Store<ConversationStoreState> = createStore<ConversationStoreState>(initialState);
+const conversationStoreInstance: Store<ConversationStoreState> =
+  createStore<ConversationStoreState>(initialState);
 
 // ============================================
 // Channel List Actions
@@ -99,9 +100,7 @@ export function addChannel(channel: ChannelSummary): void {
 export function updateChannel(channelId: string, updates: Partial<ChannelSummary>): void {
   conversationStoreInstance.update((state) => ({
     ...state,
-    channels: state.channels.map((d) =>
-      d.id === channelId ? { ...d, ...updates } : d
-    ),
+    channels: state.channels.map((d) => (d.id === channelId ? { ...d, ...updates } : d)),
   }));
 }
 
@@ -182,9 +181,7 @@ export function clearCurrentChannel(): void {
 export function setMessages(page: MessagesPage, append: boolean = false): void {
   conversationStoreInstance.update((state) => ({
     ...state,
-    messages: append
-      ? [...state.messages, ...page.messages]
-      : page.messages,
+    messages: append ? [...state.messages, ...page.messages] : page.messages,
     messagesLoading: false,
     messagesError: null,
     nextMessageCursor: page.nextCursor,
@@ -241,9 +238,7 @@ export function addMessage(message: Message): void {
 export function updateMessage(messageId: string, updates: Partial<Message>): void {
   conversationStoreInstance.update((state) => ({
     ...state,
-    messages: state.messages.map((m) =>
-      m.id === messageId ? { ...m, ...updates } : m
-    ),
+    messages: state.messages.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
   }));
 }
 

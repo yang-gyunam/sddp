@@ -15,7 +15,7 @@ import {
 } from '@sddp/shell';
 import { setupTabKeyboardShortcuts, commandPalette } from '@sddp/shell/stores';
 import { getAuthState } from '@sddp/shell/auth/stores';
-import { getMyNotifications, setNotifications } from '@sddp/activities/dashboard';
+import { getMyNotifications, setNotifications } from '@sddp/activities/runtime';
 import { initShortcuts } from '../lib/shortcuts';
 
 type ReferenceNavigateDetail = {
@@ -225,10 +225,7 @@ export function useAppBootstrap(params: AppBootstrapParams) {
       cleanupTabShortcuts();
       document.removeEventListener('keydown', handleCommandPaletteShortcut);
       window.removeEventListener('sddp:navigate', handleReferenceNavigate as () => void);
-      window.removeEventListener(
-        'sddp:dm-concluded',
-        handleDirectMessageConcluded as () => void
-      );
+      window.removeEventListener('sddp:dm-concluded', handleDirectMessageConcluded as () => void);
       window.removeEventListener(
         'sddp:open-dm-from-notification',
         handleOpenDmFromNotification as () => void

@@ -59,7 +59,14 @@
     const padCount = TOTAL_DAYS - sliced.length;
     const padded: DayContribution[] = [];
     for (let i = 0; i < padCount; i++) {
-      padded.push({ date: '', count: 0, specsCreated: 0, comments: 0, signOffs: 0, tasksCompleted: 0 });
+      padded.push({
+        date: '',
+        count: 0,
+        specsCreated: 0,
+        comments: 0,
+        signOffs: 0,
+        tasksCompleted: 0,
+      });
     }
     return [...padded, ...sliced];
   });
@@ -78,7 +85,14 @@
       const column: DayContribution[] = [];
       for (let row = 0; row < ROWS; row++) {
         const idx = col * ROWS + row;
-        const cell = allCells[idx] ?? { date: '', count: 0, specsCreated: 0, comments: 0, signOffs: 0, tasksCompleted: 0 };
+        const cell = allCells[idx] ?? {
+          date: '',
+          count: 0,
+          specsCreated: 0,
+          comments: 0,
+          signOffs: 0,
+          tasksCompleted: 0,
+        };
         column.push(cell);
       }
       cols.push(column);
@@ -86,9 +100,7 @@
     return cols;
   });
 
-  const totalContributions = $derived((): number =>
-    cells().reduce((sum, c) => sum + c.count, 0)
-  );
+  const totalContributions = $derived((): number => cells().reduce((sum, c) => sum + c.count, 0));
 
   const hasData = $derived((): boolean => data != null && data.length > 0);
 
@@ -104,7 +116,12 @@
     if (!dateStr) return '';
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    return formatDateWithOptions(d, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateWithOptions(d, {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   function onCellMouseEnter(e: MouseEvent, cell: DayContribution) {
@@ -158,11 +175,7 @@
 
       <!-- Tooltip -->
       {#if tooltipCell && tooltipCell.date}
-        <div
-          class="tooltip"
-          style="left: {tooltipX}px; top: {tooltipY}px;"
-          role="tooltip"
-        >
+        <div class="tooltip" style="left: {tooltipX}px; top: {tooltipY}px;" role="tooltip">
           <p class="tooltip-date">{formatDate(tooltipCell.date)}</p>
           <p class="tooltip-total">
             <strong>{tooltipCell.count}</strong>
@@ -197,11 +210,31 @@
       </span>
       <div class="legend" aria-label="Contribution intensity legend">
         <span class="legend-label">Less</span>
-        <span class="legend-cell" style="background-color: var(--color-bg-tertiary);" aria-label="0 contributions"></span>
-        <span class="legend-cell" style="background-color: var(--color-heatmap-level-1);" aria-label="1-2 contributions"></span>
-        <span class="legend-cell" style="background-color: var(--color-heatmap-level-2);" aria-label="3-5 contributions"></span>
-        <span class="legend-cell" style="background-color: var(--color-heatmap-level-3);" aria-label="6-10 contributions"></span>
-        <span class="legend-cell" style="background-color: var(--color-heatmap-level-4);" aria-label="11+ contributions"></span>
+        <span
+          class="legend-cell"
+          style="background-color: var(--color-bg-tertiary);"
+          aria-label="0 contributions"
+        ></span>
+        <span
+          class="legend-cell"
+          style="background-color: var(--color-heatmap-level-1);"
+          aria-label="1-2 contributions"
+        ></span>
+        <span
+          class="legend-cell"
+          style="background-color: var(--color-heatmap-level-2);"
+          aria-label="3-5 contributions"
+        ></span>
+        <span
+          class="legend-cell"
+          style="background-color: var(--color-heatmap-level-3);"
+          aria-label="6-10 contributions"
+        ></span>
+        <span
+          class="legend-cell"
+          style="background-color: var(--color-heatmap-level-4);"
+          aria-label="11+ contributions"
+        ></span>
         <span class="legend-label">More</span>
       </div>
     </div>
@@ -281,7 +314,9 @@
     border-radius: 2px;
     cursor: pointer;
     padding: 0;
-    transition: opacity 0.15s ease, outline 0.1s ease;
+    transition:
+      opacity 0.15s ease,
+      outline 0.1s ease;
     outline: 2px solid transparent;
     outline-offset: 1px;
   }

@@ -11,14 +11,13 @@
 
   let { variant = 'default', size = 'md', closable = false, onclose, children }: Props = $props();
 
-  const baseClasses =
-    'inline-flex items-center font-medium rounded-full transition-colors';
+  const baseClasses = 'inline-flex items-center font-medium rounded-full transition-colors';
 
   const variantClasses: Record<BadgeVariant, string> = {
     default:
       'bg-[var(--color-neutral-100)] text-[var(--color-neutral-600)] dark:bg-[var(--color-neutral-800)] dark:text-[var(--color-neutral-400)]',
     primary:
-      'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)] dark:bg-[var(--color-accent-primary)]/15 dark:text-[var(--color-accent-primary)]',
+      'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)] dark:bg-[var(--color-accent-primary)]/15 dark:text-[var(--color-accent-text)]',
     secondary:
       'bg-[var(--color-neutral-200)] text-[var(--color-neutral-700)] dark:bg-[var(--color-neutral-700)] dark:text-[var(--color-neutral-300)]',
     success:
@@ -27,8 +26,7 @@
       'bg-[var(--color-warning-500)]/10 text-[var(--color-warning-600)] dark:bg-[var(--color-warning-500)]/15 dark:text-[var(--color-warning-400)]',
     error:
       'bg-[var(--color-error-500)]/10 text-[var(--color-error-600)] dark:bg-[var(--color-error-500)]/15 dark:text-[var(--color-error-400)]',
-    info: 
-      'bg-[var(--color-info-500)]/10 text-[var(--color-info-600)] dark:bg-[var(--color-info-500)]/15 dark:text-[var(--color-info-400)]',
+    info: 'bg-[var(--color-info-500)]/10 text-[var(--color-info-600)] dark:bg-[var(--color-info-500)]/15 dark:text-[var(--color-info-400)]',
   };
 
   const sizeClasses: Record<BadgeSize, string> = {

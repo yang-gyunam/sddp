@@ -2,26 +2,72 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
-  import { Icon, Input, IconButton, Button, CardGrid, Checkbox, Spinner, ResizeHandle } from '@sddp/ui';
+  import {
+    Icon,
+    Input,
+    IconButton,
+    Button,
+    CardGrid,
+    Checkbox,
+    Spinner,
+    ResizeHandle,
+  } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, SidebarDetailLayout, Dropdown, RichListItem, SIDEBAR_DETAIL_LAYOUT, SurfaceCard, getTabState, setTabState, toast, formatDateWithOptions } from '@sddp/shell';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    SidebarDetailLayout,
+    Dropdown,
+    RichListItem,
+    SIDEBAR_DETAIL_LAYOUT,
+    SurfaceCard,
+    getTabState,
+    setTabState,
+    toast,
+    formatDateWithOptions,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../../shared/components/idioms';
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail } from '../../types';
-  import { getProjectService, getProjectById } from '../../services/ProjectService';
+  import { createProjectService, getProjectById } from '../../services/ProjectService';
   import { setSelectedNodePath, consumePendingEntityId, setPendingEntityId } from '../../stores';
-  import { getSpecById, deleteSpec, submitForReview, approveSpec, lockSpec, updateSpec, createSpec, createNewVersion, getSignOffSummary, submitSignOff, getVersionHistory } from '../../../specs/services';
+  import {
+    getSpecById,
+    deleteSpec,
+    submitForReview,
+    approveSpec,
+    lockSpec,
+    updateSpec,
+    createSpec,
+    createNewVersion,
+    getSignOffSummary,
+    submitSignOff,
+    getVersionHistory,
+  } from '../../../specs/services';
   import SpecDetailView from '../../../specs/components/sections/SpecDetailView.svelte';
   import SpecForm from '../../../specs/components/idioms/SpecForm.svelte';
   import SpecVersionDetail from '../../../specs/components/idioms/SpecVersionDetail.svelte';
-  import type { Spec, SpecDetail, SpecStatus, CreateSpecRequest, UpdateSpecRequest, SignOffSummary, SignOffRequest } from '../../../specs/types';
+  import type {
+    Spec,
+    SpecDetail,
+    SpecStatus,
+    CreateSpecRequest,
+    UpdateSpecRequest,
+    SignOffSummary,
+    SignOffRequest,
+  } from '../../../specs/types';
   import { SPEC_STATUS_STYLES } from '../../../specs/types';
   import { TraceGraphSection } from '../../../relationship/components/sections';
   import type { PrimaryFlowNode } from '../../../relationship/types';
-  import type { EntityMetadata, CreateEntityMetadataRequest, UpdateEntityMetadataRequest } from '../../../entities/types';
-  import { getEntityMetadataService } from '../../../entities/services';
+  import type {
+    EntityMetadata,
+    CreateEntityMetadataRequest,
+    UpdateEntityMetadataRequest,
+  } from '../../../entities/types';
+  import { createEntityMetadataService } from '../../../entities/services';
 
   interface Props {
     projectId: string;
@@ -120,9 +166,7 @@
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (s) =>
-          s.title.toLowerCase().includes(query) ||
-          s.code.toLowerCase().includes(query)
+        (s) => s.title.toLowerCase().includes(query) || s.code.toLowerCase().includes(query)
       );
     }
 
@@ -158,12 +202,8 @@
     Locked: allSpecs.filter((s) => s.status === 'Locked').length,
   });
 
-  const pastVersions = $derived(
-    versionHistory.filter((v) => v.id !== selectedSpec?.id)
-  );
-  const selectedVersionList = $derived(
-    pastVersions.filter((v) => selectedVersionIds.has(v.id))
-  );
+  const pastVersions = $derived(versionHistory.filter((v) => v.id !== selectedSpec?.id));
+  const selectedVersionList = $derived(pastVersions.filter((v) => selectedVersionIds.has(v.id)));
   const activeVersion = $derived(
     selectedVersionList.find((v) => v.id === activeVersionTabId) ?? selectedVersionList[0] ?? null
   );
@@ -215,7 +255,10 @@
   function handleResizePointerMove(e: PointerEvent) {
     if (!isResizingVersionPanel) return;
     const delta = resizeStartY - e.clientY;
-    versionPanelHeight = Math.min(VERSION_PANEL_MAX, Math.max(VERSION_PANEL_MIN, resizeStartHeight + delta));
+    versionPanelHeight = Math.min(
+      VERSION_PANEL_MAX,
+      Math.max(VERSION_PANEL_MIN, resizeStartHeight + delta)
+    );
   }
 
   function handleResizePointerUp() {
@@ -257,14 +300,9 @@
       }
 
       currentUserId = authState.user.id ?? null;
-      const service = getProjectService();
-      service.setTenantId(authState.user.tenantId);
+      const service = createProjectService(authState.user.tenantId, projectId);
 
-      const response = await service.getProjectSpecs(
-        projectId,
-        nextPageNumber,
-        SPECS_PAGE_SIZE
-      );
+      const response = await service.getProjectSpecs(projectId, nextPageNumber, SPECS_PAGE_SIZE);
       if (requestId !== latestSpecsRequestId) return;
 
       const mapped = response.items.map((s) => ({
@@ -364,8 +402,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const service = getEntityMetadataService();
-      service.setContext(authState.user.tenantId, projectId);
+      const service = createEntityMetadataService(authState.user.tenantId, projectId);
       entitySchemas = await service.getBySpec(selectedSpec.id);
     } catch (err) {
       console.error('Failed to load entity schemas:', err);
@@ -383,8 +420,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const service = getEntityMetadataService();
-      service.setContext(authState.user.tenantId, projectId);
+      const service = createEntityMetadataService(authState.user.tenantId, projectId);
       await service.create(selectedSpec.id, request);
       await loadEntitySchemas();
     } catch (err) {
@@ -402,8 +438,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const service = getEntityMetadataService();
-      service.setContext(authState.user.tenantId, projectId);
+      const service = createEntityMetadataService(authState.user.tenantId, projectId);
       await service.update(selectedSpec.id, entityId, request);
       await loadEntitySchemas();
     } catch (err) {
@@ -418,8 +453,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const service = getEntityMetadataService();
-      service.setContext(authState.user.tenantId, projectId);
+      const service = createEntityMetadataService(authState.user.tenantId, projectId);
       await service.delete(selectedSpec.id, entityId);
       await loadEntitySchemas();
     } catch (err) {
@@ -611,10 +645,7 @@
       }
 
       // Reload spec detail and list
-      await Promise.all([
-        loadSpecDetail(selectedSpec.id),
-        loadSpecs(),
-      ]);
+      await Promise.all([loadSpecDetail(selectedSpec.id), loadSpecs()]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to transition spec');
     }
@@ -708,7 +739,9 @@
         {#snippet sidebar()}
           <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
             <!-- Header with Search and Actions -->
-            <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+            <div
+              class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+            >
               <div class="flex items-center gap-1 w-full">
                 <div class="relative flex-1">
                   <Icon
@@ -720,7 +753,7 @@
                     type="text"
                     placeholder="Search specs..."
                     value={searchQuery}
-                    oninput={(e) => searchQuery = (e.target as HTMLInputElement).value}
+                    oninput={(e) => (searchQuery = (e.target as HTMLInputElement).value)}
                     variant="flat"
                     class="pl-8 w-full"
                     size="sm"
@@ -728,42 +761,52 @@
                 </div>
                 <!-- Filter Dropdown -->
                 <Dropdown position="bottom-right">
-                  {#snippet trigger()}
-                    <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+                  {#snippet trigger({ toggle, open })}
+                    <IconButton
+                      onclick={toggle}
+                      ariaHasPopup
+                      ariaExpanded={open}
+                      icon="more-vertical"
+                      size="sm"
+                      variant="ghost"
+                      title="Filter options"
+                    />
                   {/snippet}
                   <div class="py-1 min-w-[180px]">
-                    <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                    <div
+                      class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                    >
                       Status
                     </div>
                     <Button
                       variant="unstyled"
                       class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                         {statusFilter === 'all'
-                          ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                      onclick={() => statusFilter = 'all'}
+                        ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                      onclick={() => (statusFilter = 'all')}
                     >
                       <Icon name="layers" size="sm" />
                       <span class="flex-1">All</span>
                       {#if statusFilter === 'all'}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                       <span class="text-xs opacity-70">({statusCounts.all})</span>
                     </Button>
-                    {#each (['Draft', 'InReview', 'Approved', 'Locked'] as SpecStatus[]) as status (status)}
+                    {#each ['Draft', 'InReview', 'Approved', 'Locked'] as SpecStatus[] as status (status)}
                       {@const style = SPEC_STATUS_STYLES[status]}
                       <Button
                         variant="unstyled"
                         class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                           {statusFilter === status
-                            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                        onclick={() => statusFilter = status}
+                          ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                        onclick={() => (statusFilter = status)}
                       >
                         <Icon name={style.icon} size="sm" class={style.color} />
                         <span class="flex-1">{style.label}</span>
                         {#if statusFilter === status}
-                          <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                          <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                         {/if}
                         <span class="text-xs opacity-70">({statusCounts[status]})</span>
                       </Button>
@@ -774,11 +817,21 @@
             </div>
 
             <!-- List Header -->
-            <div class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
+            >
               <span class="w-4"></span>
-              <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Title</span>
-              <span class="w-24 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-right">Code</span>
-              <span class="w-8 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-right">Ver</span>
+              <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase"
+                >Title</span
+              >
+              <span
+                class="w-28 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-right"
+                >Code</span
+              >
+              <span
+                class="w-12 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-right"
+                >Ver</span
+              >
             </div>
 
             <!-- Spec List -->
@@ -793,15 +846,26 @@
                   onclick={() => handleSelectSpec(spec)}
                 >
                   {#snippet trailing()}
-                    <span class="ml-auto w-24 text-right flex-shrink-0 text-xs font-mono text-[var(--color-text-tertiary)]">
+                    <!-- truncate, not just a width: codes run to 34 characters, and an
+                         overflowing right-aligned span spills left over its neighbour. -->
+                    <span
+                      class="ml-auto w-28 text-right flex-shrink-0 truncate text-xs font-mono text-[var(--color-text-tertiary)]"
+                      title={spec.code}
+                      data-testid="spec-list-code"
+                    >
                       {spec.code}
                     </span>
-                    <span class="w-8 text-right flex-shrink-0 text-xs text-[var(--color-text-tertiary)]">
+                    <span
+                      class="w-12 text-right flex-shrink-0 whitespace-nowrap text-xs text-[var(--color-text-tertiary)]"
+                      data-testid="spec-list-version"
+                    >
                       v{spec.version}
                     </span>
                   {/snippet}
                   {#snippet badges()}
-                    <span class="px-1.5 py-0.5 text-[0.625rem] rounded {style.bgColor} {style.textColor}">
+                    <span
+                      class="px-1.5 py-0.5 text-[0.625rem] rounded {style.bgColor} {style.textColor}"
+                    >
                       {style.label}
                     </span>
                   {/snippet}
@@ -821,7 +885,6 @@
                 </div>
               {/if}
             </div>
-
           </div>
         {/snippet}
 
@@ -838,7 +901,9 @@
                 {#snippet revisionHistory()}
                   <div class="px-4 pt-1 pb-3">
                     {#if versionHistoryLoading}
-                      <div class="flex items-center gap-2 py-2 text-sm text-[var(--color-text-muted)]">
+                      <div
+                        class="flex items-center gap-2 py-2 text-sm text-[var(--color-text-muted)]"
+                      >
                         <Spinner size="sm" />
                         <span>Loading...</span>
                       </div>
@@ -848,8 +913,8 @@
                           <label
                             class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors
                                    {selectedVersionIds.has(ver.id)
-                                     ? 'bg-[var(--color-accent-primary)]/10'
-                                     : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                              ? 'bg-[var(--color-accent-primary)]/10'
+                              : 'hover:bg-[var(--color-bg-tertiary)]'}"
                           >
                             <Checkbox
                               unstyled
@@ -857,13 +922,21 @@
                               onchange={() => handleVersionToggle(ver.id)}
                               class="w-3.5 h-3.5 rounded border-[var(--color-border-secondary)] accent-[var(--color-accent-primary)]"
                             />
-                            <span class="font-mono text-sm text-[var(--color-accent-primary)] flex-shrink-0">
+                            <span
+                              class="font-mono text-sm text-[var(--color-accent-text)] flex-shrink-0"
+                            >
                               v{ver.version}
                             </span>
-                            <span class="text-xs font-medium flex-shrink-0 {SPEC_STATUS_STYLES[ver.status].textColor}">
+                            <span
+                              class="text-xs font-medium flex-shrink-0 {SPEC_STATUS_STYLES[
+                                ver.status
+                              ].textColor}"
+                            >
                               {SPEC_STATUS_STYLES[ver.status].label}
                             </span>
-                            <span class="ml-auto text-xs text-[var(--color-text-muted)] flex-shrink-0">
+                            <span
+                              class="ml-auto text-xs text-[var(--color-text-muted)] flex-shrink-0"
+                            >
                               {formatShortDate(ver.createdAt)}
                             </span>
                           </label>
@@ -886,16 +959,48 @@
             <DetailHeader>
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">New Spec</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Create"
+                  onclick={() =>
+                    (
+                      document.getElementById('spec-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if viewMode === 'edit' && selectedSpec}
             <DetailHeader>
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">Edit Spec</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Save" onclick={() => (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Save"
+                  onclick={() =>
+                    (
+                      document.getElementById('spec-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if selectedSpec}
@@ -906,12 +1011,26 @@
               <DetailTitle title={selectedSpec.title} code={selectedSpec.code} />
               {#snippet actions()}
                 {#if selectedSpec!.status === 'Draft'}
-                  <IconButton icon="edit" variant="ghost" size="sm" title="Edit" onclick={handleEditSpec} />
+                  <IconButton
+                    icon="edit"
+                    variant="ghost"
+                    size="sm"
+                    title="Edit"
+                    onclick={handleEditSpec}
+                  />
                 {/if}
                 {#if selectedSpec!.status !== 'Locked'}
                   <Dropdown position="bottom-right">
-                    {#snippet trigger()}
-                      <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+                    {#snippet trigger({ toggle, open })}
+                      <IconButton
+                        onclick={toggle}
+                        ariaHasPopup
+                        ariaExpanded={open}
+                        icon="more-vertical"
+                        variant="ghost"
+                        size="sm"
+                        title="More actions"
+                      />
                     {/snippet}
                     <div class="py-1 min-w-[160px]">
                       <Button
@@ -925,7 +1044,13 @@
                     </div>
                   </Dropdown>
                 {/if}
-                <IconButton icon="x" variant="ghost" size="sm" title="Close" onclick={handleCloseSpec} />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Close"
+                  onclick={handleCloseSpec}
+                />
               {/snippet}
             </DetailHeader>
           {:else}
@@ -938,40 +1063,40 @@
         <!-- Main Content: Spec Detail -->
         {#if viewMode === 'create'}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
-              <SpecForm
-                mode="create"
-                tenantId={getAuthState().user?.tenantId ?? ''}
-                {projectId}
-                loading={formLoading}
-                {memberCandidates}
-                onSubmit={handleCreateSpecSubmit}
-              />
+            <SpecForm
+              mode="create"
+              tenantId={getAuthState().user?.tenantId ?? ''}
+              {projectId}
+              loading={formLoading}
+              {memberCandidates}
+              onSubmit={handleCreateSpecSubmit}
+            />
           </div>
         {:else if viewMode === 'edit' && selectedSpec}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
-              <SpecForm
-                mode="edit"
-                tenantId={getAuthState().user?.tenantId ?? ''}
-                {projectId}
-                loading={formLoading}
-                {memberCandidates}
-                initialData={{
-                  code: selectedSpec.code,
-                  title: selectedSpec.title,
-                  description: selectedSpec.description,
-                  decision: selectedSpec.decision,
-                  context: selectedSpec.context,
-                  scope: selectedSpec.scope,
-                  outOfScope: selectedSpec.outOfScope,
-                  definitions: selectedSpec.definitions,
-                  acceptanceCriteria: selectedSpec.acceptanceCriteria,
-                  owners: selectedSpec.owners,
-                  reviewTrigger: selectedSpec.reviewTrigger,
-                  requirementId: selectedSpec.requirementId ?? undefined,
-                  bornFromConversationId: selectedSpec.bornFromConversationId ?? undefined,
-                }}
-                onSubmit={handleUpdateSpec}
-              />
+            <SpecForm
+              mode="edit"
+              tenantId={getAuthState().user?.tenantId ?? ''}
+              {projectId}
+              loading={formLoading}
+              {memberCandidates}
+              initialData={{
+                code: selectedSpec.code,
+                title: selectedSpec.title,
+                description: selectedSpec.description,
+                decision: selectedSpec.decision,
+                context: selectedSpec.context,
+                scope: selectedSpec.scope,
+                outOfScope: selectedSpec.outOfScope,
+                definitions: selectedSpec.definitions,
+                acceptanceCriteria: selectedSpec.acceptanceCriteria,
+                owners: selectedSpec.owners,
+                reviewTrigger: selectedSpec.reviewTrigger,
+                requirementId: selectedSpec.requirementId ?? undefined,
+                bornFromConversationId: selectedSpec.bornFromConversationId ?? undefined,
+              }}
+              onSubmit={handleUpdateSpec}
+            />
           </div>
         {:else if detailLoading}
           <div class="flex-1 flex items-center justify-center">
@@ -989,9 +1114,9 @@
               onSignOff={handleSignOff}
               signOffSummary={signOffSummary ?? undefined}
               currentUserId={currentUserId ?? undefined}
-              entitySchemas={entitySchemas}
-              entitySchemasLoading={entitySchemasLoading}
-              entitySchemasError={entitySchemasError}
+              {entitySchemas}
+              {entitySchemasLoading}
+              {entitySchemasError}
               onLoadEntitySchemas={loadEntitySchemas}
               onCreateEntitySchema={handleCreateEntitySchema}
               onUpdateEntitySchema={handleUpdateEntitySchema}
@@ -1005,28 +1130,44 @@
             {#if selectedVersionList.length > 0}
               <div class="flex-shrink-0 flex flex-col" style="height: {versionPanelHeight}px">
                 <!-- Resize handle -->
-                <ResizeHandle orientation="horizontal" onpointerdown={handleResizePointerDown} isResizing={isResizingVersionPanel} ariaLabel="Resize version panel" />
+                <ResizeHandle
+                  orientation="horizontal"
+                  onpointerdown={handleResizePointerDown}
+                  isResizing={isResizingVersionPanel}
+                  ariaLabel="Resize version panel"
+                />
                 <!-- Label + Tab bar -->
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-secondary)] flex-shrink-0">
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-secondary)] flex-shrink-0"
+                >
                   <Icon name="history" size="xs" class="text-[var(--color-text-tertiary)]" />
-                  <span class="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">Revision Compare</span>
+                  <span
+                    class="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]"
+                    >Revision Compare</span
+                  >
                 </div>
-                <div class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-1 flex-shrink-0">
+                <div
+                  class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-1 flex-shrink-0"
+                >
                   {#each selectedVersionList as ver (ver.id)}
                     <Button
                       variant="unstyled"
                       onclick={() => (activeVersionTabId = ver.id)}
                       class="group flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors border-b-2
-                             {activeVersionTabId === ver.id || (!activeVersionTabId && ver.id === selectedVersionList[0]?.id)
-                               ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
-                               : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
+                             {activeVersionTabId === ver.id ||
+                      (!activeVersionTabId && ver.id === selectedVersionList[0]?.id)
+                        ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
+                        : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
                     >
                       <span class="font-mono">v{ver.version}</span>
                       <Button
                         variant="unstyled"
                         tabindex={-1}
                         aria-label="Close version tab"
-                        onclick={(e: MouseEvent) => { e.stopPropagation(); handleRemoveVersionTab(ver.id); }}
+                        onclick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          handleRemoveVersionTab(ver.id);
+                        }}
                         class="ml-1 w-4 h-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--color-surface-200)] transition-opacity text-[var(--color-text-muted)] cursor-pointer"
                         title="Close tab"
                       >
@@ -1047,63 +1188,90 @@
         {:else}
           <!-- Empty state: Summary dashboard -->
           <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-              <!-- Summary Cards -->
-              <CardGrid cols={4} gap="md">
-                <StatCard title="Total Specs" value={statusCounts.all} icon="file-text" iconColor="blue-500" />
-                <StatCard title="Draft" value={statusCounts.Draft} icon="edit" iconColor="gray-500" />
-                <StatCard title="In Review" value={statusCounts.InReview} icon="eye" iconColor="yellow-500" />
-                <StatCard title="Approved/Locked" value={statusCounts.Approved + statusCounts.Locked} icon="check-circle" iconColor="green-500" />
-              </CardGrid>
+            <!-- Summary Cards -->
+            <CardGrid cols={4} gap="md">
+              <StatCard
+                title="Total Specs"
+                value={statusCounts.all}
+                icon="file-text"
+                iconColor="blue-500"
+              />
+              <StatCard title="Draft" value={statusCounts.Draft} icon="edit" iconColor="gray-500" />
+              <StatCard
+                title="In Review"
+                value={statusCounts.InReview}
+                icon="eye"
+                iconColor="yellow-500"
+              />
+              <StatCard
+                title="Approved/Locked"
+                value={statusCounts.Approved + statusCounts.Locked}
+                icon="check-circle"
+                iconColor="green-500"
+              />
+            </CardGrid>
 
-              <!-- Quick Guide -->
-              <SurfaceCard padding="lg">
-                <h3 class="text-sm font-semibold text-[var(--color-text-primary)] mb-3">About Specs</h3>
-                <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
-                  <p>
-                    Specs define the technical decisions and requirements for your project.
-                    They follow a workflow: Draft → In Review → Approved → Locked.
-                  </p>
-                  <div class="flex items-start gap-2 mt-3">
-                    <Icon name="edit" size="sm" class="text-gray-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Draft</strong> - Work in progress, editable</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="eye" size="sm" class="text-yellow-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>In Review</strong> - Under team review for sign-offs</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="check-circle" size="sm" class="text-green-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Approved</strong> - Accepted, ready for implementation</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="lock" size="sm" class="text-purple-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Locked</strong> - Immutable, used for artifact generation</span>
-                  </div>
+            <!-- Quick Guide -->
+            <SurfaceCard padding="lg">
+              <h3 class="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+                About Specs
+              </h3>
+              <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <p>
+                  Specs define the technical decisions and requirements for your project. They
+                  follow a workflow: Draft → In Review → Approved → Locked.
+                </p>
+                <div class="flex items-start gap-2 mt-3">
+                  <Icon name="edit" size="sm" class="text-gray-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Draft</strong> - Work in progress, editable</span>
                 </div>
-              </SurfaceCard>
+                <div class="flex items-start gap-2">
+                  <Icon name="eye" size="sm" class="text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>In Review</strong> - Under team review for sign-offs</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <Icon name="check-circle" size="sm" class="text-green-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Approved</strong> - Accepted, ready for implementation</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <Icon name="lock" size="sm" class="text-purple-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Locked</strong> - Immutable, used for artifact generation</span>
+                </div>
+              </div>
+            </SurfaceCard>
 
-              <!-- Empty state message -->
-              {#if allSpecs.length === 0}
-                <div class="text-center py-8">
-                  <Icon name="file-text" size="xl" class="mx-auto mb-4 text-[var(--color-text-tertiary)] opacity-50" />
-                  <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-2">No specs yet</h3>
-                  <p class="text-sm text-[var(--color-text-secondary)] mb-4">
-                    Start documenting your project decisions by creating specs.
-                  </p>
-                  <Button variant="primary" size="md" onclick={handleCreateSpec}>
-                    <Icon name="plus" size="sm" />
-                    Create First Spec
-                  </Button>
-                </div>
-              {:else}
-                <div class="text-center py-6">
-                  <Icon name="mouse-pointer" size="lg" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70" />
-                  <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a spec</p>
-                  <p class="text-xs text-[var(--color-text-secondary)] mt-1">
-                    Choose a spec from the sidebar to view details.
-                  </p>
-                </div>
-              {/if}
+            <!-- Empty state message -->
+            {#if allSpecs.length === 0}
+              <div class="text-center py-8">
+                <Icon
+                  name="file-text"
+                  size="xl"
+                  class="mx-auto mb-4 text-[var(--color-text-tertiary)] opacity-50"
+                />
+                <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+                  No specs yet
+                </h3>
+                <p class="text-sm text-[var(--color-text-secondary)] mb-4">
+                  Start documenting your project decisions by creating specs.
+                </p>
+                <Button variant="primary" size="md" onclick={handleCreateSpec}>
+                  <Icon name="plus" size="sm" />
+                  Create First Spec
+                </Button>
+              </div>
+            {:else}
+              <div class="text-center py-6">
+                <Icon
+                  name="mouse-pointer"
+                  size="lg"
+                  class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70"
+                />
+                <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a spec</p>
+                <p class="text-xs text-[var(--color-text-secondary)] mt-1">
+                  Choose a spec from the sidebar to view details.
+                </p>
+              </div>
+            {/if}
           </div>
         {/if}
       </SidebarDetailLayout>

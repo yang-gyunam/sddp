@@ -28,10 +28,16 @@ public sealed record UpsertArtifactCommand(
     GlobalUniqueId? SourceConversationId = null,
     GlobalUniqueId? SourceRequirementId = null,
     GlobalUniqueId? OwnerUserId = null,
-    GlobalUniqueId? ArtifactId = null) : ICommand<ArtifactTrackingDto>, IAuditableRequest<ArtifactTrackingDto>
+    GlobalUniqueId? ArtifactId = null)
+    : ICommand<ArtifactTrackingDto>,
+      IAuditableRequest<ArtifactTrackingDto>,
+      IProducesArtifactDescriptor<ArtifactTrackingDto>
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(ArtifactTrackingDto response) => AuditLog;
+
+    public GlobalUniqueId? GetDescribedArtifactId(ArtifactTrackingDto response) =>
+        GlobalUniqueId.TryParse(response?.Id, out var id) ? id : null;
 }
 
 public sealed class UpsertArtifactCommandHandler : IRequestHandler<UpsertArtifactCommand, ArtifactTrackingDto>
@@ -156,93 +162,7 @@ public sealed class UpsertArtifactCommandHandler : IRequestHandler<UpsertArtifac
     }
 }
 
-/// <summary>
-/// create
-/// </summary>
-public sealed record RegenerateArtifactCommand(
-    GlobalUniqueId TenantId,
-    GlobalUniqueId ProjectId,
-    GlobalUniqueId ArtifactId) : ICommand<ArtifactRegenerateResult>, IAuditableRequest<ArtifactRegenerateResult>
-{
-    public AuditLogRequest? AuditLog { get; set; }
-    public AuditLogRequest? GetAuditLogRequest(ArtifactRegenerateResult response) => AuditLog;
-}
 
-public sealed class RegenerateArtifactCommandHandler : IRequestHandler<RegenerateArtifactCommand, ArtifactRegenerateResult>
-{
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IGenerationService? _generationService;
-
-    public RegenerateArtifactCommandHandler(IUnitOfWork unitOfWork, IGenerationService? generationService = null)
-    {
-        _unitOfWork = unitOfWork;
-        _generationService = generationService;
-    }
-
-    public async Task<ArtifactRegenerateResult> Handle(RegenerateArtifactCommand request, CancellationToken cancellationToken)
-    {
-        var repo = _unitOfWork.Repository<ArtifactTracking>();
-        var artifact = await (repo.GetByIdAsync(request.ArtifactId, cancellationToken)).ConfigureAwait(false);
-
-        if (artifact == null || artifact.TenantId != request.TenantId || artifact.ProjectId != request.ProjectId || !artifact.IsActive)
-        {
-            throw new SddpException("REGENERATE_ERROR", "Artifact not found");
-        }
-
-        if (_generationService is null)
-        {
-            throw new SddpException("REGENERATE_ERROR", "Generation service is not available");
-        }
-
-        var previousHash = artifact.ContentHash;
-
-        var generationResult = await (_generationService.GenerateFromSpecAsync(
-            artifact.SpecId,
-            new GenerationOptions(),
-            cancellationToken)).ConfigureAwait(false);
-
-        if (!generationResult.Success)
-        {
-            throw new SddpException(
-                "REGENERATE_ERROR", $"Regeneration failed: {string.Join(", ", generationResult.Errors)}");
-        }
-
-        var regenerated = generationResult.Artifacts
-            .FirstOrDefault(a => a.FilePath == artifact.ArtifactPath);
-
-        if (regenerated is null)
-        {
-            throw new SddpException(
-                "REGENERATE_ERROR", $"Regenerated artifact not found for path: {artifact.ArtifactPath}");
-        }
-
-        var newHash = ArtifactStatusHelper.ComputeHash(regenerated.Content);
-        artifact.UpdateHash(newHash, artifact.GeneratorVersion, artifact.TemplateVersion);
-        await (repo.UpdateAsync(artifact, cancellationToken)).ConfigureAwait(false);
-        await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
-
-        request.AuditLog = new AuditLogRequest(
-            ActorId: null,
-            Action: "regenerate",
-            ResourceType: "artifact",
-            ResourceId: request.ArtifactId,
-            Payload: new { artifact.ArtifactPath, artifact.ArtifactType, PreviousHash = previousHash, NewHash = newHash },
-            TenantId: request.TenantId,
-            ProjectId: request.ProjectId);
-
-        return new ArtifactRegenerateResult(
-            ArtifactId: artifact.Id.ToString(),
-            SpecId: artifact.SpecId.ToString(),
-            ArtifactPath: artifact.ArtifactPath,
-            NewContentHash: newHash,
-            PreviousContentHash: previousHash,
-            RegeneratedAt: DateTimeOffset.UtcNow);
-    }
-}
-
-/// <summary>
-///
-/// </summary>
 public sealed record VerifyArtifactCommand(
     GlobalUniqueId TenantId,
     GlobalUniqueId ProjectId,
@@ -256,10 +176,14 @@ public sealed record VerifyArtifactCommand(
 public sealed class VerifyArtifactCommandHandler : IRequestHandler<VerifyArtifactCommand, ArtifactVerifyResult>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IArtifactRepositoryService _artifactRepositoryService;
 
-    public VerifyArtifactCommandHandler(IUnitOfWork unitOfWork)
+    public VerifyArtifactCommandHandler(
+        IUnitOfWork unitOfWork,
+        IArtifactRepositoryService artifactRepositoryService)
     {
         _unitOfWork = unitOfWork;
+        _artifactRepositoryService = artifactRepositoryService;
     }
 
     public async Task<ArtifactVerifyResult> Handle(VerifyArtifactCommand request, CancellationToken cancellationToken)
@@ -272,26 +196,50 @@ public sealed class VerifyArtifactCommandHandler : IRequestHandler<VerifyArtifac
             return new ArtifactVerifyResult(
                 IsValid: false,
                 StoredHash: string.Empty,
-                CurrentHash: request.CurrentHash,
-                ArtifactPath: string.Empty);
+                CurrentHash: string.Empty,
+                ArtifactPath: string.Empty,
+                FileExists: false);
         }
 
-        var isValid = artifact.VerifyHash(request.CurrentHash);
+        var context = await (_artifactRepositoryService.GetProjectContextAsync(
+            request.TenantId, request.ProjectId, cancellationToken)).ConfigureAwait(false);
+
+        var fileInfo = await (_artifactRepositoryService.GetArtifactFileInfoAsync(
+            context, artifact.ArtifactPath, cancellationToken)).ConfigureAwait(false);
+
+        // A file that is gone is a different event from one whose contents moved, and it calls for
+        // a different response. Folding it into "invalid" loses that.
+        var currentHash = fileInfo.Exists ? fileInfo.Hash ?? string.Empty : string.Empty;
+        var isValid = fileInfo.Exists
+            && !string.IsNullOrWhiteSpace(currentHash)
+            && !string.IsNullOrWhiteSpace(artifact.ContentHash)
+            && string.Equals(currentHash, artifact.ContentHash, StringComparison.OrdinalIgnoreCase);
 
         request.AuditLog = new AuditLogRequest(
             ActorId: null,
             Action: "verify",
             ResourceType: "artifact",
             ResourceId: request.ArtifactId,
-            Payload: new { artifact.ArtifactPath, IsValid = isValid, StoredHash = artifact.ContentHash, request.CurrentHash },
+            // RequestedHash is recorded but was not used to decide anything. Keeping it separates a
+            // caller sending a stale value from one sending none.
+            Payload: new
+            {
+                artifact.ArtifactPath,
+                IsValid = isValid,
+                fileInfo.Exists,
+                StoredHash = artifact.ContentHash,
+                CurrentHash = currentHash,
+                RequestedHash = request.CurrentHash,
+            },
             TenantId: request.TenantId,
             ProjectId: request.ProjectId);
 
         return new ArtifactVerifyResult(
             IsValid: isValid,
             StoredHash: artifact.ContentHash,
-            CurrentHash: request.CurrentHash,
-            ArtifactPath: artifact.ArtifactPath);
+            CurrentHash: currentHash,
+            ArtifactPath: artifact.ArtifactPath,
+            FileExists: fileInfo.Exists);
     }
 }
 

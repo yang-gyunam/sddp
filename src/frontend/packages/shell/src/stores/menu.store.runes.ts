@@ -7,9 +7,9 @@ function cloneMenuNode(node: MenuNode): MenuNode {
     ...node,
     tabConfig: node.tabConfig
       ? {
-        ...node.tabConfig,
-        createTab: node.tabConfig.createTab,
-      }
+          ...node.tabConfig,
+          createTab: node.tabConfig.createTab,
+        }
       : undefined,
     children: node.children.map(cloneMenuNode),
   };

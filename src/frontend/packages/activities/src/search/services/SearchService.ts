@@ -36,6 +36,11 @@ class SearchService {
   private tenantId = '';
   private projectId?: string;
 
+  constructor(tenantId: string = '', projectId?: string) {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId?: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId;
@@ -46,7 +51,11 @@ class SearchService {
    */
   async search(query: SearchQuery): Promise<SearchResult> {
     if (!query.text.trim()) {
-      return { total: 0, results: [], facets: { types: {}, projects: {}, statuses: {} } };
+      return {
+        total: 0,
+        results: [],
+        facets: { types: {}, projects: {}, statuses: {} },
+      };
     }
 
     try {
@@ -65,6 +74,7 @@ class SearchService {
       });
 
       // Transform vector results to SearchResultItem format
+      const highlightTerms = query.text.trim().split(/\s+/).filter(Boolean);
       const items: SearchResultItem[] = results.map((r) => ({
         id: r.sourceId,
         type: (r.sourceType as SearchResultItem['type']) || 'spec',
@@ -72,7 +82,7 @@ class SearchService {
         projectName: '',
         title: r.chunkText.substring(0, 80),
         snippet: r.chunkText,
-        highlights: [],
+        highlights: highlightTerms,
         metadata: {
           status: '',
           version: r.specVersion,
@@ -93,7 +103,11 @@ class SearchService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Search failed';
       console.error('Search API failed:', message);
-      return { total: 0, results: [], facets: { types: {}, projects: {}, statuses: {} } };
+      return {
+        total: 0,
+        results: [],
+        facets: { types: {}, projects: {}, statuses: {} },
+      };
     }
   }
 
@@ -173,7 +187,11 @@ class SearchService {
 
     return { types, projects, statuses };
   }
+}
 
+/** Create a context-bound search service for a single tab. */
+export function createSearchService(tenantId: string, projectId?: string): SearchService {
+  return new SearchService(tenantId, projectId);
 }
 
 // Singleton instance

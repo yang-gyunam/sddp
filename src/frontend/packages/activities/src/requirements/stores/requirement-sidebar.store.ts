@@ -160,9 +160,7 @@ export function getFilteredProjectGroups(): ProjectRequirementGroup[] {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filteredRequirements = filteredRequirements.filter(
-          (req) =>
-            req.code.toLowerCase().includes(query) ||
-            req.title.toLowerCase().includes(query)
+          (req) => req.code.toLowerCase().includes(query) || req.title.toLowerCase().includes(query)
         );
       }
 
@@ -205,9 +203,7 @@ export function getSelectedRequirement(): RequirementSummary | null {
   if (!state.selectedRequirementId) return null;
 
   for (const group of state.projectGroups) {
-    const found = group.requirements.find(
-      (r) => r.id === state.selectedRequirementId
-    );
+    const found = group.requirements.find((r) => r.id === state.selectedRequirementId);
     if (found) return found;
   }
   return null;

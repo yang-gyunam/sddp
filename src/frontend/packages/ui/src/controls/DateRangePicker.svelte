@@ -89,7 +89,9 @@
     {onValueChange}
   >
     {#if label}
-      <BitsDateRangePicker.Label class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+      <BitsDateRangePicker.Label
+        class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5"
+      >
         {label}
         {#if required}
           <span class="text-[var(--color-error-500)]">*</span>
@@ -99,12 +101,17 @@
     <div class={wrapperClasses}>
       <div class="daterangepicker-field">
         <span class="daterangepicker-field-label">{startLabel}</span>
-        <BitsDateRangePicker.Input type="start" class="daterangepicker-input {inputSizeClasses[size]}">
+        <BitsDateRangePicker.Input
+          type="start"
+          class="daterangepicker-input {inputSizeClasses[size]}"
+        >
           {#snippet children({ segments })}
             {#each segments as { part, value: segmentValue }, index (part + '-' + index)}
               <BitsDateRangePicker.Segment
                 {part}
-                class="daterangepicker-segment{part === 'literal' ? ' daterangepicker-segment--literal' : ''}"
+                class="daterangepicker-segment{part === 'literal'
+                  ? ' daterangepicker-segment--literal'
+                  : ''}"
               >
                 {segmentValue}
               </BitsDateRangePicker.Segment>
@@ -119,12 +126,17 @@
 
       <div class="daterangepicker-field">
         <span class="daterangepicker-field-label">{endLabel}</span>
-        <BitsDateRangePicker.Input type="end" class="daterangepicker-input {inputSizeClasses[size]}">
+        <BitsDateRangePicker.Input
+          type="end"
+          class="daterangepicker-input {inputSizeClasses[size]}"
+        >
           {#snippet children({ segments })}
             {#each segments as { part, value: segmentValue }, index (part + '-' + index)}
               <BitsDateRangePicker.Segment
                 {part}
-                class="daterangepicker-segment{part === 'literal' ? ' daterangepicker-segment--literal' : ''}"
+                class="daterangepicker-segment{part === 'literal'
+                  ? ' daterangepicker-segment--literal'
+                  : ''}"
               >
                 {segmentValue}
               </BitsDateRangePicker.Segment>
@@ -167,7 +179,11 @@
                   {#each month.weeks as weekDates, weekIndex (weekIndex)}
                     <BitsDateRangePicker.GridRow class="daterangepicker-grid-row">
                       {#each weekDates as date (date.toString())}
-                        <BitsDateRangePicker.Cell {date} month={month.value} class="daterangepicker-cell">
+                        <BitsDateRangePicker.Cell
+                          {date}
+                          month={month.value}
+                          class="daterangepicker-cell"
+                        >
                           <BitsDateRangePicker.Day class="daterangepicker-day" />
                         </BitsDateRangePicker.Cell>
                       {/each}
@@ -200,7 +216,9 @@
     border-radius: var(--radius-md, 6px);
     border: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
-    transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+    transition:
+      border-color 150ms ease-in-out,
+      box-shadow 150ms ease-in-out;
   }
 
   .daterangepicker-inputs:focus-within {
@@ -264,7 +282,9 @@
     padding: 0.5rem;
     border-radius: var(--radius-sm, 4px);
     color: var(--color-text-secondary);
-    transition: color 150ms ease-in-out, background-color 150ms ease-in-out;
+    transition:
+      color 150ms ease-in-out,
+      background-color 150ms ease-in-out;
   }
 
   :global(.daterangepicker-trigger:hover:not(:disabled)) {
@@ -302,7 +322,9 @@
     height: 1.75rem;
     border-radius: var(--radius-md, 6px);
     color: var(--color-text-secondary);
-    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out;
   }
 
   :global(.daterangepicker-nav-btn:hover) {
@@ -348,7 +370,9 @@
     font-size: var(--text-sm);
     border-radius: var(--radius-md, 6px);
     color: var(--color-text-primary);
-    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out;
   }
 
   :global(.daterangepicker-day:hover:not([data-disabled]):not([data-unavailable])) {

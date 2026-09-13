@@ -119,7 +119,7 @@
 <div
   class="app-shell-grid h-screen w-screen overflow-hidden bg-[var(--color-bg-primary)]"
   style:--activity-bar-width="48px"
-  style:--sidebar-width="{sidebarCollapsed ? '0px' : `${sidebarWidth}px`}"
+  style:--sidebar-width={sidebarCollapsed ? '0px' : `${sidebarWidth}px`}
   style:--statusbar-height="22px"
 >
   <!-- Activity Bar (Navigation) -->
@@ -180,8 +180,8 @@
     grid-template-columns: var(--activity-bar-width) var(--sidebar-width) 1fr;
     grid-template-rows: 1fr var(--statusbar-height);
     grid-template-areas:
-      "activity sidebar main"
-      "status   status  status";
+      'activity sidebar main'
+      'status   status  status';
   }
 
   .area-activity {

@@ -30,7 +30,7 @@
       <div class="flex items-center gap-2 mt-0.5">
         <span class="text-xs text-[var(--color-text-tertiary)] font-mono">{version.code}</span>
         <span class="text-xs text-[var(--color-text-muted)]">·</span>
-        <span class="text-xs font-mono text-[var(--color-accent-primary)]">v{version.version}</span>
+        <span class="text-xs font-mono text-[var(--color-accent-text)]">v{version.version}</span>
       </div>
     </div>
   </div>
@@ -43,7 +43,9 @@
   <!-- Description -->
   {#if version.description}
     <DetailField label="Description">
-      <div class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap">
+      <div
+        class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap"
+      >
         {version.description}
       </div>
     </DetailField>
@@ -52,7 +54,9 @@
   <!-- Decision -->
   {#if version.decision}
     <DetailField label="Decision">
-      <div class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap">
+      <div
+        class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap"
+      >
         {version.decision}
       </div>
     </DetailField>
@@ -61,10 +65,14 @@
   <!-- Metadata -->
   <div class="grid grid-cols-2 gap-3 text-sm">
     <DetailField label="Created">
-      <span class="text-[var(--color-text-secondary)]">{formatDateTime(version.createdAt, { month: 'short' })}</span>
+      <span class="text-[var(--color-text-secondary)]"
+        >{formatDateTime(version.createdAt, { month: 'short' })}</span
+      >
     </DetailField>
     <DetailField label="Updated">
-      <span class="text-[var(--color-text-secondary)]">{formatDateTime(version.updatedAt, { month: 'short' })}</span>
+      <span class="text-[var(--color-text-secondary)]"
+        >{formatDateTime(version.updatedAt, { month: 'short' })}</span
+      >
     </DetailField>
   </div>
 </div>

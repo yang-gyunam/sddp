@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Api.Constants;
+using Sddp.Api.Authorization;
 using Sddp.Application.Features.Roles.Queries;
 
 namespace Sddp.Api.Controllers;
@@ -22,6 +23,7 @@ public class RolesController : BaseApiController
     }
 
     [HttpGet]
+    [ResourceScopeExempt("Role is a global catalog entity with neither ProjectId nor TenantId; the CanManageUsers permission policy in the caller's tenant is the gate.")]
     [Authorize(Policy = "CanManageUsers")]
     public async Task<IActionResult> GetRoles()
     {
@@ -30,6 +32,7 @@ public class RolesController : BaseApiController
     }
 
     [HttpGet("{id}")]
+    [ResourceScopeExempt("Role is a global catalog entity with neither ProjectId nor TenantId, so nothing project-owned is addressed; CanManageUsers is the gate.")]
     [Authorize(Policy = "CanManageUsers")]
     public async Task<IActionResult> GetRoleById(string id)
     {

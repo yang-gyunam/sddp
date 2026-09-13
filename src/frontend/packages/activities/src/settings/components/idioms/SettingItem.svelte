@@ -27,7 +27,8 @@
   {/if}
   {#if note}
     <div class="setting-item-note">
-      <span class="note-label">Note:</span> {note}
+      <span class="note-label">Note:</span>
+      {note}
     </div>
   {/if}
   <div class="setting-item-control">

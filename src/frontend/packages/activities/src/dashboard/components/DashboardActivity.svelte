@@ -9,7 +9,7 @@
   import { DashboardSidebar } from './sections';
   import { MyDashboardPage, SystemDashboardPage } from './pages';
   import { subscribeDashboardView, loadDashboardView } from '../stores/dashboardView.store';
-  import { getProjectService } from '../../projects/services';
+  import { createProjectService } from '../../projects/services';
   import type { DashboardView } from '../types';
   import type { Project } from '../../projects/types';
 
@@ -59,8 +59,7 @@
 
     projectsLoading = true;
     try {
-      const projectService = getProjectService();
-      projectService.setTenantId(tenantId);
+      const projectService = createProjectService(tenantId);
       const projects: Project[] = await projectService.getProjects();
       myProjects = projects.map((p) => ({ id: p.id, name: p.name }));
     } catch (err) {

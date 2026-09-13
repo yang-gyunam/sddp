@@ -3,7 +3,7 @@
  * Mediates between Artifact stores and ArtifactService
  */
 
-import { getArtifactService } from './services';
+import { createArtifactService } from './services';
 import { setTypeGroups } from './stores';
 import type { ArtifactTypeGroup, ArtifactSummary, ArtifactType } from './types';
 
@@ -16,8 +16,7 @@ export async function loadArtifactsSidebar(
   specId: string
 ): Promise<void> {
   try {
-    const service = getArtifactService();
-    service.setContext(tenantId, projectId);
+    const service = createArtifactService(tenantId, projectId);
 
     const artifacts = await service.getArtifactsBySpec(specId);
 
@@ -43,14 +42,12 @@ export async function loadArtifactsSidebar(
       });
     }
 
-    const groups: ArtifactTypeGroup[] = Array.from(groupMap.entries()).map(
-      ([type, artifacts]) => ({
-        type,
-        artifacts,
-        totalCount: artifacts.length,
-        expanded: true,
-      })
-    );
+    const groups: ArtifactTypeGroup[] = Array.from(groupMap.entries()).map(([type, artifacts]) => ({
+      type,
+      artifacts,
+      totalCount: artifacts.length,
+      expanded: true,
+    }));
 
     setTypeGroups(groups);
   } catch (error) {

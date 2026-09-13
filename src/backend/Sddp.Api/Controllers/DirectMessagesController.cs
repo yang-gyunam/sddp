@@ -1,11 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.Conversations.Commands;
 using Sddp.Application.Features.Conversations.Queries;
+using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Controllers;
 
@@ -27,6 +30,7 @@ public class DirectMessagesController : BaseApiController
     /// Get DM list for the current user
     /// </summary>
     [HttpGet("dm")]
+    [ResourceScopeExempt("Personal listing keyed by the caller's own user id, with no conversation named in the route.")]
     public async Task<IActionResult> GetDirectMessages(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -68,7 +72,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Get or create DM with a target user
     /// </summary>
-    [HttpPost("dm/{targetUserId:guid}")]
+    [HttpPost("dm/{targetUserId}")]
+    [ResourceScopeExempt("The route names the other participant, a User, which carries no project; the conversation may not exist yet.")]
+    [RequirePermission(PermissionCodes.ConversationCreate)]
     [Authorize]
     public async Task<IActionResult> GetOrCreateDirectMessage(
         string targetUserId,
@@ -108,7 +114,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Send DM invitation to a target user (DM is created on accept)
     /// </summary>
-    [HttpPost("dm/invitations/{targetUserId:guid}")]
+    [HttpPost("dm/invitations/{targetUserId}")]
+    [ResourceScopeExempt("The route names the invited User, which carries no project, and no conversation exists to resolve from.")]
+    [RequirePermission(PermissionCodes.ConversationCreate)]
     [Authorize]
     public async Task<IActionResult> SendDirectMessageInvitation(
         string targetUserId,
@@ -141,7 +149,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Accept DM invitation and create/get DM conversation
     /// </summary>
-    [HttpPost("dm/invitations/{notificationId:guid}/accept")]
+    [HttpPost("dm/invitations/{notificationId}/accept")]
+    [ResourceScopeExempt("The route names a Notification, which carries no project; the handler accepts it only for its own recipient.")]
+    [RequirePermission(PermissionCodes.ConversationCreate)]
     [Authorize]
     public async Task<IActionResult> AcceptDirectMessageInvitation(
         string notificationId,
@@ -170,7 +180,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Reject DM invitation
     /// </summary>
-    [HttpPost("dm/invitations/{notificationId:guid}/reject")]
+    [HttpPost("dm/invitations/{notificationId}/reject")]
+    [ResourceScopeExempt("The route names a Notification, which carries no project; the handler accepts it only for its own recipient.")]
+    [RequirePermission(PermissionCodes.ConversationCreate)]
     [Authorize]
     public async Task<IActionResult> RejectDirectMessageInvitation(
         string notificationId,
@@ -199,7 +211,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Conclude a DM (Active → Concluded)
     /// </summary>
-    [HttpPost("dm/{id:guid}/conclude")]
+    [HttpPost("dm/{id}/conclude")]
+    [ResourceScope<DirectMessage>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ConcludeDirectMessage(
         string id,
@@ -233,7 +247,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Reopen a DM (Concluded → Active)
     /// </summary>
-    [HttpPost("dm/{id:guid}/reopen")]
+    [HttpPost("dm/{id}/reopen")]
+    [ResourceScope<DirectMessage>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ReopenDirectMessage(
         string id,
@@ -259,7 +275,9 @@ public class DirectMessagesController : BaseApiController
     /// <summary>
     /// Archive a DM (Concluded → Archived)
     /// </summary>
-    [HttpPost("dm/{id:guid}/archive")]
+    [HttpPost("dm/{id}/archive")]
+    [ResourceScope<DirectMessage>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ArchiveDirectMessage(
         string id,

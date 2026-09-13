@@ -41,9 +41,21 @@ describe('Input', () => {
   });
 
   it('should show hint when no error', () => {
-    render(Input, { props: { hint: 'Enter your email' } });
+    render(Input, { props: { id: 'email', hint: 'Enter your email' } });
     const hint = screen.getByText('Enter your email');
     expect(hint).not.toBeNull();
+    expect(hint.id).toBe('email-hint');
+    expect(document.querySelector('input')?.getAttribute('aria-describedby')).toBe('email-hint');
+  });
+
+  it('should describe errors instead of hints when both are present', () => {
+    render(Input, {
+      props: { id: 'email', hint: 'Enter your email', error: 'Email is invalid' },
+    });
+
+    expect(screen.queryByText('Enter your email')).toBeNull();
+    expect(screen.getByText('Email is invalid').id).toBe('email-error');
+    expect(document.querySelector('input')?.getAttribute('aria-describedby')).toBe('email-error');
   });
 
   it('should set placeholder', () => {

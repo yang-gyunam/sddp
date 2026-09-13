@@ -13,7 +13,10 @@ namespace Sddp.Application.Features.Auth.Commands;
 /// <summary>
 /// user log
 /// </summary>
-public sealed record LoginCommand(LoginRequest Request) : ICommand<LoginResponse>, IAuditableRequest<LoginResponse>
+public sealed record LoginCommand(LoginRequest Request) :
+    ICommand<LoginResponse>,
+    INonTransactionalCommand,
+    IAuditableRequest<LoginResponse>
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(LoginResponse response) => AuditLog;
@@ -21,24 +24,30 @@ public sealed record LoginCommand(LoginRequest Request) : ICommand<LoginResponse
 
 public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResponse>
 {
+    private const string DummyPasswordHash =
+        "$2a$12$dgwRnMdTgpQMi9gX66rktOBFcocw0oBwBdxE7jxwlUK1qiiDvaWci";
+
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
     private readonly IRefreshTokenStore _refreshTokenStore;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<LoginCommandHandler> _logger;
+    private readonly LoginSecurityPolicy _securityPolicy;
 
     public LoginCommandHandler(
         IUnitOfWork unitOfWork,
         IJwtService jwtService,
         IRefreshTokenStore refreshTokenStore,
         IPasswordHasher passwordHasher,
-        ILogger<LoginCommandHandler> logger)
+        ILogger<LoginCommandHandler> logger,
+        LoginSecurityPolicy securityPolicy)
     {
         _unitOfWork = unitOfWork;
         _jwtService = jwtService;
         _refreshTokenStore = refreshTokenStore;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _securityPolicy = securityPolicy;
     }
 
     public async Task<LoginResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -50,35 +59,58 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, LoginRes
 
         if (user is null)
         {
+            _passwordHasher.Verify(loginRequest.Password, DummyPasswordHash);
             _logger.LogWarning("Login failed: User not found - {Username}", loginRequest.Username);
             throw new UnauthorizedException("Invalid username or password");
         }
 
-        if (user.IsAI)
+        if (!user.IsActive || user.IsAI)
         {
-            _logger.LogWarning("Login failed: AI account is not allowed - {Username}", loginRequest.Username);
+            _passwordHasher.Verify(loginRequest.Password, DummyPasswordHash);
+            _logger.LogWarning("Login failed: Account is not eligible - {Username}", loginRequest.Username);
+            throw new UnauthorizedException("Invalid username or password");
+        }
+
+        var attemptedAt = Timestamp.Now;
+        user.ResetExpiredLoginLockout(attemptedAt);
+
+        if (user.IsLoginLocked(attemptedAt))
+        {
+            _passwordHasher.Verify(loginRequest.Password, DummyPasswordHash);
+            _logger.LogWarning("Login failed: Account is temporarily locked - {Username}", loginRequest.Username);
             throw new UnauthorizedException("Invalid username or password");
         }
 
         if (!_passwordHasher.Verify(loginRequest.Password, user.PasswordHash))
         {
+            user.RecordFailedLogin(
+                attemptedAt,
+                _securityPolicy.MaxFailedAttempts,
+                _securityPolicy.LockoutDuration);
+            await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
             _logger.LogWarning("Login failed: Invalid password - {Username}", loginRequest.Username);
             throw new UnauthorizedException("Invalid username or password");
         }
 
-        var userRoles = await (AuthHelpers.GetUserRolesEntitiesAsync(_unitOfWork, user.Id, cancellationToken)).ConfigureAwait(false);
-        var roles = await (AuthHelpers.ResolveRoleNamesAsync(_unitOfWork, userRoles, cancellationToken)).ConfigureAwait(false);
-        var permissions = await (AuthHelpers.GetUserPermissionsAsync(_unitOfWork, user.Id, cancellationToken)).ConfigureAwait(false);
+        var allUserRoles = await (AuthHelpers.GetUserRolesEntitiesAsync(
+            _unitOfWork, user.Id, cancellationToken)).ConfigureAwait(false);
+        var resolvedTenantId = AuthHelpers.ResolveTenantId(allUserRoles, loginRequest.TenantId);
+        var tenantRoles = allUserRoles
+            .Where(role => role.TenantId.HasValue && role.TenantId.Value == resolvedTenantId)
+            .ToList();
+        var roles = await (AuthHelpers.ResolveRoleNamesAsync(
+            _unitOfWork, tenantRoles, cancellationToken)).ConfigureAwait(false);
+        var permissions = await (AuthHelpers.GetUserPermissionsAsync(
+            _unitOfWork, tenantRoles, cancellationToken)).ConfigureAwait(false);
 
-        var resolvedTenantId = AuthHelpers.ResolveTenantId(userRoles);
-
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, resolvedTenantId, roles, permissions, user.DisplayName);
+        var accessToken = _jwtService.GenerateAccessToken(
+            user.Id, user.Username, resolvedTenantId, user.DisplayName);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var refreshTokenTtl = TimeSpan.FromDays(_jwtService.RefreshTokenExpirationDays);
 
-        await (_refreshTokenStore.StoreAsync(user.Id, refreshToken, refreshTokenTtl, cancellationToken)).ConfigureAwait(false);
+        await (_refreshTokenStore.StoreAsync(user.Id, refreshToken, refreshTokenTtl, cancellationToken, resolvedTenantId)).ConfigureAwait(false);
 
-        user.RecordLogin();
+        user.RecordLogin(attemptedAt);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
         _logger.LogInformation("User logged in successfully: {Username}", loginRequest.Username);
@@ -103,10 +135,8 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, LoginRes
     }
 }
 
-/// <summary>
-///
-/// </summary>
-public sealed record RefreshTokenCommand(string RefreshToken) : ICommand<TokenResponse>, IAuditableRequest<TokenResponse>
+public sealed record RefreshTokenCommand(string RefreshToken)
+    : ICommand<TokenResponse>, INonTransactionalCommand, IAuditableRequest<TokenResponse>
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(TokenResponse response) => AuditLog;
@@ -138,33 +168,62 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             throw new UnauthorizedException("Refresh token is required");
         }
 
-        var userId = await (_refreshTokenStore.GetUserIdAsync(request.RefreshToken, cancellationToken)).ConfigureAwait(false);
-        if (userId is null)
+        var session = await (_refreshTokenStore.GetSessionAsync(request.RefreshToken, cancellationToken)).ConfigureAwait(false);
+        if (session is null)
         {
             throw new UnauthorizedException("Invalid refresh token");
         }
 
         var userRepo = _unitOfWork.Repository<User>();
-        var user = await (userRepo.GetByIdAsync(userId.Value, cancellationToken)).ConfigureAwait(false);
+        var user = await (userRepo.GetByIdAsync(session.UserId, cancellationToken)).ConfigureAwait(false);
 
+        // A rejection is a decision, not a failure, so the token is destroyed here on purpose —
+        // unlike a transient error, retrying will never make an ineligible account eligible. The
+        // reordering above is about not destroying it when the answer is "try again later".
         if (user is null)
         {
-            throw new UnauthorizedException("User not found");
+            await (_refreshTokenStore.RemoveAsync(request.RefreshToken, cancellationToken)).ConfigureAwait(false);
+            throw new UnauthorizedException("Invalid refresh token");
         }
 
-        await (_refreshTokenStore.RemoveAsync(request.RefreshToken, cancellationToken)).ConfigureAwait(false);
+        if (!user.IsActive || user.IsAI)
+        {
+            _logger.LogWarning(
+                "Refresh rejected: Account is not eligible - {Username}",
+                user.Username);
+            await (_refreshTokenStore.RemoveAsync(request.RefreshToken, cancellationToken)).ConfigureAwait(false);
+            throw new UnauthorizedException("Invalid refresh token");
+        }
 
-        var userRoles = await (AuthHelpers.GetUserRolesEntitiesAsync(_unitOfWork, user.Id, cancellationToken)).ConfigureAwait(false);
-        var roles = await (AuthHelpers.ResolveRoleNamesAsync(_unitOfWork, userRoles, cancellationToken)).ConfigureAwait(false);
-        var permissions = await (AuthHelpers.GetUserPermissionsAsync(_unitOfWork, user.Id, cancellationToken)).ConfigureAwait(false);
+        var allUserRoles = await (AuthHelpers.GetUserRolesEntitiesAsync(
+            _unitOfWork, user.Id, cancellationToken)).ConfigureAwait(false);
+        var resolvedTenantId = session.TenantId;
+        if (!allUserRoles.Any(role => role.TenantId == resolvedTenantId))
+        {
+            await _refreshTokenStore.RemoveAsync(request.RefreshToken, cancellationToken).ConfigureAwait(false);
+            throw new UnauthorizedException("Session tenant membership is no longer active");
+        }
+        var tenantRoles = allUserRoles
+            .Where(role => role.TenantId.HasValue && role.TenantId.Value == resolvedTenantId)
+            .ToList();
+        var roles = await (AuthHelpers.ResolveRoleNamesAsync(
+            _unitOfWork, tenantRoles, cancellationToken)).ConfigureAwait(false);
+        var permissions = await (AuthHelpers.GetUserPermissionsAsync(
+            _unitOfWork, tenantRoles, cancellationToken)).ConfigureAwait(false);
 
-        var resolvedTenantId = AuthHelpers.ResolveTenantId(userRoles);
-
-        var newAccessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, resolvedTenantId, roles, permissions, user.DisplayName);
+        var newAccessToken = _jwtService.GenerateAccessToken(
+            user.Id, user.Username, resolvedTenantId, user.DisplayName);
         var newRefreshToken = _jwtService.GenerateRefreshToken();
         var refreshTokenTtl = TimeSpan.FromDays(_jwtService.RefreshTokenExpirationDays);
 
-        await (_refreshTokenStore.StoreAsync(user.Id, newRefreshToken, refreshTokenTtl, cancellationToken)).ConfigureAwait(false);
+        // Validate generation and replace in one Redis operation. A revoke cannot fall between
+        // consumption and storage and accidentally attach the replacement to a new generation.
+        var rotated = await (_refreshTokenStore.RotateAsync(user.Id, request.RefreshToken,
+            newRefreshToken, refreshTokenTtl, cancellationToken, resolvedTenantId)).ConfigureAwait(false);
+        if (!rotated)
+        {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
 
         _logger.LogInformation("Token refreshed for user: {Username}", user.Username);
 

@@ -73,18 +73,23 @@
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">AI Analysis</span>
       <Badge variant="warning" size="sm">Coming Soon</Badge>
     </div>
-    <p class="mt-2 text-sm text-[var(--color-text-muted)]">
- AI..
-    </p>
+    <p class="mt-2 text-sm text-[var(--color-text-muted)]">AI..</p>
   </div>
 {:else}
   <div class="grid gap-4 lg:grid-cols-2">
     <!-- Quality Analysis -->
-    <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3">
+    <div
+      class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3"
+    >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <span class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-1"><Icon name="sparkles" size="xs" /> Quality Analysis</span>
-          <p class="text-xs text-[var(--color-text-muted)]">Clarity, completeness, and terminology.</p>
+          <span
+            class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-1"
+            ><Icon name="sparkles" size="xs" /> Quality Analysis</span
+          >
+          <p class="text-xs text-[var(--color-text-muted)]">
+            Clarity, completeness, and terminology.
+          </p>
         </div>
         {#if !isReadOnly}
           <Button
@@ -163,21 +168,29 @@
 
           <div class="space-y-2">
             {#each qualityScoreEntries as entry (entry.key)}
-              <div class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2">
+              <div
+                class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2"
+              >
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-medium text-[var(--color-text-secondary)]">{entry.label}</span>
+                  <span class="text-xs font-medium text-[var(--color-text-secondary)]"
+                    >{entry.label}</span
+                  >
                   <Badge variant={getScoreVariant(entry.score)} size="sm">
                     {entry.score}
                   </Badge>
                 </div>
                 {#if entry.issues?.length}
-                  <ul class="mt-1 text-xs text-[var(--color-text-muted)] list-disc list-inside space-y-0.5">
+                  <ul
+                    class="mt-1 text-xs text-[var(--color-text-muted)] list-disc list-inside space-y-0.5"
+                  >
                     {#each entry.issues as issue, issueIdx (issueIdx)}
                       <li>{issue}</li>
                     {/each}
                   </ul>
                 {:else}
-                  <span class="mt-1 text-[0.6875rem] text-[var(--color-text-muted)]">No issues noted.</span>
+                  <span class="mt-1 text-[0.6875rem] text-[var(--color-text-muted)]"
+                    >No issues noted.</span
+                  >
                 {/if}
               </div>
             {/each}
@@ -185,9 +198,13 @@
 
           {#if qualityParsed.data.improvements?.length}
             <div class="space-y-2">
-              <h5 class="text-xs font-medium text-[var(--color-text-secondary)]">Recommendations</h5>
+              <h5 class="text-xs font-medium text-[var(--color-text-secondary)]">
+                Recommendations
+              </h5>
               {#each qualityParsed.data.improvements as item, improvementIdx (improvementIdx)}
-                <div class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2">
+                <div
+                  class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2"
+                >
                   <div class="text-xs font-medium text-[var(--color-text-secondary)]">
                     {item.section}
                   </div>
@@ -216,16 +233,22 @@
           {qualityParsed.error}
         </div>
         {#if qualityParsed.raw}
-          <pre class="mt-2 text-xs bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)] rounded p-2 overflow-auto">{qualityParsed.raw}</pre>
+          <pre
+            class="mt-2 text-xs bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)] rounded p-2 overflow-auto">{qualityParsed.raw}</pre>
         {/if}
       {/if}
     </div>
 
     <!-- Impact Analysis -->
-    <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3">
+    <div
+      class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3"
+    >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <span class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-1"><Icon name="sparkles" size="xs" /> Impact Analysis</span>
+          <span
+            class="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-1"
+            ><Icon name="sparkles" size="xs" /> Impact Analysis</span
+          >
           <p class="text-xs text-[var(--color-text-muted)]">Affected specs, artifacts, and risk.</p>
         </div>
         {#if !isReadOnly}
@@ -293,7 +316,9 @@
         <div class="space-y-3">
           <div class="flex flex-wrap items-center gap-2">
             <Badge variant={getImpactVariant(impactParsed.data.impactLevel)} size="sm">
-              {impactParsed.data.impactLevel ? impactParsed.data.impactLevel.toUpperCase() : 'UNKNOWN'}
+              {impactParsed.data.impactLevel
+                ? impactParsed.data.impactLevel.toUpperCase()
+                : 'UNKNOWN'}
             </Badge>
             {#if impactParsed.data.breakingChanges}
               <Badge variant="error" size="sm">Breaking Changes</Badge>
@@ -311,9 +336,13 @@
             {#if impactParsed.data.affectedSpecs?.length}
               <div class="space-y-2">
                 {#each impactParsed.data.affectedSpecs as item (item.specCode)}
-                  <div class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2 space-y-1">
+                  <div
+                    class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2 space-y-1"
+                  >
                     <div class="flex items-center justify-between">
-                      <span class="text-xs font-mono text-[var(--color-text-primary)]">{item.specCode}</span>
+                      <span class="text-xs font-mono text-[var(--color-text-primary)]"
+                        >{item.specCode}</span
+                      >
                       <Badge variant={getImpactVariant(item.impactLevel)} size="sm">
                         {item.impactLevel}
                       </Badge>
@@ -321,7 +350,9 @@
                     <div class="text-xs text-[var(--color-text-muted)]">{item.relationship}</div>
                     <div class="text-xs text-[var(--color-text-primary)]">{item.description}</div>
                     {#if item.action}
-                      <div class="text-xs text-[var(--color-text-muted)]">Action: {item.action}</div>
+                      <div class="text-xs text-[var(--color-text-muted)]">
+                        Action: {item.action}
+                      </div>
                     {/if}
                   </div>
                 {/each}
@@ -333,12 +364,18 @@
 
           {#if impactParsed.data.affectedArtifacts?.length}
             <div class="space-y-2">
-              <h5 class="text-xs font-medium text-[var(--color-text-secondary)]">Affected Artifacts</h5>
+              <h5 class="text-xs font-medium text-[var(--color-text-secondary)]">
+                Affected Artifacts
+              </h5>
               <div class="space-y-2">
                 {#each impactParsed.data.affectedArtifacts as artifact (artifact.artifactPath)}
-                  <div class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2">
+                  <div
+                    class="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-2"
+                  >
                     <div class="flex items-center justify-between">
-                      <span class="text-xs font-mono text-[var(--color-text-primary)]">{artifact.artifactPath}</span>
+                      <span class="text-xs font-mono text-[var(--color-text-primary)]"
+                        >{artifact.artifactPath}</span
+                      >
                       <Badge variant={getImpactVariant(artifact.impactLevel)} size="sm">
                         {artifact.impactLevel}
                       </Badge>
@@ -355,7 +392,8 @@
           {impactParsed.error}
         </div>
         {#if impactParsed.raw}
-          <pre class="mt-2 text-xs bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)] rounded p-2 overflow-auto">{impactParsed.raw}</pre>
+          <pre
+            class="mt-2 text-xs bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)] rounded p-2 overflow-auto">{impactParsed.raw}</pre>
         {/if}
       {/if}
     </div>

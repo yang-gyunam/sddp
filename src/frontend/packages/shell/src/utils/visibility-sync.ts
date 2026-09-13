@@ -6,7 +6,7 @@
  * Debounced with a minimum interval to prevent rapid tab-switching overhead.
  */
 
-import { hasSession, getAccessToken, refreshToken } from '../auth/stores/auth.store';
+import { getAuthState, getAccessToken, refreshToken } from '../auth/stores/auth.store';
 
 export interface VisibilitySyncOptions {
   /** Called after successful token refresh */
@@ -32,17 +32,17 @@ function handleVisibilityChange(): void {
   if (now - lastSyncTimestamp < minInterval) return;
   lastSyncTimestamp = now;
 
-  if (!hasSession()) return;
+  if (!getAuthState().user) return;
 
   const token = getAccessToken();
 
   if (!token) {
     // Token expired — attempt refresh
-    refreshToken().then((success) => {
-      if (success) {
+    refreshToken().then((outcome) => {
+      if (outcome === 'authenticated') {
         syncOptions.onTokenRefreshed?.();
         syncOptions.onRefreshNotifications?.();
-      } else {
+      } else if (outcome === 'rejected') {
         syncOptions.onSessionExpired?.();
       }
     });

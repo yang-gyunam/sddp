@@ -10,12 +10,7 @@
 import { writable, derived, type Subscriber, type Unsubscriber } from 'svelte/store';
 import { config } from '../core/services/ConfigurationManager';
 import type { Tab, EditorGroupData } from '../types';
-import {
-  clearTabState,
-  clearTabStates,
-  copyTabState,
-  resetTabStateStore,
-} from './tab-state.store';
+import { clearTabState, clearTabStates, copyTabState, resetTabStateStore } from './tab-state.store';
 import { createRunesTabsStateStore } from './tabs.store.runes';
 
 export interface TabsState {
@@ -57,10 +52,22 @@ export interface TabActionsLike {
   splitGroup: (direction: 'horizontal' | 'vertical', sourceGroupId: string) => void;
   splitRight: (tabId: string, sourceGroupId: string) => void;
   closeGroup: (groupId: string) => void;
-  moveTabToGroup: (tabId: string, targetGroupId: string, sourceGroupId: string, insertIndex?: number) => void;
+  moveTabToGroup: (
+    tabId: string,
+    targetGroupId: string,
+    sourceGroupId: string,
+    insertIndex?: number
+  ) => void;
   reorderTabs: (fromIndex: number, toIndex: number, groupId?: string) => void;
-  updateGroupPositions: (updates: Record<string, { x: number; y: number; width: number; height: number }>) => void;
-  copyTabToGroup: (tabId: string, targetGroupId: string, sourceGroupId: string, insertIndex?: number) => void;
+  updateGroupPositions: (
+    updates: Record<string, { x: number; y: number; width: number; height: number }>
+  ) => void;
+  copyTabToGroup: (
+    tabId: string,
+    targetGroupId: string,
+    sourceGroupId: string,
+    insertIndex?: number
+  ) => void;
   openByPath: (path: string, tabData: Omit<Tab, 'id' | 'path'>, groupId?: string) => Tab | null;
 }
 
@@ -284,7 +291,10 @@ const normalizeGroupPositions = (groups: EditorGroupData[]): EditorGroupData[] =
       for (const other of groups) {
         if (other.id === group.id) continue;
         const otherPos = positions.get(other.id)!;
-        if (rangesOverlap(pos.x, pos.width, otherPos.x, otherPos.width) && otherPos.y + otherPos.height <= pos.y + eps) {
+        if (
+          rangesOverlap(pos.x, pos.width, otherPos.x, otherPos.width) &&
+          otherPos.y + otherPos.height <= pos.y + eps
+        ) {
           minY = Math.max(minY, otherPos.y + otherPos.height);
         }
       }
@@ -299,7 +309,10 @@ const normalizeGroupPositions = (groups: EditorGroupData[]): EditorGroupData[] =
       for (const other of groups) {
         if (other.id === group.id) continue;
         const otherPos = positions.get(other.id)!;
-        if (rangesOverlap(pos.x, pos.width, otherPos.x, otherPos.width) && otherPos.y >= pos.y + pos.height - eps) {
+        if (
+          rangesOverlap(pos.x, pos.width, otherPos.x, otherPos.width) &&
+          otherPos.y >= pos.y + pos.height - eps
+        ) {
           maxBottom = Math.min(maxBottom, otherPos.y);
         }
       }
@@ -312,7 +325,10 @@ const normalizeGroupPositions = (groups: EditorGroupData[]): EditorGroupData[] =
       for (const other of groups) {
         if (other.id === group.id) continue;
         const otherPos = positions.get(other.id)!;
-        if (rangesOverlap(pos.y, pos.height, otherPos.y, otherPos.height) && otherPos.x + otherPos.width <= pos.x + eps) {
+        if (
+          rangesOverlap(pos.y, pos.height, otherPos.y, otherPos.height) &&
+          otherPos.x + otherPos.width <= pos.x + eps
+        ) {
           minX = Math.max(minX, otherPos.x + otherPos.width);
         }
       }
@@ -327,7 +343,10 @@ const normalizeGroupPositions = (groups: EditorGroupData[]): EditorGroupData[] =
       for (const other of groups) {
         if (other.id === group.id) continue;
         const otherPos = positions.get(other.id)!;
-        if (rangesOverlap(pos.y, pos.height, otherPos.y, otherPos.height) && otherPos.x >= pos.x + pos.width - eps) {
+        if (
+          rangesOverlap(pos.y, pos.height, otherPos.y, otherPos.height) &&
+          otherPos.x >= pos.x + pos.width - eps
+        ) {
           maxRight = Math.min(maxRight, otherPos.x);
         }
       }
@@ -433,8 +452,7 @@ function createTabsModule(
             : null;
 
           if (existingTab) {
-            const shouldUpdate =
-              (tabData.component && !existingTab.component) || tabData.props;
+            const shouldUpdate = (tabData.component && !existingTab.component) || tabData.props;
             if (shouldUpdate) {
               const updatedTabs = group.tabs.map((tab) =>
                 tab.id === existingTab.id
@@ -479,9 +497,16 @@ function createTabsModule(
             const groupWithCleanHistory = { ...group, tabs: newTabs, tabHistory: cleanHistory };
 
             if (newTabs.length > 0) {
-              const { tabId: lastActive, updatedHistory } = getLastActiveCandidate(groupWithCleanHistory, newTabs);
+              const { tabId: lastActive, updatedHistory } = getLastActiveCandidate(
+                groupWithCleanHistory,
+                newTabs
+              );
               if (lastActive) {
-                return { ...groupWithCleanHistory, activeTab: lastActive, tabHistory: updatedHistory };
+                return {
+                  ...groupWithCleanHistory,
+                  activeTab: lastActive,
+                  tabHistory: updatedHistory,
+                };
               }
 
               const newIndex = Math.min(tabIndex, newTabs.length - 1);
@@ -492,11 +517,16 @@ function createTabsModule(
             return { ...groupWithCleanHistory, activeTab: '' };
           }
 
-          return { ...group, tabs: newTabs, tabHistory: group.tabHistory.filter((id) => id !== tabId) };
+          return {
+            ...group,
+            tabs: newTabs,
+            tabHistory: group.tabHistory.filter((id) => id !== tabId),
+          };
         });
 
         const nonEmptyGroups = groups.filter((group) => group.tabs.length > 0);
-        const remainingGroups = nonEmptyGroups.length > 0 ? nonEmptyGroups : [createDefaultGroup(idFactory)];
+        const remainingGroups =
+          nonEmptyGroups.length > 0 ? nonEmptyGroups : [createDefaultGroup(idFactory)];
         const filteredGroups =
           remainingGroups.length < state.groups.length
             ? normalizeGroupPositions(remainingGroups)
@@ -692,7 +722,9 @@ function createTabsModule(
         const remaining = state.groups.filter((group) => group.id !== groupId);
         const groups = normalizeGroupPositions(remaining);
         const newActiveGroupId =
-          state.activeGroupId === groupId ? (groups[0]?.id ?? state.activeGroupId) : state.activeGroupId;
+          state.activeGroupId === groupId
+            ? (groups[0]?.id ?? state.activeGroupId)
+            : state.activeGroupId;
 
         return { ...state, groups, activeGroupId: newActiveGroupId };
       });
@@ -723,7 +755,9 @@ function createTabsModule(
           : [];
         const hasDuplicate = duplicateIndexes.length > 0;
         removedDuplicateIds = hasDuplicate
-          ? targetTabs.filter((entry) => getTabDedupKey(entry) === dedupKey).map((entry) => entry.id)
+          ? targetTabs
+              .filter((entry) => getTabDedupKey(entry) === dedupKey)
+              .map((entry) => entry.id)
           : [];
 
         const newSourceTabs = sourceGroup.tabs.filter((entry) => entry.id !== tabId);
@@ -763,7 +797,10 @@ function createTabsModule(
               insertIndex !== undefined
                 ? Math.max(0, Math.min(adjustedInsertIndex ?? 0, filteredTargetTabs.length))
                 : hasDuplicate
-                  ? Math.min(duplicateIndexes[0] ?? filteredTargetTabs.length, filteredTargetTabs.length)
+                  ? Math.min(
+                      duplicateIndexes[0] ?? filteredTargetTabs.length,
+                      filteredTargetTabs.length
+                    )
                   : filteredTargetTabs.length;
 
             const newTargetTabs = [...filteredTargetTabs];
@@ -775,7 +812,8 @@ function createTabsModule(
         });
 
         const nonEmptyGroups = groups.filter((group) => group.tabs.length > 0);
-        const remainingGroups = nonEmptyGroups.length > 0 ? nonEmptyGroups : [createDefaultGroup(idFactory)];
+        const remainingGroups =
+          nonEmptyGroups.length > 0 ? nonEmptyGroups : [createDefaultGroup(idFactory)];
         const filteredGroups =
           remainingGroups.length < state.groups.length
             ? normalizeGroupPositions(remainingGroups)
@@ -918,7 +956,10 @@ function createParityAwareTabsModule(
     if (
       !areEqual(normalizeTabsState(primaryState), normalizeTabsState(shadowState)) ||
       !areEqual(primaryEffectsLog, shadowEffectsLog) ||
-      !areEqual(primaryResult ? normalizeTab(primaryResult) : primaryResult ?? null, shadowResult ? normalizeTab(shadowResult) : shadowResult ?? null)
+      !areEqual(
+        primaryResult ? normalizeTab(primaryResult) : (primaryResult ?? null),
+        shadowResult ? normalizeTab(shadowResult) : (shadowResult ?? null)
+      )
     ) {
       reportMismatch({
         action,
@@ -1052,12 +1093,18 @@ function createModule(): TabsModuleLike {
 
   const writableModule = createTabsModule(
     createWritableTabsStateStore(enableRunesTabsStore ? shadowInitialState : primaryInitialState),
-    createRecordingTabStateEffects(enableRunesTabsStore ? 'shadow' : 'active', enableRunesTabsStore ? shadowEffectsLog : primaryEffectsLog),
+    createRecordingTabStateEffects(
+      enableRunesTabsStore ? 'shadow' : 'active',
+      enableRunesTabsStore ? shadowEffectsLog : primaryEffectsLog
+    ),
     writableIdFactory
   );
   const runesModule = createTabsModule(
     createRunesTabsStateStore(enableRunesTabsStore ? primaryInitialState : shadowInitialState),
-    createRecordingTabStateEffects(enableRunesTabsStore ? 'active' : 'shadow', enableRunesTabsStore ? primaryEffectsLog : shadowEffectsLog),
+    createRecordingTabStateEffects(
+      enableRunesTabsStore ? 'active' : 'shadow',
+      enableRunesTabsStore ? primaryEffectsLog : shadowEffectsLog
+    ),
     runesIdFactory
   );
 
@@ -1068,17 +1115,27 @@ function createModule(): TabsModuleLike {
     return primaryModule;
   }
 
-  return createParityAwareTabsModule(primaryModule, shadowModule, primaryEffectsLog, shadowEffectsLog, (context) => {
-    console.error('[tabs.store] parity mismatch', {
-      action: context.action,
-      primaryState: normalizeTabsState(context.primaryState),
-      shadowState: normalizeTabsState(context.shadowState),
-      primaryEffects: context.primaryEffects,
-      shadowEffects: context.shadowEffects,
-      primaryResult: context.primaryResult ? normalizeTab(context.primaryResult) : context.primaryResult ?? null,
-      shadowResult: context.shadowResult ? normalizeTab(context.shadowResult) : context.shadowResult ?? null,
-    });
-  });
+  return createParityAwareTabsModule(
+    primaryModule,
+    shadowModule,
+    primaryEffectsLog,
+    shadowEffectsLog,
+    (context) => {
+      console.error('[tabs.store] parity mismatch', {
+        action: context.action,
+        primaryState: normalizeTabsState(context.primaryState),
+        shadowState: normalizeTabsState(context.shadowState),
+        primaryEffects: context.primaryEffects,
+        shadowEffects: context.shadowEffects,
+        primaryResult: context.primaryResult
+          ? normalizeTab(context.primaryResult)
+          : (context.primaryResult ?? null),
+        shadowResult: context.shadowResult
+          ? normalizeTab(context.shadowResult)
+          : (context.shadowResult ?? null),
+      });
+    }
+  );
 }
 
 const moduleInstance = createModule();
@@ -1087,8 +1144,9 @@ export const tabsStore = moduleInstance.store;
 
 export const editorGroups = derived(tabsStore, ($state) => $state.groups);
 
-export const activeGroup = derived(tabsStore, ($state) =>
-  $state.groups.find((group) => group.id === $state.activeGroupId) || $state.groups[0]
+export const activeGroup = derived(
+  tabsStore,
+  ($state) => $state.groups.find((group) => group.id === $state.activeGroupId) || $state.groups[0]
 );
 
 export const activeGroupId = derived(tabsStore, ($state) => $state.activeGroupId);
@@ -1099,9 +1157,7 @@ export const globalActiveTab = derived(tabsStore, ($state) => {
   return group.tabs.find((tab) => tab.id === group.activeTab) || null;
 });
 
-export const allTabs = derived(tabsStore, ($state) =>
-  $state.groups.flatMap((group) => group.tabs)
-);
+export const allTabs = derived(tabsStore, ($state) => $state.groups.flatMap((group) => group.tabs));
 
 export const tabActions = moduleInstance.actions;
 

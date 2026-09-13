@@ -1,12 +1,15 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-/* Tailwind v4: Source paths for other packages */
-@source "../../../packages/ui/src/**/*.svelte";
-@source "../../../packages/shell/src/**/*.svelte";
-@source "../../../packages/activities/src/**/*.svelte";
-@source "../../../packages/features/src/**/*.svelte";
-@source "./**/*.svelte";
+/* Tailwind v4: Source paths for other packages.
+   .ts is scanned too: style maps such as ENTITY_TYPE_STYLES and ARTIFACT_TYPE_STYLES
+   hold their class strings in TypeScript, and a class Tailwind never sees is silently
+   dropped from the stylesheet. Enforced by tests/unit/config/tailwind-source-coverage. */
+@source "../../../packages/ui/src/**/*.{svelte,ts}";
+@source "../../../packages/shell/src/**/*.{svelte,ts}";
+@source "../../../packages/activities/src/**/*.{svelte,ts}";
+@source "../../../packages/features/src/**/*.{svelte,ts}";
+@source "./**/*.{svelte,ts}";
 
 @import '../../ui/src/styles/design-tokens.css';
 @import '../../ui/src/styles/gap-utilities.css';
@@ -55,7 +58,11 @@ body {
   --color-bg-tertiary: var(--color-neutral-200);
   --color-text-primary: var(--color-neutral-900);
   --color-text-secondary: var(--color-neutral-600);
-  --color-text-tertiary: var(--color-neutral-400);
+  /* Not a palette step: neutral-400 fails WCAG AA on our light surfaces (2.3:1) and
+     neutral-500 still misses on --color-bg-secondary (4.46:1). neutral-600 would clear it
+     but is exactly --color-text-secondary, collapsing the hierarchy. This sits between the
+     two at 5.4:1 on #f4f4f5 and 5.7:1 on #fafafa. */
+  --color-text-tertiary: #63636c;
   --color-text-muted: var(--color-neutral-500);
   --color-text-on-accent: var(--color-neutral-50);
   --color-border: var(--color-neutral-200);
@@ -69,6 +76,7 @@ body {
   --color-surface-200: var(--color-neutral-200);
   --color-surface-300: var(--color-neutral-300);
   --color-accent-primary: var(--color-primary-500);
+  --color-accent-text: #4e51ef;
   --color-focus-ring: var(--color-primary-600);
   --color-focus-ring-offset: var(--color-bg-primary);
   /* Overlay colors */
@@ -99,6 +107,7 @@ body {
   --color-surface-200: var(--color-neutral-700);
   --color-surface-300: var(--color-neutral-600);
   --color-accent-primary: var(--color-primary-500);
+  --color-accent-text: #8486f4;
   --color-focus-ring: var(--color-primary-400);
   --color-focus-ring-offset: var(--color-bg-primary);
   /* Overlay colors - darker in dark mode */
@@ -129,6 +138,7 @@ body {
   --color-surface-200: #e5e5e5;
   --color-surface-300: #d4d4d8;
   --color-accent-primary: var(--color-primary-700);
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #111827;
   --color-focus-ring-offset: #ffffff;
   --color-overlay: #111827;
@@ -158,6 +168,7 @@ body {
   --color-surface-200: #141414;
   --color-surface-300: #1f1f1f;
   --color-accent-primary: var(--color-primary-300);
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #ffffff;
   --color-focus-ring-offset: #000000;
   --color-overlay: #000000;
@@ -187,6 +198,7 @@ body {
     --color-surface-200: #e5e5e5;
     --color-surface-300: #d4d4d8;
     --color-accent-primary: var(--color-primary-700);
+    --color-accent-text: var(--color-accent-primary);
     --color-focus-ring: #111827;
     --color-focus-ring-offset: #ffffff;
     --color-overlay: #111827;
@@ -216,6 +228,7 @@ body {
     --color-surface-200: #141414;
     --color-surface-300: #1f1f1f;
     --color-accent-primary: var(--color-primary-300);
+    --color-accent-text: var(--color-accent-primary);
     --color-focus-ring: #ffffff;
     --color-focus-ring-offset: #000000;
     --color-overlay: #000000;
@@ -232,122 +245,146 @@ body {
 
 /* --- Blue (VS Code Default) --- */
 :root[data-accent='blue'] {
-  --color-accent-primary: #007ACC;
-  --color-focus-ring: #005A9E;
+  --color-accent-primary: #007acc;
+  --color-accent-text: #006bb3;
+  --color-focus-ring: #005a9e;
 }
 .dark[data-accent='blue'] {
-  --color-accent-primary: #3DAEE9;
-  --color-focus-ring: #3DAEE9;
+  --color-accent-primary: #3daee9;
+  --color-accent-text: var(--color-accent-primary);
+  --color-focus-ring: #3daee9;
 }
 
 /* --- Purple --- */
 :root[data-accent='purple'] {
   --color-accent-primary: #8b5cf6;
+  --color-accent-text: #763ff4;
   --color-focus-ring: #7c3aed;
 }
 .dark[data-accent='purple'] {
   --color-accent-primary: #a78bfa;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #a78bfa;
 }
 
 /* --- Cyan --- */
 :root[data-accent='cyan'] {
   --color-accent-primary: #06b6d4;
+  --color-accent-text: #047487;
   --color-focus-ring: #0891b2;
 }
 .dark[data-accent='cyan'] {
   --color-accent-primary: #22d3ee;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #22d3ee;
 }
 
 /* --- Teal --- */
 :root[data-accent='teal'] {
   --color-accent-primary: #14b8a6;
+  --color-accent-text: #0d786c;
   --color-focus-ring: #0d9488;
 }
 .dark[data-accent='teal'] {
   --color-accent-primary: #2dd4bf;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #2dd4bf;
 }
 
 /* --- Sky --- */
 :root[data-accent='sky'] {
   --color-accent-primary: #0ea5e9;
+  --color-accent-text: #0a709e;
   --color-focus-ring: #0284c7;
 }
 .dark[data-accent='sky'] {
   --color-accent-primary: #38bdf8;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #38bdf8;
 }
 
 /* --- Rose --- */
 :root[data-accent='rose'] {
   --color-accent-primary: #f43f5e;
+  --color-accent-text: #d00c2e;
   --color-focus-ring: #e11d48;
 }
 .dark[data-accent='rose'] {
   --color-accent-primary: #fb7185;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #fb7185;
 }
 
 /* --- Orange --- */
 :root[data-accent='orange'] {
   --color-accent-primary: #f97316;
+  --color-accent-text: #b14b05;
   --color-focus-ring: #ea580c;
 }
 .dark[data-accent='orange'] {
   --color-accent-primary: #fb923c;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #fb923c;
 }
 
 /* --- Pink --- */
 :root[data-accent='pink'] {
   --color-accent-primary: #ec4899;
+  --color-accent-text: #c8156e;
   --color-focus-ring: #db2777;
 }
 .dark[data-accent='pink'] {
   --color-accent-primary: #f472b6;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #f472b6;
 }
 
 /* --- Lime --- */
 :root[data-accent='lime'] {
   --color-accent-primary: #84cc16;
+  --color-accent-text: #4d770d;
   --color-focus-ring: #65a30d;
 }
 .dark[data-accent='lime'] {
   --color-accent-primary: #a3e635;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #a3e635;
 }
 
 /* --- Amber --- */
 :root[data-accent='amber'] {
   --color-accent-primary: #f59e0b;
+  --color-accent-text: #966106;
   --color-focus-ring: #d97706;
 }
 .dark[data-accent='amber'] {
   --color-accent-primary: #fbbf24;
+  --color-accent-text: var(--color-accent-primary);
   --color-focus-ring: #fbbf24;
 }
 
 /* --- Seoul Green Aurora (2025) --- */
 :root[data-accent='seoul-green-aurora'] {
-  --color-accent-primary: #00B493;
-  --color-focus-ring: #009B7D;
+  --color-accent-primary: #00b493;
+  --color-accent-text: #007963;
+  --color-focus-ring: #009b7d;
 }
 .dark[data-accent='seoul-green-aurora'] {
-  --color-accent-primary: #2DD4B0;
-  --color-focus-ring: #2DD4B0;
+  --color-accent-primary: #2dd4b0;
+  --color-accent-text: var(--color-accent-primary);
+  --color-focus-ring: #2dd4b0;
 }
 
 /* --- Seoul Skycoral (2024) --- */
 :root[data-accent='seoul-skycoral'] {
-  --color-accent-primary: #F8496C;
-  --color-focus-ring: #E03355;
+  --color-accent-primary: #f8496c;
+  --color-accent-text: #d00830;
+  --color-focus-ring: #e03355;
 }
 .dark[data-accent='seoul-skycoral'] {
-  --color-accent-primary: #FF6B8A;
-  --color-focus-ring: #FF6B8A;
+  --color-accent-primary: #ff6b8a;
+  --color-accent-text: var(--color-accent-primary);
+  --color-focus-ring: #ff6b8a;
 }
 
 /* ============================================
@@ -356,21 +393,21 @@ body {
 
 /* Buttons and clickable elements */
 button,
-[role="button"],
-[role="tab"],
-[role="menuitem"],
-[role="option"],
-[role="treeitem"],
-[role="link"],
-[role="checkbox"],
-[role="radio"],
-[role="switch"],
-input[type="checkbox"],
-input[type="radio"],
-input[type="submit"],
-input[type="button"],
-input[type="reset"],
-input[type="range"],
+[role='button'],
+[role='tab'],
+[role='menuitem'],
+[role='option'],
+[role='treeitem'],
+[role='link'],
+[role='checkbox'],
+[role='radio'],
+[role='switch'],
+input[type='checkbox'],
+input[type='radio'],
+input[type='submit'],
+input[type='button'],
+input[type='reset'],
+input[type='range'],
 select,
 label[for],
 summary,
@@ -384,25 +421,25 @@ a[href],
 
 /* Disabled elements should show not-allowed cursor */
 button:disabled,
-[role="button"][aria-disabled="true"],
+[role='button'][aria-disabled='true'],
 [disabled],
 .disabled {
   cursor: not-allowed;
 }
 
 /* Text inputs should show text cursor */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"],
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='tel'],
+input[type='url'],
+input[type='number'],
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
 textarea,
-[contenteditable="true"] {
+[contenteditable='true'] {
   cursor: text;
 }
 
@@ -421,16 +458,16 @@ textarea,
  * ============================================ */
 
 :where(
-    button,
-    [role='button'],
-    [role='tab'],
-    [role='menuitem'],
-    [role='option'],
-    [role='treeitem'],
-    [role='link'],
-    a[href],
-    [tabindex]:not([tabindex='-1'])
-  ):focus-visible {
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='option'],
+  [role='treeitem'],
+  [role='link'],
+  a[href],
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
   outline: 2px solid var(--color-focus-ring) !important;
   outline-offset: 2px;
 }
@@ -475,6 +512,7 @@ textarea,
     --color-surface-200: var(--color-neutral-700);
     --color-surface-300: var(--color-neutral-600);
     --color-accent-primary: var(--color-primary-500);
+    --color-accent-text: #8486f4;
     /* Overlay colors - darker in dark mode */
     --color-overlay: var(--color-neutral-950);
     --color-overlay-opacity: 0.6;

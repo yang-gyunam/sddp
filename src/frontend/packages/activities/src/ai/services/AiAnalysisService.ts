@@ -4,12 +4,7 @@
 
 import { fetchWithAuth } from '../../shared/api';
 import { config as appConfig } from '@sddp/shell/core';
-import type {
-  AiAnalysisType,
-  AiReport,
-  AiReportSummary,
-  TriggerAnalysisRequest,
-} from '../types';
+import type { AiAnalysisType, AiReport, AiReportSummary, TriggerAnalysisRequest } from '../types';
 
 // ============================================
 // AI Analysis API
@@ -74,6 +69,11 @@ export class AiAnalysisService {
   private tenantId = '';
   private projectId = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId;
@@ -93,6 +93,10 @@ export class AiAnalysisService {
   async getReportById(reportId: string): Promise<AiReport> {
     return getReportById(this.tenantId, this.projectId, reportId);
   }
+}
+
+export function createAiAnalysisService(tenantId: string, projectId: string): AiAnalysisService {
+  return new AiAnalysisService(tenantId, projectId);
 }
 
 let aiAnalysisServiceInstance: AiAnalysisService | null = null;

@@ -3,30 +3,37 @@
   import { untrack } from 'svelte';
   import { SvelteDate } from 'svelte/reactivity';
   import { IconButton, Button, Icon, CardGrid } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, EmptyState, SidebarDetailLayout, SurfaceCard, getTabState, setTabState, formatNumber, formatPercent, formatMonthShort, toast, Modal } from '@sddp/shell';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    EmptyState,
+    SidebarDetailLayout,
+    SurfaceCard,
+    getTabState,
+    setTabState,
+    formatNumber,
+    formatPercent,
+    formatMonthShort,
+    toast,
+    Modal,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../../shared/components/idioms';
   import type { ProjectDetail } from '../../types';
   import {
-    effortStore,
-    initEffort,
-    selectMember,
-    resetEffortStore,
-    subscribeEffort,
-    previousWeek,
-    nextWeek,
-    goToToday,
-    previousMonth,
-    nextMonth,
-    goToCurrentMonth,
-    setDateRange,
-    setViewMode,
+    createEffortStoreScope,
     formatWeekLabel,
     type EffortState,
   } from '../../../effort/stores';
   import { isWeekend, getMemberDailyEffort, formatDate } from '../../../effort/services';
-  import type { DailyEffort, HeatmapWeek, MemberEffortSummary, WeekData } from '../../../effort/types';
+  import type {
+    DailyEffort,
+    HeatmapWeek,
+    MemberEffortSummary,
+    WeekData,
+  } from '../../../effort/types';
   import { ConflictWarnings, ActivityHeatmap } from '../../../effort/components/idioms';
   import {
     EffortSidebar,
@@ -48,21 +55,23 @@
 
   const pageTitle = 'Effort';
   const pageMeta = $derived(project?.name || projectName || undefined);
+  const effortScope = createEffortStoreScope();
+  const initialEffortState = effortScope.getState();
 
   // Reactive state from store
-  let members = $state<MemberEffortSummary[]>(effortStore.get().members);
-  let ownership = $state(effortStore.get().ownership);
-  let ownershipLoading = $state(effortStore.get().ownershipLoading);
-  let ownershipError = $state(effortStore.get().ownershipError);
-  let viewMode = $state(effortStore.get().viewMode);
-  let memberDailyEffort = $state(effortStore.get().memberDailyEffort);
-  let selectedMemberId = $state(effortStore.get().selectedMemberId);
-  let weekData = $state(effortStore.get().weekData);
-  let conflicts = $state(effortStore.get().conflicts);
-  let isLoading = $state(effortStore.get().isLoading);
-  let error = $state(effortStore.get().error);
-  let storeProjectId = $state(effortStore.get().projectId);
-  let dateRange = $state(effortStore.get().dateRange);
+  let members = $state<MemberEffortSummary[]>(initialEffortState.members);
+  let ownership = $state(initialEffortState.ownership);
+  let ownershipLoading = $state(initialEffortState.ownershipLoading);
+  let ownershipError = $state(initialEffortState.ownershipError);
+  let viewMode = $state(initialEffortState.viewMode);
+  let memberDailyEffort = $state(initialEffortState.memberDailyEffort);
+  let selectedMemberId = $state(initialEffortState.selectedMemberId);
+  let weekData = $state(initialEffortState.weekData);
+  let conflicts = $state(initialEffortState.conflicts);
+  let isLoading = $state(initialEffortState.isLoading);
+  let error = $state(initialEffortState.error);
+  let storeProjectId = $state(initialEffortState.projectId);
+  let dateRange = $state(initialEffortState.dateRange);
 
   interface ProjectEffortTabState {
     selectedMemberId: string | null;
@@ -115,7 +124,11 @@
   const activeWeekData = $derived.by(() => {
     if (viewMode === 'week') return weekData;
     if (!memberDailyEffort || !selectedWeekRange) return null;
-    return buildWeekDataFromDaily(memberDailyEffort, selectedWeekRange.start, selectedWeekRange.end);
+    return buildWeekDataFromDaily(
+      memberDailyEffort,
+      selectedWeekRange.start,
+      selectedWeekRange.end
+    );
   });
 
   $effect(() => {
@@ -151,14 +164,14 @@
       const weeks = 12;
       const today = new SvelteDate();
       const startDate = new SvelteDate(today);
-      startDate.setDate(startDate.getDate() - (weeks * 7));
+      startDate.setDate(startDate.getDate() - weeks * 7);
       const endDate = today;
 
       const dailyData = await getMemberDailyEffort(
         projectId,
         userId,
         formatDate(startDate),
-        formatDate(endDate),
+        formatDate(endDate)
       );
 
       heatmapData = aggregateDailyToHeatmap(dailyData, weeks);
@@ -174,16 +187,16 @@
     const today = new SvelteDate();
 
     const startDate = new SvelteDate(today);
-    startDate.setDate(startDate.getDate() - (weeks * 7));
+    startDate.setDate(startDate.getDate() - weeks * 7);
     const dayOfWeek = startDate.getDay();
     const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     startDate.setDate(startDate.getDate() + diff);
 
     for (let w = 0; w < weeks; w++) {
       const weekStart = new SvelteDate(startDate);
-      weekStart.setDate(weekStart.getDate() + (w * 7));
+      weekStart.setDate(weekStart.getDate() + w * 7);
 
-      const days: (HeatmapWeek['days'][number])[] = [];
+      const days: HeatmapWeek['days'][number][] = [];
 
       for (let d = 0; d < 5; d++) {
         const date = new SvelteDate(weekStart);
@@ -215,7 +228,7 @@
   // Initialize
   $effect(() => {
     pendingRestore = getTabState<ProjectEffortTabState>(tabStateKey) ?? null;
-    const unsubscribe = subscribeEffort((state: EffortState) => {
+    const unsubscribe = effortScope.subscribe((state: EffortState) => {
       members = state.members;
       ownership = state.ownership;
       ownershipLoading = state.ownershipLoading;
@@ -232,7 +245,7 @@
     });
 
     untrack(() => {
-      initEffort(projectId).then(async () => {
+      effortScope.initEffort(projectId).then(async () => {
         await restoreViewState();
       });
     });
@@ -247,7 +260,7 @@
         });
       }
       unsubscribe();
-      resetEffortStore();
+      effortScope.reset();
     };
   });
 
@@ -255,7 +268,7 @@
   $effect(() => {
     if (projectId && projectId !== storeProjectId) {
       untrack(() => {
-        initEffort(projectId).then(async () => {
+        effortScope.initEffort(projectId).then(async () => {
           await restoreViewState();
         });
       });
@@ -269,13 +282,13 @@
 
     if (savedViewMode) {
       const anchor = pendingRestore.selectedWeekStart ?? savedRange?.start;
-      await setViewMode(savedViewMode, anchor);
+      await effortScope.setViewMode(savedViewMode, anchor);
     }
 
     if (savedRange && !savedViewMode) {
       const { start, end } = savedRange;
       if (start !== dateRange.start || end !== dateRange.end) {
-        await setDateRange(start, end);
+        await effortScope.setDateRange(start, end);
       }
     }
 
@@ -284,35 +297,35 @@
     }
 
     if (pendingRestore.selectedMemberId) {
-      await selectMember(pendingRestore.selectedMemberId);
+      await effortScope.selectMember(pendingRestore.selectedMemberId);
     }
   }
 
   function handleMemberSelect(userId: string): void {
-    selectMember(userId === selectedMemberId ? null : userId);
+    effortScope.selectMember(userId === selectedMemberId ? null : userId);
   }
 
   async function handlePrevPeriod(): Promise<void> {
     if (viewMode === 'week') {
-      await previousWeek();
+      await effortScope.previousWeek();
     } else {
-      await previousMonth();
+      await effortScope.previousMonth();
     }
   }
 
   async function handleNextPeriod(): Promise<void> {
     if (viewMode === 'week') {
-      await nextWeek();
+      await effortScope.nextWeek();
     } else {
-      await nextMonth();
+      await effortScope.nextMonth();
     }
   }
 
   async function handleCurrentPeriod(): Promise<void> {
     if (viewMode === 'week') {
-      await goToToday();
+      await effortScope.goToToday();
     } else {
-      await goToCurrentMonth();
+      await effortScope.goToCurrentMonth();
     }
   }
 
@@ -320,10 +333,10 @@
     if (mode === viewMode) return;
     if (mode === 'month') {
       selectedWeekRange = { start: dateRange.start, end: dateRange.end };
-      await setViewMode('month', dateRange.start);
+      await effortScope.setViewMode('month', dateRange.start);
     } else {
       const anchor = selectedWeekRange?.start ?? dateRange.start;
-      await setViewMode('week', anchor);
+      await effortScope.setViewMode('week', anchor);
     }
   }
 
@@ -361,7 +374,7 @@
   }
 
   function handleRefresh(): void {
-    initEffort(projectId);
+    effortScope.initEffort(projectId);
   }
 
   function getWeekRangeFromDate(dateStr: string): { start: string; end: string } {
@@ -423,12 +436,11 @@
   function handleHeatmapCellClick(date: string): void {
     const range = getWeekRangeFromDate(date);
     if (viewMode === 'month') {
-      setViewMode('week', range.start);
+      effortScope.setViewMode('week', range.start);
     } else {
-      setDateRange(range.start, range.end);
+      effortScope.setDateRange(range.start, range.end);
     }
   }
-
 </script>
 
 <PageShell class={className}>
@@ -448,24 +460,16 @@
     <div class="effort-page">
       {#if error}
         <div class="effort-page__error">
-          <EmptyState
-            icon="alert-circle"
-            heading="Error loading effort data"
-            subtext={error}
-          />
+          <EmptyState icon="alert-circle" heading="Error loading effort data" subtext={error} />
         </div>
       {:else}
-        <SidebarDetailLayout
-          sidebarWidth={420}
-          minSidebarWidth={380}
-          maxSidebarWidth={500}
-        >
+        <SidebarDetailLayout sidebarWidth={420} minSidebarWidth={380} maxSidebarWidth={500}>
           {#snippet sidebar()}
             <EffortSidebar
               {members}
               {selectedMemberId}
               {viewMode}
-              periodLabel={periodLabel}
+              {periodLabel}
               tabId={tabStateKey}
               onMemberSelect={handleMemberSelect}
               onPrevPeriod={handlePrevPeriod}
@@ -483,7 +487,9 @@
               <!-- Header -->
               <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
                 {#snippet leading()}
-                  <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-surface-200)] text-[var(--color-text-secondary)] text-xs font-semibold">
+                  <div
+                    class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-surface-200)] text-[var(--color-text-secondary)] text-xs font-semibold"
+                  >
                     {selectedMember.userName.slice(0, 1)}
                   </div>
                 {/snippet}
@@ -496,7 +502,13 @@
                   </span>
                 </DetailTitle>
                 {#snippet actions()}
-                  <IconButton icon="x" variant="ghost" size="sm" title="Close" onclick={() => handleMemberSelect(selectedMember.userId)} />
+                  <IconButton
+                    icon="x"
+                    variant="ghost"
+                    size="sm"
+                    title="Close"
+                    onclick={() => handleMemberSelect(selectedMember.userId)}
+                  />
                 {/snippet}
               </DetailHeader>
 
@@ -504,17 +516,16 @@
               <div class="flex-1 overflow-y-auto p-3 space-y-3">
                 <!-- Conflict Warnings -->
                 {#if hasConflicts}
-                  <ConflictWarnings
-                    {conflicts}
-                    class="flex-shrink-0"
-                  />
+                  <ConflictWarnings {conflicts} class="flex-shrink-0" />
                 {/if}
 
                 {#if viewMode === 'month'}
                   <!-- Monthly Overview -->
                   <div>
                     <div class="flex items-center justify-between mb-2">
-                      <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">Monthly Overview</h3>
+                      <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">
+                        Monthly Overview
+                      </h3>
                       <span class="text-xs text-[var(--color-text-tertiary)]">{monthLabel}</span>
                     </div>
                     <SurfaceCard class="overflow-hidden" padding="sm">
@@ -532,8 +543,12 @@
                   {#if activeWeekData}
                     <div>
                       <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">Weekly Timesheet</h3>
-                        <span class="text-xs text-[var(--color-text-tertiary)]">{selectedWeekLabel}</span>
+                        <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">
+                          Weekly Timesheet
+                        </h3>
+                        <span class="text-xs text-[var(--color-text-tertiary)]"
+                          >{selectedWeekLabel}</span
+                        >
                       </div>
                       <SurfaceCard class="overflow-hidden" padding="none">
                         <WeeklyTimesheet
@@ -543,6 +558,8 @@
                           editable={true}
                           showHeader={false}
                           variant="embedded"
+                          onUpdateAllocation={effortScope.updateAllocation}
+                          onLogWork={effortScope.logWork}
                         />
                       </SurfaceCard>
                     </div>
@@ -551,7 +568,9 @@
                   <!-- Weekly Timesheet -->
                   <div>
                     <div class="flex items-center justify-between mb-2">
-                      <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">Weekly Timesheet</h3>
+                      <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">
+                        Weekly Timesheet
+                      </h3>
                       <span class="text-xs text-[var(--color-text-tertiary)]">{weekLabel}</span>
                     </div>
                     {#if activeWeekData}
@@ -563,6 +582,8 @@
                           editable={true}
                           showHeader={false}
                           variant="embedded"
+                          onUpdateAllocation={effortScope.updateAllocation}
+                          onLogWork={effortScope.logWork}
                         />
                       </SurfaceCard>
                     {:else}
@@ -576,7 +597,9 @@
                 <!-- Production Summary -->
                 <div>
                   <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">Production</h3>
+                    <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">
+                      Production
+                    </h3>
                     <span class="text-xs text-[var(--color-text-tertiary)]">
                       {viewMode === 'week' ? weekLabel : monthLabel}
                     </span>
@@ -590,7 +613,9 @@
 
                 <!-- Ownership -->
                 <div>
-                  <h3 class="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Ownership</h3>
+                  <h3 class="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                    Ownership
+                  </h3>
                   <div class="effort-page__ownership">
                     {#if ownershipError}
                       <EmptyState
@@ -604,6 +629,7 @@
                         userId={selectedMember.userId}
                         isLoading={ownershipLoading}
                         showHeader={false}
+                        onLoadOwnership={effortScope.loadMemberOwnership}
                       />
                     {:else if ownershipLoading}
                       <SurfaceCard class="effort-page__ownership-loading">
@@ -621,7 +647,9 @@
 
                 <!-- Activity Heatmap -->
                 <div>
-                  <h3 class="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Activity (Last 12 weeks)</h3>
+                  <h3 class="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                    Activity (Last 12 weeks)
+                  </h3>
                   <SurfaceCard class="effort-page__heatmap" padding="sm">
                     <ActivityHeatmap
                       data={heatmapData}
@@ -637,10 +665,30 @@
               </DetailHeader>
               <div class="flex-1 overflow-y-auto p-3 space-y-3">
                 <CardGrid cols={4} gap="md">
-                  <StatCard title="Team Members" value={members.length} icon="user" iconColor="blue-500" />
-                  <StatCard title="Allocated" value="{formatNumber(totalAllocated)}h" icon="clock" iconColor="emerald-500" />
-                  <StatCard title="Spent" value="{formatNumber(totalSpent)}h" icon="check-circle" iconColor="amber-500" />
-                  <StatCard title="Utilization" value={formatPercent(utilizationRate, { maximumFractionDigits: 0 })} icon="activity" iconColor="purple-500" />
+                  <StatCard
+                    title="Team Members"
+                    value={members.length}
+                    icon="user"
+                    iconColor="blue-500"
+                  />
+                  <StatCard
+                    title="Allocated"
+                    value="{formatNumber(totalAllocated)}h"
+                    icon="clock"
+                    iconColor="emerald-500"
+                  />
+                  <StatCard
+                    title="Spent"
+                    value="{formatNumber(totalSpent)}h"
+                    icon="check-circle"
+                    iconColor="amber-500"
+                  />
+                  <StatCard
+                    title="Utilization"
+                    value={formatPercent(utilizationRate, { maximumFractionDigits: 0 })}
+                    icon="activity"
+                    iconColor="purple-500"
+                  />
                 </CardGrid>
 
                 <div class="effort-page__placeholder">
@@ -671,22 +719,16 @@
     <div>
       <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">Working Days</h4>
       <div class="grid grid-cols-7 gap-2">
-        {#each [
-          { key: 'monday', label: 'Mon' },
-          { key: 'tuesday', label: 'Tue' },
-          { key: 'wednesday', label: 'Wed' },
-          { key: 'thursday', label: 'Thu' },
-          { key: 'friday', label: 'Fri' },
-          { key: 'saturday', label: 'Sat' },
-          { key: 'sunday', label: 'Sun' },
-        ] as day (day.key)}
+        {#each [{ key: 'monday', label: 'Mon' }, { key: 'tuesday', label: 'Tue' }, { key: 'wednesday', label: 'Wed' }, { key: 'thursday', label: 'Thu' }, { key: 'friday', label: 'Fri' }, { key: 'saturday', label: 'Sat' }, { key: 'sunday', label: 'Sun' }] as day (day.key)}
           <Button
             variant="unstyled"
             class="flex flex-col items-center gap-1 px-2 py-3 rounded-lg border transition-colors
               {workingDays[day.key as keyof typeof workingDays]
-                ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-            onclick={() => workingDays[day.key as keyof typeof workingDays] = !workingDays[day.key as keyof typeof workingDays]}
+              ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+              : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+            onclick={() =>
+              (workingDays[day.key as keyof typeof workingDays] =
+                !workingDays[day.key as keyof typeof workingDays])}
           >
             <span class="text-xs font-medium">{day.label}</span>
             <Icon

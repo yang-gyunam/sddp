@@ -34,22 +34,34 @@ function splitWords(str: string): string[] {
 export function camelCase(str: string): string {
   const words = splitWords(str);
   if (words.length === 0) return '';
-  return words[0]!.toLowerCase() + words.slice(1).map((w) => capitalize(w.toLowerCase())).join('');
+  return (
+    words[0]!.toLowerCase() +
+    words
+      .slice(1)
+      .map((w) => capitalize(w.toLowerCase()))
+      .join('')
+  );
 }
 
 /** Convert to kebab-case */
 export function kebabCase(str: string): string {
-  return splitWords(str).map((w) => w.toLowerCase()).join('-');
+  return splitWords(str)
+    .map((w) => w.toLowerCase())
+    .join('-');
 }
 
 /** Convert to snake_case */
 export function snakeCase(str: string): string {
-  return splitWords(str).map((w) => w.toLowerCase()).join('_');
+  return splitWords(str)
+    .map((w) => w.toLowerCase())
+    .join('_');
 }
 
 /** Convert to PascalCase */
 export function pascalCase(str: string): string {
-  return splitWords(str).map((w) => capitalize(w.toLowerCase())).join('');
+  return splitWords(str)
+    .map((w) => capitalize(w.toLowerCase()))
+    .join('');
 }
 
 /** Convert to URL-safe slug */

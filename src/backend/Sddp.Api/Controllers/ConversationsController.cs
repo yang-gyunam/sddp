@@ -1,12 +1,15 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.Conversations.Commands;
 using Sddp.Application.Features.Conversations.Queries;
+using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Controllers;
 
@@ -32,6 +35,7 @@ public class ConversationsController : BaseApiController
     /// Search conversations by name or description (lightweight, for autocomplete)
     /// </summary>
     [HttpGet("search")]
+    [ResourceScopeExempt("Search endpoint: no resource id in the route; results are filtered to the tenant and the requested project.")]
     public async Task<IActionResult> SearchConversations(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -70,6 +74,7 @@ public class ConversationsController : BaseApiController
     /// Get conversations for a specific project
     /// </summary>
     [HttpGet]
+    [ResourceScopeExempt("Listing endpoint: no resource id in the route; results are filtered to the tenant and the requested project.")]
     public async Task<IActionResult> GetConversations(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -119,7 +124,8 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Get a single conversation by ID
     /// </summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
+    [ResourceScope<Conversation>("id", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetConversationById(
         string id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -155,6 +161,7 @@ public class ConversationsController : BaseApiController
     /// Get tenant-wide (global) conversations (no project association)
     /// </summary>
     [HttpGet("global")]
+    [ResourceScopeExempt("Tenant-wide conversations by definition carry no project, so there is nothing to resolve from the route.")]
     public async Task<IActionResult> GetGlobalConversations(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromQuery] int pageNumber = 1,
@@ -182,6 +189,7 @@ public class ConversationsController : BaseApiController
     /// Get unread message counts for the current user
     /// </summary>
     [HttpGet("unread")]
+    [ResourceScopeExempt("Personal aggregate keyed by the caller's own user id, with no conversation named in the route.")]
     public async Task<IActionResult> GetUnreadCounts(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -217,6 +225,8 @@ public class ConversationsController : BaseApiController
     /// Scope dto.Scope, X-Project-Id.
     /// </summary>
     [HttpPost]
+    [ResourceScopeExempt("Creation endpoint: the conversation does not exist yet, so no owning project can be read from it.")]
+    [RequirePermission(PermissionCodes.ConversationCreate)]
     [Authorize(Policy = "CanCreateConversation")]
     [Authorize]
     public async Task<IActionResult> CreateConversation(
@@ -288,7 +298,8 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Get members of a conversation
     /// </summary>
-    [HttpGet("{conversationId:guid}/members")]
+    [HttpGet("{conversationId}/members")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetConversationMembers(
         string conversationId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -325,7 +336,9 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Add members to a conversation
     /// </summary>
-    [HttpPost("{conversationId:guid}/members")]
+    [HttpPost("{conversationId}/members")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> AddConversationMembers(
         string conversationId,
@@ -374,7 +387,8 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Get users that can be invited to a conversation
     /// </summary>
-    [HttpGet("{conversationId:guid}/invitable-users")]
+    [HttpGet("{conversationId}/invitable-users")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetInvitableUsers(
         string conversationId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -407,7 +421,9 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Remove a member from a conversation
     /// </summary>
-    [HttpDelete("{conversationId:guid}/members/{targetUserId:guid}")]
+    [HttpDelete("{conversationId}/members/{targetUserId}")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> RemoveConversationMember(
         string conversationId,
@@ -456,6 +472,7 @@ public class ConversationsController : BaseApiController
     /// Get user's starred conversations
     /// </summary>
     [HttpGet("starred")]
+    [ResourceScopeExempt("Personal listing keyed by the caller's own user id, with no conversation named in the route.")]
     public async Task<IActionResult> GetStarredConversations(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken = default)
@@ -481,7 +498,9 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Toggle starred status for a conversation
     /// </summary>
-    [HttpPost("{conversationId:guid}/star")]
+    [HttpPost("{conversationId}/star")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> ToggleStarred(
         string conversationId,
@@ -514,7 +533,9 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Toggle muted status for a conversation
     /// </summary>
-    [HttpPost("{conversationId:guid}/mute")]
+    [HttpPost("{conversationId}/mute")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> ToggleMuted(
         string conversationId,
@@ -547,7 +568,9 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Mark conversation as read
     /// </summary>
-    [HttpPost("{conversationId:guid}/read")]
+    [HttpPost("{conversationId}/read")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> MarkAsRead(
         string conversationId,
@@ -597,7 +620,8 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Get user conversation settings (starred, muted, lastReadAt)
     /// </summary>
-    [HttpGet("{conversationId:guid}/settings")]
+    [HttpGet("{conversationId}/settings")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetUserConversationSettings(
         string conversationId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -633,7 +657,8 @@ public class ConversationsController : BaseApiController
     /// <summary>
     /// Get requirements linked to a conversation
     /// </summary>
-    [HttpGet("{conversationId:guid}/linked-requirements")]
+    [HttpGet("{conversationId}/linked-requirements")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetLinkedRequirements(
         string conversationId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

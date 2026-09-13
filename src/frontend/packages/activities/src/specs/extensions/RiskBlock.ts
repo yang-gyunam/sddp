@@ -21,32 +21,33 @@ declare module '@tiptap/core' {
   }
 }
 
-const RISK_COLORS: Record<RiskLevel, { border: string; bg: string; text: string; badge: string }> = {
-  Low: {
-    border: 'border-green-500',
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    text: 'text-green-600 dark:text-green-400',
-    badge: 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300',
-  },
-  Medium: {
-    border: 'border-yellow-500',
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    text: 'text-yellow-600 dark:text-yellow-400',
-    badge: 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-300',
-  },
-  High: {
-    border: 'border-orange-500',
-    bg: 'bg-orange-50 dark:bg-orange-900/20',
-    text: 'text-orange-600 dark:text-orange-400',
-    badge: 'bg-orange-100 dark:bg-orange-800 text-orange-700 dark:text-orange-300',
-  },
-  Critical: {
-    border: 'border-red-500',
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    text: 'text-red-600 dark:text-red-400',
-    badge: 'bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300',
-  },
-};
+const RISK_COLORS: Record<RiskLevel, { border: string; bg: string; text: string; badge: string }> =
+  {
+    Low: {
+      border: 'border-green-500',
+      bg: 'bg-green-50 dark:bg-green-900/20',
+      text: 'text-green-600 dark:text-green-400',
+      badge: 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300',
+    },
+    Medium: {
+      border: 'border-yellow-500',
+      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      badge: 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-300',
+    },
+    High: {
+      border: 'border-orange-500',
+      bg: 'bg-orange-50 dark:bg-orange-900/20',
+      text: 'text-orange-600 dark:text-orange-400',
+      badge: 'bg-orange-100 dark:bg-orange-800 text-orange-700 dark:text-orange-300',
+    },
+    Critical: {
+      border: 'border-red-500',
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      text: 'text-red-600 dark:text-red-400',
+      badge: 'bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300',
+    },
+  };
 
 function getRiskScore(level: RiskLevel): number {
   const scores: Record<RiskLevel, number> = { Low: 1, Medium: 2, High: 3, Critical: 4 };
@@ -170,11 +171,7 @@ export const RiskBlock = Node.create({
           ? [
               'div',
               { class: 'text-sm border-t border-gray-200 dark:border-gray-700 pt-2 mt-2' },
-              [
-                'span',
-                { class: 'font-medium text-gray-700 dark:text-gray-300' },
-                'Mitigation: ',
-              ],
+              ['span', { class: 'font-medium text-gray-700 dark:text-gray-300' }, 'Mitigation: '],
               ['span', { class: 'text-gray-600 dark:text-gray-400' }, attrs.mitigation],
             ]
           : '',

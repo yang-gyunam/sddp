@@ -67,7 +67,7 @@ export function loadSettingsNavigation(): void {
       settingsNavigationStore.update((state) => ({
         ...state,
         activeCategory: savedCategory,
-        selectedProjectId: savedCategory.startsWith('project:') ? (savedProjectId || null) : null,
+        selectedProjectId: savedCategory.startsWith('project:') ? savedProjectId || null : null,
       }));
     }
   }
@@ -87,7 +87,9 @@ export function getSettingsNavigationState(): SettingsNavigationState {
   return settingsNavigationStore.get();
 }
 
-export function subscribeSettingsNavigation(listener: (state: SettingsNavigationState) => void): () => void {
+export function subscribeSettingsNavigation(
+  listener: (state: SettingsNavigationState) => void
+): () => void {
   return settingsNavigationStore.subscribe(listener);
 }
 

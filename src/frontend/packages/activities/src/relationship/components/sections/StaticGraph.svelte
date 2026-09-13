@@ -2,7 +2,14 @@
 <script lang="ts">
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { RelationshipGraphData, GraphNode, GraphEdge, RelationType } from '../../types';
-  import { RELATION_TYPE_STYLES, ENTITY_TYPE_STYLES, EDGE_COLORS, EDGE_DASH_ARRAYS, EDGE_LINE_STYLES, NODE_COLORS } from '../../types';
+  import {
+    RELATION_TYPE_STYLES,
+    ENTITY_TYPE_STYLES,
+    EDGE_COLORS,
+    EDGE_DASH_ARRAYS,
+    EDGE_LINE_STYLES,
+    NODE_COLORS,
+  } from '../../types';
   import { truncate } from '@sddp/shell';
   import { Icon, IconButton, Button } from '@sddp/ui';
 
@@ -232,14 +239,11 @@
               stroke-width={isRoot ? 3 : 2}
               class="transition-all dark:fill-gray-800"
             />
-            <foreignObject
-              x={-8}
-              y={-8}
-              width="16"
-              height="16"
-              class="pointer-events-none"
-            >
-              <div class="w-4 h-4 flex items-center justify-center" style="color: {isHovered || isRoot ? 'white' : color}">
+            <foreignObject x={-8} y={-8} width="16" height="16" class="pointer-events-none">
+              <div
+                class="w-4 h-4 flex items-center justify-center"
+                style="color: {isHovered || isRoot ? 'white' : color}"
+              >
                 <Icon name={iconName} size="xs" />
               </div>
             </foreignObject>
@@ -267,14 +271,14 @@
           <div class="font-medium text-gray-700 dark:text-gray-200">{selectedNode.label}</div>
           <IconButton icon="x" variant="ghost" size="sm" onclick={closePopover} title="Close" />
         </div>
-        <div class="text-gray-500 dark:text-gray-400">{ENTITY_TYPE_STYLES[selectedNode.entityType].label}</div>
+        <div class="text-gray-500 dark:text-gray-400">
+          {ENTITY_TYPE_STYLES[selectedNode.entityType].label}
+        </div>
         {#if selectedNode.status}
           <div class="text-gray-500 dark:text-gray-400 mt-1">Status: {selectedNode.status}</div>
         {/if}
         <div class="mt-3 flex justify-end">
-          <Button variant="primary" size="sm" onclick={handleOpenNode}>
-            Open
-          </Button>
+          <Button variant="primary" size="sm" onclick={handleOpenNode}>Open</Button>
         </div>
       </div>
     {/if}

@@ -26,11 +26,34 @@ export interface UpdateProjectParams {
 
 export type ProjectStatus = 'planning' | 'active' | 'concluded' | 'archived';
 
-export const PROJECT_STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string; icon: string; description: string }> = {
-  planning: { label: 'Planning', color: 'text-[var(--color-info-500)]', icon: 'edit', description: 'Project is being set up' },
-  active: { label: 'Active', color: 'text-[var(--color-success-500)]', icon: 'play', description: 'Project is in active development' },
-  concluded: { label: 'Concluded', color: 'text-[var(--color-warning-500)]', icon: 'pause', description: 'Project development is concluded' },
-  archived: { label: 'Archived', color: 'text-[var(--color-neutral-500)]', icon: 'archive', description: 'Project is archived (read-only)' },
+export const PROJECT_STATUS_CONFIG: Record<
+  ProjectStatus,
+  { label: string; color: string; icon: string; description: string }
+> = {
+  planning: {
+    label: 'Planning',
+    color: 'text-[var(--color-info-500)]',
+    icon: 'edit',
+    description: 'Project is being set up',
+  },
+  active: {
+    label: 'Active',
+    color: 'text-[var(--color-success-500)]',
+    icon: 'play',
+    description: 'Project is in active development',
+  },
+  concluded: {
+    label: 'Concluded',
+    color: 'text-[var(--color-warning-500)]',
+    icon: 'pause',
+    description: 'Project development is concluded',
+  },
+  archived: {
+    label: 'Archived',
+    color: 'text-[var(--color-neutral-500)]',
+    icon: 'archive',
+    description: 'Project is archived (read-only)',
+  },
 };
 
 export interface ProjectDataResetResult {
@@ -81,7 +104,17 @@ export interface ProjectWithBadges extends Project {
   };
 }
 
-export type ProjectPageType = 'dashboard' | 'conversations' | 'requirements' | 'specs' | 'tasks' | 'glossary' | 'artifacts' | 'effort' | 'traceability';
+export type ProjectPageType =
+  | 'dashboard'
+  | 'conversations'
+  | 'requirements'
+  | 'specs'
+  | 'tasks'
+  | 'glossary'
+  | 'knowledge'
+  | 'artifacts'
+  | 'effort'
+  | 'traceability';
 
 export interface ProjectTreeNode {
   id: string;
@@ -114,10 +147,21 @@ export interface ProjectsState {
 
 export const PROJECT_TREE_NODES: ProjectTreeNode[] = [
   { id: 'dashboard', type: 'dashboard', label: 'Dashboard', icon: ENTITY_SVG_ICONS.dashboard },
-  { id: 'conversations', type: 'conversations', label: 'Conversations', icon: ENTITY_SVG_ICONS.conversations },
-  { id: 'requirements', type: 'requirements', label: 'Requirements', icon: ENTITY_SVG_ICONS.requirements },
+  {
+    id: 'conversations',
+    type: 'conversations',
+    label: 'Conversations',
+    icon: ENTITY_SVG_ICONS.conversations,
+  },
+  {
+    id: 'requirements',
+    type: 'requirements',
+    label: 'Requirements',
+    icon: ENTITY_SVG_ICONS.requirements,
+  },
   { id: 'specs', type: 'specs', label: 'Specs', icon: ENTITY_SVG_ICONS.specs },
   { id: 'glossary', type: 'glossary', label: 'Glossary', icon: ENTITY_SVG_ICONS.glossary },
+  { id: 'knowledge', type: 'knowledge', label: 'Knowledge', icon: 'documents' },
   { id: 'artifacts', type: 'artifacts', label: 'Artifacts', icon: ENTITY_SVG_ICONS.artifacts },
   { id: 'tasks', type: 'tasks', label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
   { id: 'effort', type: 'effort', label: 'Effort', icon: ENTITY_SVG_ICONS.effort },
@@ -131,6 +175,7 @@ export const PROJECT_PAGE_CONFIG: Record<ProjectPageType, { label: string; icon:
   specs: { label: 'Specs', icon: ENTITY_SVG_ICONS.specs },
   tasks: { label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
   glossary: { label: 'Glossary', icon: ENTITY_SVG_ICONS.glossary },
+  knowledge: { label: 'Knowledge', icon: 'documents' },
   artifacts: { label: 'Artifacts', icon: ENTITY_SVG_ICONS.artifacts },
   effort: { label: 'Effort', icon: ENTITY_SVG_ICONS.effort },
   traceability: { label: 'Traceability', icon: 'type-hierarchy' },
@@ -141,7 +186,7 @@ export const PROJECT_PAGE_CONFIG: Record<ProjectPageType, { label: string; icon:
  */
 export function generateProjectTreeNodes(
   project: Project,
-  badges?: ProjectSidebarBadges,
+  badges?: ProjectSidebarBadges
 ): ProjectTreeNode[] {
   return PROJECT_TREE_NODES.map((node) => ({
     ...node,
@@ -178,9 +223,24 @@ export interface ProjectOwnership {
 // Timeline Types
 // ============================================
 
-export type TimelineEventType = 'created' | 'updated' | 'approved' | 'rejected' | 'commented' | 'locked' | 'signed-off' | 'create' | 'update' | 'delete' | 'comment' | 'approve' | 'reject' | 'transition';
+export type TimelineEventType =
+  | 'created'
+  | 'updated'
+  | 'approved'
+  | 'rejected'
+  | 'commented'
+  | 'locked'
+  | 'signed-off'
+  | 'create'
+  | 'update'
+  | 'delete'
+  | 'comment'
+  | 'approve'
+  | 'reject'
+  | 'transition';
 
-export type TimelineEntityType = 'spec' | 'requirement' | 'conversation' | 'glossary' | 'task' | 'artifact';
+export type TimelineEntityType =
+  'spec' | 'requirement' | 'conversation' | 'glossary' | 'task' | 'artifact';
 
 export interface TimelineEvent {
   id: string;
@@ -222,16 +282,28 @@ export const TIMELINE_EVENT_TYPE_STYLES: Record<
   updated: { color: 'text-[var(--color-info-500)]', icon: 'edit', label: 'updated' },
   approved: { color: 'text-[var(--color-teal-500)]', icon: 'check-circle', label: 'approved' },
   rejected: { color: 'text-[var(--color-error-500)]', icon: 'x-circle', label: 'rejected' },
-  commented: { color: 'text-[var(--color-warning-500)]', icon: 'message-circle', label: 'commented on' },
+  commented: {
+    color: 'text-[var(--color-warning-500)]',
+    icon: 'message-circle',
+    label: 'commented on',
+  },
   locked: { color: 'text-[var(--color-purple-500)]', icon: 'lock', label: 'locked' },
   'signed-off': { color: 'text-[var(--color-cyan-500)]', icon: 'file-check', label: 'signed off' },
   create: { color: 'text-[var(--color-success-500)]', icon: 'plus-circle', label: 'created' },
   update: { color: 'text-[var(--color-info-500)]', icon: 'edit', label: 'updated' },
   delete: { color: 'text-[var(--color-error-500)]', icon: 'trash-2', label: 'deleted' },
-  comment: { color: 'text-[var(--color-warning-500)]', icon: 'message-circle', label: 'commented on' },
+  comment: {
+    color: 'text-[var(--color-warning-500)]',
+    icon: 'message-circle',
+    label: 'commented on',
+  },
   approve: { color: 'text-[var(--color-teal-500)]', icon: 'check-circle', label: 'approved' },
   reject: { color: 'text-[var(--color-error-500)]', icon: 'x-circle', label: 'rejected' },
-  transition: { color: 'text-[var(--color-purple-500)]', icon: 'arrow-right', label: 'transitioned' },
+  transition: {
+    color: 'text-[var(--color-purple-500)]',
+    icon: 'arrow-right',
+    label: 'transitioned',
+  },
 };
 
 export const ENTITY_TYPE_ICONS: Record<TimelineEntityType, string> = {
@@ -242,4 +314,3 @@ export const ENTITY_TYPE_ICONS: Record<TimelineEntityType, string> = {
   task: 'check-square',
   artifact: 'package',
 };
-

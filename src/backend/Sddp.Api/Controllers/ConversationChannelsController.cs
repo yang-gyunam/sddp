@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.Conversations.Commands;
+using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Controllers;
 
@@ -25,7 +28,9 @@ public class ConversationChannelsController : BaseApiController
     /// <summary>
     /// Conclude a channel (Active → Concluded)
     /// </summary>
-    [HttpPost("{conversationId:guid}/conclude")]
+    [HttpPost("{conversationId}/conclude")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ConcludeChannel(
         string conversationId,
@@ -74,7 +79,9 @@ public class ConversationChannelsController : BaseApiController
     /// <summary>
     /// Reopen a channel (Concluded → Active)
     /// </summary>
-    [HttpPost("{conversationId:guid}/reopen")]
+    [HttpPost("{conversationId}/reopen")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ReopenChannel(
         string conversationId,
@@ -112,7 +119,9 @@ public class ConversationChannelsController : BaseApiController
     /// <summary>
     /// Archive a channel (Concluded → Archived)
     /// </summary>
-    [HttpPost("{conversationId:guid}/archive")]
+    [HttpPost("{conversationId}/archive")]
+    [ResourceScope<Conversation>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationClose)]
     [Authorize]
     public async Task<IActionResult> ArchiveChannel(
         string conversationId,

@@ -19,6 +19,9 @@ export * from './services';
 // Stores
 export * from './stores';
 
+// Safe text rendering helpers
+export * from './utils';
+
 // Components (sections + pages only; idioms are internal — avoids name collision)
 export * from './components/sections';
 export * from './components/pages';

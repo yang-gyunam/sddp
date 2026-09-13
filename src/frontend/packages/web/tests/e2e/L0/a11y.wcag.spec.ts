@@ -16,27 +16,11 @@ import { navigateToActivity, waitForSidebarContent } from '../helpers/page-objec
 type AxeResults = Awaited<ReturnType<AxeBuilder['analyze']>>;
 
 /**
- * axe-core WCAG 2.1 AA.
- * (tiptap).
+ * axe-core WCAG 2.1 A/AA 전체 DOM 검사.
  */
-async function checkA11y(
-  page: Page,
-  options?: { exclude?: string[] }
-): Promise<AxeResults> {
+async function checkA11y(page: Page): Promise<AxeResults> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const builder = new AxeBuilder({ page } as any)
-    .withTags(['wcag2a', 'wcag2aa'])
-    .exclude('.tiptap-editor')
-    .exclude('.ProseMirror');
-
-  if (options?.exclude) {
-    for (const selector of options.exclude) {
-      builder.exclude(selector);
-    }
-  }
-
-  const results = await builder.analyze();
-  return results;
+  return new AxeBuilder({ page } as any).withTags(['wcag2a', 'wcag2aa']).analyze();
 }
 
 /* * */
@@ -88,9 +72,7 @@ test.describe('A11y — App Shell', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // autoAuth fixture
-    const activityBar = page
-      .locator('[role="tablist"][aria-label="Activity Bar"]')
-      .first();
+    const activityBar = page.locator('[role="tablist"][aria-label="Activity Bar"]').first();
     await expect(activityBar).toBeVisible({ timeout: 15000 });
   });
 
@@ -110,9 +92,7 @@ test.describe('A11y — App Shell', () => {
 test.describe('A11y — Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    const activityBar = page
-      .locator('[role="tablist"][aria-label="Activity Bar"]')
-      .first();
+    const activityBar = page.locator('[role="tablist"][aria-label="Activity Bar"]').first();
     await expect(activityBar).toBeVisible({ timeout: 15000 });
   });
 
@@ -135,9 +115,7 @@ test.describe('A11y — Dashboard', () => {
 test.describe('A11y — Settings', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    const activityBar = page
-      .locator('[role="tablist"][aria-label="Activity Bar"]')
-      .first();
+    const activityBar = page.locator('[role="tablist"][aria-label="Activity Bar"]').first();
     await expect(activityBar).toBeVisible({ timeout: 15000 });
   });
 
@@ -160,9 +138,7 @@ test.describe('A11y — Settings', () => {
 test.describe('A11y — Projects', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    const activityBar = page
-      .locator('[role="tablist"][aria-label="Activity Bar"]')
-      .first();
+    const activityBar = page.locator('[role="tablist"][aria-label="Activity Bar"]').first();
     await expect(activityBar).toBeVisible({ timeout: 15000 });
   });
 
@@ -185,15 +161,11 @@ test.describe('A11y — Projects', () => {
 test.describe('A11y — Conversations', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    const activityBar = page
-      .locator('[role="tablist"][aria-label="Activity Bar"]')
-      .first();
+    const activityBar = page.locator('[role="tablist"][aria-label="Activity Bar"]').first();
     await expect(activityBar).toBeVisible({ timeout: 15000 });
   });
 
-  test('conversations should have no WCAG 2.1 AA violations', async ({
-    page,
-  }) => {
+  test('conversations should have no WCAG 2.1 AA violations', async ({ page }) => {
     await navigateToActivity(page, 'Conversations');
     await waitForSidebarContent(page);
 

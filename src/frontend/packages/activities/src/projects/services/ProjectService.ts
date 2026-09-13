@@ -4,7 +4,16 @@
  */
 
 import { fetchWithAuth } from '../../shared/api';
-import type { Project, ProjectDetail, ProjectMember, ProjectWithBadges, UpdateProjectParams, ProjectOwnership, ProjectDataResetResult, TenantDataResetResult } from '../types';
+import type {
+  Project,
+  ProjectDetail,
+  ProjectMember,
+  ProjectWithBadges,
+  UpdateProjectParams,
+  ProjectOwnership,
+  ProjectDataResetResult,
+  TenantDataResetResult,
+} from '../types';
 export type { UpdateProjectParams } from '../types';
 
 // ============================================
@@ -99,7 +108,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assertRecord(value: unknown, responseName: string): asserts value is Record<string, unknown> {
+function assertRecord(
+  value: unknown,
+  responseName: string
+): asserts value is Record<string, unknown> {
   if (!isRecord(value)) {
     throw new Error(`Invalid ${responseName}: expected an object`);
   }
@@ -135,10 +147,10 @@ function getOptionalStringField(
 function normalizeProjectStatus(status: string, responseName: string): Project['status'] {
   const normalized = status.toLowerCase();
   if (
-    normalized === 'planning'
-    || normalized === 'active'
-    || normalized === 'concluded'
-    || normalized === 'archived'
+    normalized === 'planning' ||
+    normalized === 'active' ||
+    normalized === 'concluded' ||
+    normalized === 'archived'
   ) {
     return normalized as Project['status'];
   }
@@ -165,7 +177,9 @@ function mapProjectApiResponse(raw: unknown, responseName = 'project response'):
     throw new Error(`Invalid ${responseName}: owner information is required`);
   }
 
-  const description = getOptionalStringField(raw, 'description', responseName);
+  const description = raw['description'] === null
+    ? undefined
+    : getOptionalStringField(raw, 'description', responseName);
 
   return {
     id: getRequiredStringField(raw, 'id', responseName),
@@ -175,7 +189,10 @@ function mapProjectApiResponse(raw: unknown, responseName = 'project response'):
     description,
     ownerId,
     ownerName,
-    status: normalizeProjectStatus(getRequiredStringField(raw, 'status', responseName), responseName),
+    status: normalizeProjectStatus(
+      getRequiredStringField(raw, 'status', responseName),
+      responseName
+    ),
     createdAt: getRequiredStringField(raw, 'createdAt', responseName),
     updatedAt: getRequiredStringField(raw, 'updatedAt', responseName),
   };
@@ -203,15 +220,13 @@ function normalizeProjectMembers(members: unknown[], responseName: string): Proj
     const lastActivityAtRaw = rawMember['lastActivityAt'];
     const isOnlineRaw = rawMember['isOnline'];
 
-    const personId = typeof personIdRaw === 'string' && personIdRaw.trim().length > 0
-      ? personIdRaw
-      : userId;
-    const displayName = typeof displayNameRaw === 'string' && displayNameRaw.trim().length > 0
-      ? displayNameRaw
-      : userId;
-    const role = typeof roleRaw === 'string' && roleRaw.trim().length > 0
-      ? roleRaw
-      : 'Member';
+    const personId =
+      typeof personIdRaw === 'string' && personIdRaw.trim().length > 0 ? personIdRaw : userId;
+    const displayName =
+      typeof displayNameRaw === 'string' && displayNameRaw.trim().length > 0
+        ? displayNameRaw
+        : userId;
+    const role = typeof roleRaw === 'string' && roleRaw.trim().length > 0 ? roleRaw : 'Member';
     const avatarUrl = typeof avatarUrlRaw === 'string' ? avatarUrlRaw : undefined;
     const lastActivityAt = typeof lastActivityAtRaw === 'string' ? lastActivityAtRaw : undefined;
     const isOnline = typeof isOnlineRaw === 'boolean' ? isOnlineRaw : false;
@@ -260,7 +275,10 @@ function normalizeProjectMembers(members: unknown[], responseName: string): Proj
   return Array.from(membersByUserId.values());
 }
 
-function mapProjectDetailApiResponse(raw: unknown, responseName = 'project detail response'): ProjectDetail {
+function mapProjectDetailApiResponse(
+  raw: unknown,
+  responseName = 'project detail response'
+): ProjectDetail {
   assertRecord(raw, responseName);
 
   const statistics = raw['statistics'];
@@ -315,7 +333,9 @@ export async function getProjectsPage(
     pageSize: String(pageSize),
   });
 
-  const response = await fetchWithAuth<PagedResponse<ProjectApiResponse>>(`/projects?${params}`, { tenantId });
+  const response = await fetchWithAuth<PagedResponse<ProjectApiResponse>>(`/projects?${params}`, {
+    tenantId,
+  });
   return {
     ...response,
     items: response.items.map((project, index) =>
@@ -356,11 +376,10 @@ export async function getProjectsWithBadges(tenantId: string): Promise<ProjectWi
 /**
  * Get project detail by ID (includes statistics and members)
  */
-export async function getProjectById(
-  tenantId: string,
-  projectId: string
-): Promise<ProjectDetail> {
-  const response = await fetchWithAuth<ProjectDetailApiResponse>(`/projects/${projectId}`, { tenantId });
+export async function getProjectById(tenantId: string, projectId: string): Promise<ProjectDetail> {
+  const response = await fetchWithAuth<ProjectDetailApiResponse>(`/projects/${projectId}`, {
+    tenantId,
+  });
   return mapProjectDetailApiResponse(response);
 }
 
@@ -590,10 +609,13 @@ export async function initializeProject(
   tenantId: string,
   projectId: string
 ): Promise<ProjectDetail> {
-  const response = await fetchWithAuth<ProjectDetailApiResponse>(`/projects/${projectId}/initialize`, {
-    tenantId,
-    method: 'POST',
-  });
+  const response = await fetchWithAuth<ProjectDetailApiResponse>(
+    `/projects/${projectId}/initialize`,
+    {
+      tenantId,
+      method: 'POST',
+    }
+  );
   return mapProjectDetailApiResponse(response);
 }
 
@@ -605,11 +627,14 @@ export async function concludeProject(
   projectId: string,
   reason?: string
 ): Promise<ProjectDetail> {
-  const response = await fetchWithAuth<ProjectDetailApiResponse>(`/projects/${projectId}/conclude`, {
-    tenantId,
-    method: 'POST',
-    body: { reason },
-  });
+  const response = await fetchWithAuth<ProjectDetailApiResponse>(
+    `/projects/${projectId}/conclude`,
+    {
+      tenantId,
+      method: 'POST',
+      body: { reason },
+    }
+  );
   return mapProjectDetailApiResponse(response);
 }
 
@@ -632,10 +657,7 @@ export async function reopenProject(
 /**
  * Archive a project (Concluded → Archived)
  */
-export async function archiveProject(
-  tenantId: string,
-  projectId: string
-): Promise<ProjectDetail> {
+export async function archiveProject(tenantId: string, projectId: string): Promise<ProjectDetail> {
   const response = await fetchWithAuth<ProjectDetailApiResponse>(`/projects/${projectId}/archive`, {
     tenantId,
     method: 'POST',
@@ -684,6 +706,11 @@ export class ProjectService {
   private tenantId = '';
   private projectId = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setTenantId(tenantId: string): void {
     this.tenantId = tenantId;
   }
@@ -702,10 +729,7 @@ export class ProjectService {
     return getProjects(this.tenantId);
   }
 
-  getProjectsPage(
-    pageNumber: number = 1,
-    pageSize: number = 20
-  ): Promise<PagedResponse<Project>> {
+  getProjectsPage(pageNumber: number = 1, pageSize: number = 20): Promise<PagedResponse<Project>> {
     return getProjectsPage(this.tenantId, pageNumber, pageSize);
   }
 
@@ -814,6 +838,10 @@ export class ProjectService {
   ): Promise<PagedResponse<ProjectGlossaryTerm>> {
     return getProjectGlossaryTerms(this.tenantId, projectId, page, pageSize, category, status);
   }
+}
+
+export function createProjectService(tenantId: string, projectId: string = ''): ProjectService {
+  return new ProjectService(tenantId, projectId);
 }
 
 // ============================================

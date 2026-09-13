@@ -81,9 +81,7 @@
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (m) =>
-          m.userName.toLowerCase().includes(query) ||
-          m.userEmail.toLowerCase().includes(query)
+        (m) => m.userName.toLowerCase().includes(query) || m.userEmail.toLowerCase().includes(query)
       );
     }
 
@@ -149,8 +147,11 @@
           title={viewMode === 'week' ? 'Previous week' : 'Previous month'}
         />
         <Dropdown position="bottom-left">
-          {#snippet trigger()}
+          {#snippet trigger({ toggle, open })}
             <Button
+              onclick={toggle}
+              aria-haspopup="true"
+              aria-expanded={open}
               variant="unstyled"
               class="effort-sidebar__period-label"
               title="Switch view"
@@ -164,7 +165,9 @@
               <span class="effort-sidebar__menu-label">View</span>
               <Button
                 variant="unstyled"
-                class="effort-sidebar__menu-item {viewMode === 'week' ? 'effort-sidebar__menu-item--active' : ''}"
+                class="effort-sidebar__menu-item {viewMode === 'week'
+                  ? 'effort-sidebar__menu-item--active'
+                  : ''}"
                 onclick={() => onViewModeChange('week')}
               >
                 Week
@@ -174,7 +177,9 @@
               </Button>
               <Button
                 variant="unstyled"
-                class="effort-sidebar__menu-item {viewMode === 'month' ? 'effort-sidebar__menu-item--active' : ''}"
+                class="effort-sidebar__menu-item {viewMode === 'month'
+                  ? 'effort-sidebar__menu-item--active'
+                  : ''}"
                 onclick={() => onViewModeChange('month')}
               >
                 Month
@@ -200,11 +205,7 @@
 
       <!-- Search (inline) -->
       <div class="effort-sidebar__search">
-        <Icon
-          name="search"
-          size="sm"
-          class="effort-sidebar__search-icon"
-        />
+        <Icon name="search" size="sm" class="effort-sidebar__search-icon" />
         <Input
           type="text"
           placeholder="Search..."
@@ -226,8 +227,11 @@
           />
         {/if}
         <Dropdown position="bottom-right">
-          {#snippet trigger()}
+          {#snippet trigger({ toggle, open })}
             <IconButton
+              onclick={toggle}
+              ariaHasPopup
+              ariaExpanded={open}
               icon="more-vertical"
               size="sm"
               variant="ghost"
@@ -240,8 +244,10 @@
               {#each gradeOptions as option (option.key)}
                 <Button
                   variant="unstyled"
-                  class="effort-sidebar__menu-item {filterGrade === option.key ? 'effort-sidebar__menu-item--active' : ''}"
-                  onclick={() => filterGrade = option.key}
+                  class="effort-sidebar__menu-item {filterGrade === option.key
+                    ? 'effort-sidebar__menu-item--active'
+                    : ''}"
+                  onclick={() => (filterGrade = option.key)}
                 >
                   {option.label}
                   {#if filterGrade === option.key}
@@ -256,8 +262,10 @@
               {#each sortOptions as option (option.key)}
                 <Button
                   variant="unstyled"
-                  class="effort-sidebar__menu-item {sortBy === option.key ? 'effort-sidebar__menu-item--active' : ''}"
-                  onclick={() => sortBy = option.key}
+                  class="effort-sidebar__menu-item {sortBy === option.key
+                    ? 'effort-sidebar__menu-item--active'
+                    : ''}"
+                  onclick={() => (sortBy = option.key)}
                 >
                   {option.label}
                   {#if sortBy === option.key}
@@ -542,7 +550,11 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

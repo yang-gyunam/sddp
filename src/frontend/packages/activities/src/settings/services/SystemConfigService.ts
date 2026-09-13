@@ -138,6 +138,11 @@ class SystemConfigService {
   private tenantId: string = '';
   private projectId: string = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId?: string) {
     this.tenantId = tenantId;
     this.projectId = projectId || '';
@@ -219,6 +224,13 @@ class SystemConfigService {
 
     return toSystemConfig(response);
   }
+}
+
+export function createSystemConfigService(
+  tenantId: string,
+  projectId: string = ''
+): SystemConfigService {
+  return new SystemConfigService(tenantId, projectId);
 }
 
 // Singleton instance

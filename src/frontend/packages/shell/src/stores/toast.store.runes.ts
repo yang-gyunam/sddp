@@ -93,20 +93,44 @@ export function createRunesToastDataStore(
     clearAll,
     info: (message, optionsOverride) => {
       effects.outputInfo('Application', message);
-      effects.addProblem({ severity: 'info', type: 'runtime', message, source: 'Toast', code: 'TOAST_INFO' });
+      effects.addProblem({
+        severity: 'info',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_INFO',
+      });
       return addToastData({ type: 'info', message, ...optionsOverride });
     },
     success: (message, optionsOverride) => {
       effects.outputInfo('Application', message);
-      effects.addProblem({ severity: 'info', type: 'runtime', message, source: 'Toast', code: 'TOAST_SUCCESS' });
+      effects.addProblem({
+        severity: 'info',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_SUCCESS',
+      });
       return addToastData({ type: 'success', message, ...optionsOverride });
     },
     warning: (message, optionsOverride) => {
-      effects.addProblem({ severity: 'warning', type: 'runtime', message, source: 'Toast', code: 'TOAST_WARNING' });
+      effects.addProblem({
+        severity: 'warning',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_WARNING',
+      });
       return addToastData({ type: 'warning', message, ...optionsOverride });
     },
     error: (message, optionsOverride) => {
-      effects.addProblem({ severity: 'error', type: 'runtime', message, source: 'Toast', code: 'TOAST_ERROR' });
+      effects.addProblem({
+        severity: 'error',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_ERROR',
+      });
       effects.panelShow();
       effects.panelSetActiveTab('problems');
       return addToastData({ type: 'error', message, ...optionsOverride });

@@ -4,6 +4,7 @@
   import { formatNumber, formatPercent, truncate } from '@sddp/shell';
   import type { ArtifactDetail, ArtifactFilterType } from '../../types';
   import { ARTIFACT_TYPE_STYLES, ARTIFACT_STATUS_STYLES } from '../../types';
+  import ArtifactTypeIcon from '../idioms/ArtifactTypeIcon.svelte';
 
   interface Props {
     artifact: ArtifactDetail | null;
@@ -18,33 +19,43 @@
   }: Props = $props();
 
   const typeStyle = $derived(artifact ? ARTIFACT_TYPE_STYLES[artifact.artifactType] : null);
-  const statusStyle = $derived(artifact ? (ARTIFACT_STATUS_STYLES[artifact.status] ?? ARTIFACT_STATUS_STYLES.Unverified) : null);
+  const statusStyle = $derived(
+    artifact ? (ARTIFACT_STATUS_STYLES[artifact.status] ?? ARTIFACT_STATUS_STYLES.Unverified) : null
+  );
 
   // Calculate health percentage
   const healthPercentage = $derived(
-    statusCounts.all > 0
-      ? Math.round((statusCounts.valid / statusCounts.all) * 100)
-      : 100
+    statusCounts.all > 0 ? Math.round((statusCounts.valid / statusCounts.all) * 100) : 100
   );
 
   const healthColor = $derived(
-    healthPercentage >= 90 ? 'text-[var(--color-success-500)]' :
-    healthPercentage >= 70 ? 'text-[var(--color-warning-500)]' : 'text-[var(--color-error-500)]'
+    healthPercentage >= 90
+      ? 'text-[var(--color-success-500)]'
+      : healthPercentage >= 70
+        ? 'text-[var(--color-warning-500)]'
+        : 'text-[var(--color-error-500)]'
   );
 
   const healthBarColor = $derived(
-    healthPercentage >= 90 ? 'bg-[var(--color-success-500)]' :
-    healthPercentage >= 70 ? 'bg-[var(--color-warning-500)]' : 'bg-[var(--color-error-500)]'
+    healthPercentage >= 90
+      ? 'bg-[var(--color-success-500)]'
+      : healthPercentage >= 70
+        ? 'bg-[var(--color-warning-500)]'
+        : 'bg-[var(--color-error-500)]'
   );
   const healthPercentageLabel = $derived(
     formatPercent(healthPercentage / 100, { maximumFractionDigits: 0 })
   );
 </script>
 
-<div class="flex flex-col h-full bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] {className}">
+<div
+  class="flex flex-col h-full bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] {className}"
+>
   <!-- Overall Stats -->
   <div class="p-3 border-b border-[var(--color-border-primary)]">
-    <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+    <h3
+      class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+    >
       Artifact Health
     </h3>
     <div class="flex items-center gap-3 p-3 bg-[var(--color-bg-primary)] rounded-lg">
@@ -68,30 +79,44 @@
 
   <!-- Status Breakdown -->
   <div class="p-3 border-b border-[var(--color-border-primary)]">
-    <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+    <h3
+      class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+    >
       Status Breakdown
     </h3>
     <div class="space-y-2">
       <div class="flex items-center justify-between p-2 bg-[var(--color-bg-primary)] rounded-lg">
-        <div class="flex items-center gap-2 text-[var(--color-success-600)] dark:text-[var(--color-success-400)]">
+        <div
+          class="flex items-center gap-2 text-[var(--color-success-600)] dark:text-[var(--color-success-400)]"
+        >
           <Icon name="check-circle" size="sm" />
           <span class="text-sm">Valid</span>
         </div>
-        <span class="font-medium text-[var(--color-text-primary)]">{formatNumber(statusCounts.valid)}</span>
+        <span class="font-medium text-[var(--color-text-primary)]"
+          >{formatNumber(statusCounts.valid)}</span
+        >
       </div>
       <div class="flex items-center justify-between p-2 bg-[var(--color-bg-primary)] rounded-lg">
-        <div class="flex items-center gap-2 text-[var(--color-warning-600)] dark:text-[var(--color-warning-400)]">
+        <div
+          class="flex items-center gap-2 text-[var(--color-warning-600)] dark:text-[var(--color-warning-400)]"
+        >
           <Icon name="alert-triangle" size="sm" />
           <span class="text-sm">Modified</span>
         </div>
-        <span class="font-medium text-[var(--color-text-primary)]">{formatNumber(statusCounts.modified)}</span>
+        <span class="font-medium text-[var(--color-text-primary)]"
+          >{formatNumber(statusCounts.modified)}</span
+        >
       </div>
       <div class="flex items-center justify-between p-2 bg-[var(--color-bg-primary)] rounded-lg">
-        <div class="flex items-center gap-2 text-[var(--color-error-600)] dark:text-[var(--color-error-400)]">
+        <div
+          class="flex items-center gap-2 text-[var(--color-error-600)] dark:text-[var(--color-error-400)]"
+        >
           <Icon name="x-circle" size="sm" />
           <span class="text-sm">Missing</span>
         </div>
-        <span class="font-medium text-[var(--color-text-primary)]">{formatNumber(statusCounts.missing)}</span>
+        <span class="font-medium text-[var(--color-text-primary)]"
+          >{formatNumber(statusCounts.missing)}</span
+        >
       </div>
     </div>
   </div>
@@ -99,7 +124,9 @@
   <!-- Selected Artifact Info -->
   {#if artifact}
     <div class="flex-1 overflow-y-auto p-3">
-      <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+      <h3
+        class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+      >
         Selected Artifact
       </h3>
 
@@ -108,7 +135,7 @@
         <div class="p-2 bg-[var(--color-bg-primary)] rounded-lg">
           <div class="text-xs text-[var(--color-text-tertiary)] mb-1">Type</div>
           <div class="flex items-center gap-2 {typeStyle?.color}">
-            <Icon name={typeStyle?.icon || 'file'} size="sm" />
+            <ArtifactTypeIcon type={artifact.artifactType} size={16} />
             <span class="text-sm font-medium">{typeStyle?.label}</span>
           </div>
         </div>
@@ -133,7 +160,10 @@
         <!-- Hash (truncated) -->
         <div class="p-2 bg-[var(--color-bg-primary)] rounded-lg">
           <div class="text-xs text-[var(--color-text-tertiary)] mb-1">Content Hash</div>
-          <div class="text-xs font-mono text-[var(--color-text-tertiary)] truncate" title={artifact.contentHash}>
+          <div
+            class="text-xs font-mono text-[var(--color-text-tertiary)] truncate"
+            title={artifact.contentHash}
+          >
             {truncate(artifact.contentHash, 24)}
           </div>
         </div>

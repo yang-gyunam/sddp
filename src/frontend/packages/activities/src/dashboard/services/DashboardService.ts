@@ -172,9 +172,15 @@ function mapMyDashboard(dto: MyDashboardDto): MyDashboard {
   return {
     statistics: {
       tasks: { total: dto.tasks?.total ?? 0, toDo: dto.tasks?.secondary ?? 0 },
-      conversations: { total: dto.conversations?.total ?? 0, active: dto.conversations?.secondary ?? 0 },
+      conversations: {
+        total: dto.conversations?.total ?? 0,
+        active: dto.conversations?.secondary ?? 0,
+      },
       specs: { total: dto.specs?.total ?? 0, inReview: dto.specs?.secondary ?? 0 },
-      requirements: { total: dto.requirements?.total ?? 0, draft: dto.requirements?.secondary ?? 0 },
+      requirements: {
+        total: dto.requirements?.total ?? 0,
+        draft: dto.requirements?.secondary ?? 0,
+      },
       glossary: { total: dto.glossary?.total ?? 0, draft: dto.glossary?.secondary ?? 0 },
       artifacts: { total: dto.artifacts?.total ?? 0, recent: dto.artifacts?.secondary ?? 0 },
       effort: { total: 40, used: 0 },
@@ -214,19 +220,35 @@ function mapProjectDashboard(dto: ProjectDashboardDto): ProjectDashboard {
       lastActivityAt: dto.project.lastActivityAt ?? dto.project.createdAt,
     },
     statistics: {
-      conversations: { total: dto.statistics.conversations?.total ?? 0, active: dto.statistics.conversations?.secondary ?? 0 },
-      requirements: { total: dto.statistics.requirements?.total ?? 0, draft: dto.statistics.requirements?.secondary ?? 0 },
-      specs: { total: dto.statistics.specs?.total ?? 0, inReview: dto.statistics.specs?.secondary ?? 0 },
-      tasks: { total: dto.statistics.tasks?.total ?? 0, inProgress: dto.statistics.tasks?.secondary ?? 0 },
-      artifacts: { total: dto.statistics.artifacts?.total ?? 0, recent: dto.statistics.artifacts?.secondary ?? 0 },
+      conversations: {
+        total: dto.statistics.conversations?.total ?? 0,
+        active: dto.statistics.conversations?.secondary ?? 0,
+      },
+      requirements: {
+        total: dto.statistics.requirements?.total ?? 0,
+        draft: dto.statistics.requirements?.secondary ?? 0,
+      },
+      specs: {
+        total: dto.statistics.specs?.total ?? 0,
+        inReview: dto.statistics.specs?.secondary ?? 0,
+      },
+      tasks: {
+        total: dto.statistics.tasks?.total ?? 0,
+        inProgress: dto.statistics.tasks?.secondary ?? 0,
+      },
+      artifacts: {
+        total: dto.statistics.artifacts?.total ?? 0,
+        recent: dto.statistics.artifacts?.secondary ?? 0,
+      },
     },
     progress: [],
-    teamMembers: dto.teamMembers?.map((m) => ({
-      userId: m.userId,
-      userName: m.userName,
-      role: m.role,
-      activityCount: m.activityCount,
-    })) ?? [],
+    teamMembers:
+      dto.teamMembers?.map((m) => ({
+        userId: m.userId,
+        userName: m.userName,
+        role: m.role,
+        activityCount: m.activityCount,
+      })) ?? [],
     recentActivities: activities,
     requirementStatus: {},
     taskProgress: {
@@ -254,7 +276,10 @@ function mapSystemDashboard(dto: SystemDashboardDto): SystemDashboard {
       users: { total: dto.users?.total ?? 0, thisMonth: dto.users?.secondary ?? 0 },
       specs: { total: dto.specs?.total ?? 0, thisWeek: dto.specs?.secondary ?? 0 },
       tasks: { total: 0, thisWeek: 0 },
-      conversations: { total: dto.conversations?.total ?? 0, thisWeek: dto.conversations?.secondary ?? 0 },
+      conversations: {
+        total: dto.conversations?.total ?? 0,
+        thisWeek: dto.conversations?.secondary ?? 0,
+      },
     },
     projectActivity: dates.map((date) => ({
       date,
@@ -284,16 +309,25 @@ function mapSystemDashboard(dto: SystemDashboardDto): SystemDashboard {
 // ============================================
 
 export async function getMyDashboard(tenantId?: string): Promise<MyDashboard> {
-  const dto = await fetchWithAuth<MyDashboardDto>('/dashboard/my', tenantId ? { tenantId } : undefined);
+  const dto = await fetchWithAuth<MyDashboardDto>(
+    '/dashboard/my',
+    tenantId ? { tenantId } : undefined
+  );
   return mapMyDashboard(dto);
 }
 
 export async function getSystemDashboard(tenantId?: string): Promise<SystemDashboard> {
-  const dto = await fetchWithAuth<SystemDashboardDto>('/dashboard/system', tenantId ? { tenantId } : undefined);
+  const dto = await fetchWithAuth<SystemDashboardDto>(
+    '/dashboard/system',
+    tenantId ? { tenantId } : undefined
+  );
   return mapSystemDashboard(dto);
 }
 
-export async function getProjectDashboard(projectId: string, tenantId?: string): Promise<ProjectDashboard> {
+export async function getProjectDashboard(
+  projectId: string,
+  tenantId?: string
+): Promise<ProjectDashboard> {
   const dto = await fetchWithAuth<ProjectDashboardDto>(
     `/dashboard/projects/${projectId}`,
     tenantId ? { tenantId } : undefined
@@ -301,12 +335,15 @@ export async function getProjectDashboard(projectId: string, tenantId?: string):
   return mapProjectDashboard(dto);
 }
 
-export async function getActivities(params?: {
-  projectId?: string;
-  userId?: string;
-  limit?: number;
-  offset?: number;
-}, tenantId?: string): Promise<ActivityLogEntry[]> {
+export async function getActivities(
+  params?: {
+    projectId?: string;
+    userId?: string;
+    limit?: number;
+    offset?: number;
+  },
+  tenantId?: string
+): Promise<ActivityLogEntry[]> {
   // Route to existing API based on params
   if (params?.userId) {
     const result = await getMyActivities(tenantId, 1, params.limit ?? 20);
@@ -331,16 +368,25 @@ export async function refreshDashboard(
 }
 
 export async function getMyDashboardWidgets(tenantId?: string): Promise<DashboardWidgets> {
-  const responseData = await fetchWithAuth<DashboardWidgets>('/dashboard/my/widgets', tenantId ? { tenantId } : undefined);
+  const responseData = await fetchWithAuth<DashboardWidgets>(
+    '/dashboard/my/widgets',
+    tenantId ? { tenantId } : undefined
+  );
   const data = (responseData as unknown as { data?: DashboardWidgets }).data || responseData;
   return data;
 }
 
 export async function getMyOverview(tenantId?: string): Promise<MyStatistics> {
-  const dto = await fetchWithAuth<MyOverviewDto>('/dashboard/my/overview', tenantId ? { tenantId } : undefined);
+  const dto = await fetchWithAuth<MyOverviewDto>(
+    '/dashboard/my/overview',
+    tenantId ? { tenantId } : undefined
+  );
   return {
     tasks: { total: dto.tasks?.total ?? 0, toDo: dto.tasks?.secondary ?? 0 },
-    conversations: { total: dto.conversations?.total ?? 0, active: dto.conversations?.secondary ?? 0 },
+    conversations: {
+      total: dto.conversations?.total ?? 0,
+      active: dto.conversations?.secondary ?? 0,
+    },
     specs: { total: dto.specs?.total ?? 0, inReview: dto.specs?.secondary ?? 0 },
     requirements: { total: dto.requirements?.total ?? 0, draft: dto.requirements?.secondary ?? 0 },
     glossary: { total: dto.glossary?.total ?? 0, draft: dto.glossary?.secondary ?? 0 },
@@ -365,7 +411,10 @@ export async function getMyActivities(
 }
 
 export async function getSystemStats(tenantId?: string): Promise<SystemStatistics> {
-  const dto = await fetchWithAuth<SystemStatsDto>('/dashboard/system/stats', tenantId ? { tenantId } : undefined);
+  const dto = await fetchWithAuth<SystemStatsDto>(
+    '/dashboard/system/stats',
+    tenantId ? { tenantId } : undefined
+  );
   return {
     projects: { total: dto.totalProjects ?? 0, thisMonth: 0 },
     users: { total: dto.totalUsers ?? 0, thisMonth: 0 },
@@ -392,7 +441,10 @@ export async function getSystemAuditLogs(
 
 export async function getSystemHealth(tenantId?: string): Promise<HealthCheckDto> {
   try {
-    return await fetchWithAuth<HealthCheckDto>('/dashboard/system/health', tenantId ? { tenantId } : undefined);
+    return await fetchWithAuth<HealthCheckDto>(
+      '/dashboard/system/health',
+      tenantId ? { tenantId } : undefined
+    );
   } catch (error) {
     console.warn('System Health API failed:', error);
     return {
@@ -428,10 +480,7 @@ export async function getMyNotifications(
   };
 }
 
-export async function markNotificationRead(
-  id: string,
-  tenantId?: string
-): Promise<void> {
+export async function markNotificationRead(id: string, tenantId?: string): Promise<void> {
   await fetchWithAuth(`/dashboard/my/notifications/${id}/read`, {
     method: 'PATCH',
     ...(tenantId ? { tenantId } : {}),
@@ -491,7 +540,10 @@ export class DashboardService {
     return getMyDashboardWidgets(this.tenantId);
   }
 
-  getMyActivities(page = 1, pageSize = 20): Promise<{ activities: ActivityLogEntry[]; totalCount: number }> {
+  getMyActivities(
+    page = 1,
+    pageSize = 20
+  ): Promise<{ activities: ActivityLogEntry[]; totalCount: number }> {
     return getMyActivities(this.tenantId, page, pageSize);
   }
 

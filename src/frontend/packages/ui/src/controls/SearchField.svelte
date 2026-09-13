@@ -33,13 +33,11 @@
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   const sizeClasses = $derived(
-    size === 'sm'
-      ? 'pl-8 pr-7 py-1.5 text-xs'
-      : 'pl-9 pr-8 py-2 text-sm'
+    size === 'sm' ? 'pl-8 pr-7 py-1.5 text-xs' : 'pl-9 pr-8 py-2 text-sm'
   );
 
-  const iconSize = $derived(size === 'sm' ? 'xs' as const : 'sm' as const);
-  const clearBtnSize = $derived(size === 'sm' ? 'xs' as const : 'xs' as const);
+  const iconSize = $derived(size === 'sm' ? ('xs' as const) : ('sm' as const));
+  const clearBtnSize = $derived(size === 'sm' ? ('xs' as const) : ('xs' as const));
 
   function handleInput(e: Event) {
     value = (e.target as HTMLInputElement).value;
@@ -86,7 +84,9 @@
   <Icon
     name="search"
     size={iconSize}
-    class="absolute {size === 'sm' ? 'left-2' : 'left-3'} pointer-events-none text-[var(--color-text-muted)]"
+    class="absolute {size === 'sm'
+      ? 'left-2'
+      : 'left-3'} pointer-events-none text-[var(--color-text-muted)]"
   />
   <input
     bind:this={inputElement}
@@ -105,12 +105,7 @@
   />
   {#if clearable && value}
     <div class="absolute {size === 'sm' ? 'right-1' : 'right-1.5'}">
-      <IconButton
-        icon="x"
-        size={clearBtnSize}
-        onclick={handleClear}
-        title="Clear search"
-      />
+      <IconButton icon="x" size={clearBtnSize} onclick={handleClear} title="Clear search" />
     </div>
   {/if}
 </div>

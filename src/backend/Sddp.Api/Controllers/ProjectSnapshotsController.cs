@@ -1,9 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.ProjectSnapshots.Commands;
 using Sddp.Application.Features.ProjectSnapshots.Queries;
 
@@ -28,6 +31,7 @@ public class ProjectSnapshotsController : BaseApiController
     /// GET /api/projects/{projectId}/snapshots
     /// </summary>
     [HttpGet]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetSnapshots(
         string projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -51,6 +55,9 @@ public class ProjectSnapshotsController : BaseApiController
     /// POST /api/projects/{projectId}/snapshots
     /// </summary>
     [HttpPost]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
+    [Authorize]
     public async Task<IActionResult> CreateSnapshot(
         string projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -82,6 +89,9 @@ public class ProjectSnapshotsController : BaseApiController
     /// POST /api/projects/{projectId}/snapshots/{snapshotId}/restore
     /// </summary>
     [HttpPost("{snapshotId}/restore")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
+    [Authorize]
     public async Task<IActionResult> RestoreSnapshot(
         string projectId,
         string snapshotId,
@@ -116,6 +126,9 @@ public class ProjectSnapshotsController : BaseApiController
     /// DELETE /api/projects/{projectId}/snapshots/{snapshotId}
     /// </summary>
     [HttpDelete("{snapshotId}")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
+    [Authorize]
     public async Task<IActionResult> DeleteSnapshot(
         string projectId,
         string snapshotId,

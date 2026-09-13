@@ -69,6 +69,7 @@ public sealed class GetTenantMembersQueryHandler : IRequestHandler<GetTenantMemb
 }
 
 public sealed record GetUsersQuery(
+    GlobalUniqueId TenantId,
     int PageNumber,
     int PageSize,
     string? Search) : IQuery<PagedResult<UserDto>>;
@@ -88,21 +89,34 @@ public sealed class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedR
         var search = request.Search;
         var hasSearch = !string.IsNullOrWhiteSpace(search);
 
-        var (pagedUsers, totalCount) = await (userRepo.FindPagedAsync(
+        var memberIds = await TenantUserScope.MemberIdsAsync(
+            _unitOfWork, request.TenantId, cancellationToken).ConfigureAwait(false);
+
+        var matching = await (userRepo.FindAsync(
             u => !hasSearch
                 || u.Username.Contains(search!)
                 || u.Email.Contains(search!)
                 || u.DisplayName.Contains(search!),
-            request.PageNumber, request.PageSize,
-            orderBy: u => u.DisplayName,
-            cancellationToken: cancellationToken)).ConfigureAwait(false);
+            cancellationToken)).ConfigureAwait(false);
 
-        var items = pagedUsers.Select(UserMapping.MapToDto).ToList();
-        return PagedResult<UserDto>.Create(items, totalCount, request.PageNumber, request.PageSize);
+        var inTenant = matching
+            .Where(u => memberIds.Contains(u.Id))
+            .OrderBy(u => u.DisplayName)
+            .ToList();
+
+        var items = inTenant
+            .Skip(Math.Max(0, request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(UserMapping.MapToDto)
+            .ToList();
+
+        return PagedResult<UserDto>.Create(items, inTenant.Count, request.PageNumber, request.PageSize);
     }
 }
 
-public sealed record GetUserByIdQuery(GlobalUniqueId UserId) : IQuery<UserDto?>;
+public sealed record GetUserByIdQuery(
+    GlobalUniqueId UserId,
+    GlobalUniqueId TenantId) : IQuery<UserDto?>;
 
 public sealed class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDto?>
 {
@@ -117,11 +131,20 @@ public sealed class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, 
     {
         var userRepo = _unitOfWork.Repository<User>();
         var user = await (userRepo.GetByIdAsync(request.UserId, cancellationToken)).ConfigureAwait(false);
-        return user is null ? null : UserMapping.MapToDto(user);
+        if (user is null)
+        {
+            return null;
+        }
+
+        return await TenantUserScope.IsMemberAsync(
+                _unitOfWork, request.UserId, request.TenantId, cancellationToken).ConfigureAwait(false)
+            ? UserMapping.MapToDto(user)
+            : null;
     }
 }
 
 public sealed record GetSystemUsersQuery(
+    GlobalUniqueId TenantId,
     int PageNumber,
     int PageSize,
     string? Search,
@@ -170,6 +193,10 @@ public sealed class GetSystemUsersQueryHandler : IRequestHandler<GetSystemUsersQ
         var normalizedStatusFilter = string.IsNullOrWhiteSpace(request.Status)
             ? null
             : request.Status.Trim().ToLowerInvariant();
+
+        var tenantMemberIds = await TenantUserScope.MemberIdsAsync(
+            _unitOfWork, request.TenantId, cancellationToken).ConfigureAwait(false);
+        users = users.Where(u => tenantMemberIds.Contains(u.Id)).ToList();
 
         var candidateUserIds = users.Select(u => u.Id).ToList();
         var allUserRoles = candidateUserIds.Count == 0
@@ -270,7 +297,9 @@ public sealed class GetSystemUsersQueryHandler : IRequestHandler<GetSystemUsersQ
     }
 }
 
-public sealed record GetSystemUserByIdQuery(GlobalUniqueId UserId) : IQuery<SystemUserDto?>;
+public sealed record GetSystemUserByIdQuery(
+    GlobalUniqueId UserId,
+    GlobalUniqueId TenantId) : IQuery<SystemUserDto?>;
 
 public sealed class GetSystemUserByIdQueryHandler : IRequestHandler<GetSystemUserByIdQuery, SystemUserDto?>
 {
@@ -292,6 +321,12 @@ public sealed class GetSystemUserByIdQueryHandler : IRequestHandler<GetSystemUse
         // user get ()
         var user = await (userRepo.GetByIdIncludingInactiveAsync(request.UserId, cancellationToken)).ConfigureAwait(false);
         if (user is null)
+        {
+            return null;
+        }
+
+        if (!await TenantUserScope.IsMemberAsync(
+                _unitOfWork, request.UserId, request.TenantId, cancellationToken).ConfigureAwait(false))
         {
             return null;
         }
@@ -397,6 +432,9 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
 
     public async Task<UserDto?> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
+        // Deliberately not tenant-scoped: this reads the caller's own record, and the id comes
+        // from their own token. Requiring tenant membership here would lock a user out of their
+        // own profile the moment their last role in that tenant was removed.
         var userRepo = _unitOfWork.Repository<User>();
         var user = await (userRepo.GetByIdAsync(request.UserId, cancellationToken)).ConfigureAwait(false);
         return user is null ? null : UserMapping.MapToDto(user);

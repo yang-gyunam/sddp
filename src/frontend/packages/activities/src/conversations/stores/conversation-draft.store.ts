@@ -46,5 +46,4 @@ export const getConversationDraft = (key: string): ConversationDraft | undefined
 export const setConversationDraft = (key: string, draft: ConversationDraft): void =>
   conversationDraftStore.setDraft(key, draft);
 
-export const clearConversationDraft = (key: string): void =>
-  conversationDraftStore.clearDraft(key);
+export const clearConversationDraft = (key: string): void => conversationDraftStore.clearDraft(key);

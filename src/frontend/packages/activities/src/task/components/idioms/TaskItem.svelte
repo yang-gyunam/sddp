@@ -36,8 +36,8 @@
   class="w-full flex items-start gap-2 px-3 py-2 text-left transition-colors
     border-b border-[var(--color-border-primary)]
     {selected
-      ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
-      : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
+    ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
+    : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
     {className}"
   onclick={handleClick}
 >
@@ -66,7 +66,11 @@
       {/if}
 
       {#if task.estimatedHours > 0}
-        <span class="flex items-center gap-0.5 {task.hasOverdueEffort ? 'text-[var(--color-error-500)]' : ''}">
+        <span
+          class="flex items-center gap-0.5 {task.hasOverdueEffort
+            ? 'text-[var(--color-error-500)]'
+            : ''}"
+        >
           <Icon name="clock" size="xs" />
           {task.actualHours}h/{task.estimatedHours}h
         </span>

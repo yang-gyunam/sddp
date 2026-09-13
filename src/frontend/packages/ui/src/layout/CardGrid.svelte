@@ -6,12 +6,7 @@
     children?: import('svelte').Snippet;
   }
 
-  let {
-    cols = 3,
-    gap = 'md',
-    class: className = '',
-    children,
-  }: Props = $props();
+  let { cols = 3, gap = 'md', class: className = '', children }: Props = $props();
 
   const gapMap = {
     sm: 'var(--space-2)',

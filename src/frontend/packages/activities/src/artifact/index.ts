@@ -25,7 +25,12 @@ export * from './types';
 export * from './stores';
 
 // Services (explicit to avoid naming collisions with wildcard re-exports)
-export { resetArtifactService, getArtifactService, ArtifactService } from './services';
+export {
+  resetArtifactService,
+  createArtifactService,
+  getArtifactService,
+  ArtifactService,
+} from './services';
 
 // Components (sections + pages only; idioms are internal — avoids name collision with types)
 export * from './components/sections';

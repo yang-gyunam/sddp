@@ -1,5 +1,12 @@
 export type { UserRef } from './userRef.types';
-export { ROLE_DISPLAY, ALL_ROLES, PROJECT_ROLES, getRoleLabel, isSystemRole } from './role.constants';
+export {
+  ROLE_DISPLAY,
+  ALL_ROLES,
+  PROJECT_ROLES,
+  getRoleLabel,
+  isSystemRole,
+  getSystemRoleBadge,
+} from './role.constants';
 
 /**
  * Field author information - who last modified each field

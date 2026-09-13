@@ -244,7 +244,9 @@ test.describe('Authentication - API Authorization', () => {
 
     // Should receive 401 Unauthorized (if API is running)
     const status = response.status();
-    test.skip(status === 0, 'API not running');
+    // A genuine environment prerequisite: status 0 means the request never left. CI always
+    // has the API up, so this only fires locally.
+    test.skip(status === 0, 'local-only: API not running');
     expect(status).toBe(401);
   });
 
@@ -261,11 +263,15 @@ test.describe('Authentication - API Authorization', () => {
       }
     );
 
-    test.skip(loginResponse.status() !== 200, 'Login failed — cannot test protected API');
+    // Login failing is a regression, not a reason to stop looking.
+    expect(loginResponse.status()).toBe(200);
 
+    // The API wraps every payload: `{ success, data: { accessToken, ... } }`. Reading
+    // `loginData.accessToken` found nothing on every run, and the skip below turned that into
+    // "no token in this environment" -- so the protected-endpoint assertion never executed.
     const loginData = await loginResponse.json();
-    const accessToken = loginData.accessToken || loginData.token;
-    test.skip(!accessToken, 'No access token received from login');
+    const accessToken = loginData.data?.accessToken ?? loginData.accessToken ?? loginData.token;
+    expect(accessToken, 'login must return an access token').toBeTruthy();
 
     // Use token to access protected endpoint
     const protectedResponse = await request.get(

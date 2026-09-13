@@ -1,4 +1,5 @@
 using Sddp.Abstractions.Base;
+using Sddp.Abstractions.Constants;
 
 namespace Sddp.Domain.Entities;
 
@@ -33,6 +34,11 @@ public class Permission : EntityBase
     public string Action { get; private set; } = string.Empty;
 
     /// <summary>
+    /// Whether this permission is part of the built-in authorization contract.
+    /// </summary>
+    public bool IsSystemPermission { get; private set; }
+
+    /// <summary>
     /// Roles that include this permission
     /// </summary>
     public ICollection<RolePermission> RolePermissions { get; private set; } = [];
@@ -40,13 +46,29 @@ public class Permission : EntityBase
     // Default constructor for EF Core
     private Permission() { }
 
-    public Permission(string code, string name, string description, string resource, string action)
+    public Permission(
+        string code,
+        string name,
+        string description,
+        string resource,
+        string action,
+        bool isSystemPermission = false)
     {
         Code = code;
         Name = name;
         Description = description;
         Resource = resource;
         Action = action;
+        IsSystemPermission = isSystemPermission;
+    }
+
+    public void MarkAsSystemPermission()
+    {
+        if (!IsSystemPermission)
+        {
+            IsSystemPermission = true;
+            MarkAsModified();
+        }
     }
 
     /// <summary>
@@ -54,53 +76,68 @@ public class Permission : EntityBase
     /// </summary>
     public static IEnumerable<Permission> CreateDefaultPermissions()
     {
+        static Permission SystemPermission(
+            string code,
+            string name,
+            string description,
+            string resource,
+            string action) => new(code, name, description, resource, action, isSystemPermission: true);
+
         // Spec permissions
-        yield return new Permission("spec:create", "Create Spec", "Create a spec", "spec", "create");
-        yield return new Permission("spec:read", "Read Spec", "Read a spec", "spec", "read");
-        yield return new Permission("spec:update", "Update Spec", "Update a spec", "spec", "update");
-        yield return new Permission("spec:delete", "Delete Spec", "Delete a spec", "spec", "delete");
-        yield return new Permission("spec:approve", "Approve Spec", "Approve a spec", "spec", "approve");
-        yield return new Permission("spec:lock", "Lock Spec", "Lock a spec", "spec", "lock");
+        yield return SystemPermission(PermissionCodes.SpecCreate, "Create Spec", "Create a spec", "spec", "create");
+        yield return SystemPermission(PermissionCodes.SpecRead, "Read Spec", "Read a spec", "spec", "read");
+        yield return SystemPermission(PermissionCodes.SpecUpdate, "Update Spec", "Update a spec", "spec", "update");
+        yield return SystemPermission(PermissionCodes.SpecDelete, "Delete Spec", "Delete a spec", "spec", "delete");
+        yield return SystemPermission(PermissionCodes.SpecApprove, "Approve Spec", "Approve a spec", "spec", "approve");
+        yield return SystemPermission(PermissionCodes.SpecLock, "Lock Spec", "Lock a spec", "spec", "lock");
 
         // Conversation permissions
-        yield return new Permission("conversation:create", "Create Conversation", "Create a conversation", "conversation", "create");
-        yield return new Permission("conversation:read", "Read Conversation", "Read a conversation", "conversation", "read");
-        yield return new Permission("conversation:post", "Post to Conversation", "Post a conversation message", "conversation", "post");
-        yield return new Permission("conversation:close", "Close Conversation", "Close a conversation", "conversation", "close");
+        yield return SystemPermission(PermissionCodes.ConversationCreate, "Create Conversation", "Create a conversation", "conversation", "create");
+        yield return SystemPermission(PermissionCodes.ConversationRead, "Read Conversation", "Read a conversation", "conversation", "read");
+        yield return SystemPermission(PermissionCodes.ConversationPost, "Post to Conversation", "Post a conversation message", "conversation", "post");
+        yield return SystemPermission(PermissionCodes.ConversationClose, "Close Conversation", "Close a conversation", "conversation", "close");
 
         // Requirement permissions
-        yield return new Permission("requirement:create", "Create Requirement", "Create a requirement", "requirement", "create");
-        yield return new Permission("requirement:read", "Read Requirement", "Read a requirement", "requirement", "read");
-        yield return new Permission("requirement:update", "Update Requirement", "Update a requirement", "requirement", "update");
-        yield return new Permission("requirement:delete", "Delete Requirement", "Delete a requirement", "requirement", "delete");
+        yield return SystemPermission(PermissionCodes.RequirementCreate, "Create Requirement", "Create a requirement", "requirement", "create");
+        yield return SystemPermission(PermissionCodes.RequirementRead, "Read Requirement", "Read a requirement", "requirement", "read");
+        yield return SystemPermission(PermissionCodes.RequirementUpdate, "Update Requirement", "Update a requirement", "requirement", "update");
+        yield return SystemPermission(PermissionCodes.RequirementDelete, "Delete Requirement", "Delete a requirement", "requirement", "delete");
 
         // Generation permissions
-        yield return new Permission("generation:execute", "Execute Generation", "Run code generation", "generation", "execute");
-        yield return new Permission("generation:rollback", "Rollback Generation", "Roll back generated code", "generation", "rollback");
+        yield return SystemPermission(PermissionCodes.GenerationExecute, "Execute Generation", "Run code generation", "generation", "execute");
+        yield return SystemPermission(PermissionCodes.GenerationRollback, "Rollback Generation", "Roll back generated code", "generation", "rollback");
 
         // Glossary permissions
-        yield return new Permission("glossary:create", "Create Glossary", "Create a glossary term", "glossary", "create");
-        yield return new Permission("glossary:read", "Read Glossary", "Read glossary terms", "glossary", "read");
-        yield return new Permission("glossary:update", "Update Glossary", "Update a glossary term", "glossary", "update");
-        yield return new Permission("glossary:deprecate", "Deprecate Glossary", "Deprecate a glossary term", "glossary", "deprecate");
+        yield return SystemPermission(PermissionCodes.GlossaryCreate, "Create Glossary", "Create a glossary term", "glossary", "create");
+        yield return SystemPermission(PermissionCodes.GlossaryRead, "Read Glossary", "Read glossary terms", "glossary", "read");
+        yield return SystemPermission(PermissionCodes.GlossaryUpdate, "Update Glossary", "Update a glossary term", "glossary", "update");
+        yield return SystemPermission(PermissionCodes.GlossaryDeprecate, "Deprecate Glossary", "Deprecate a glossary term", "glossary", "deprecate");
 
         // User permissions
-        yield return new Permission("user:manage", "Manage Users", "Manage users", "user", "manage");
-        yield return new Permission("role:assign", "Assign Roles", "Assign roles", "role", "assign");
+        yield return SystemPermission(PermissionCodes.UserManage, "Manage Users", "Manage users", "user", "manage");
+        yield return SystemPermission(PermissionCodes.RoleAssign, "Assign Roles", "Assign roles", "role", "assign");
 
         // Audit permissions
-        yield return new Permission("audit:read", "Read Audit Logs", "Read audit logs", "audit", "read");
+        yield return SystemPermission(PermissionCodes.AuditRead, "Read Audit Logs", "Read audit logs", "audit", "read");
 
         // Project permissions
-        yield return new Permission("project:create", "Create Project", "Create a project", "project", "create");
-        yield return new Permission("project:read", "Read Project", "Read a project", "project", "read");
-        yield return new Permission("project:update", "Update Project", "Update a project", "project", "update");
-        yield return new Permission("project:delete", "Delete Project", "Delete a project", "project", "delete");
+        yield return SystemPermission(PermissionCodes.ProjectCreate, "Create Project", "Create a project", "project", "create");
+        yield return SystemPermission(PermissionCodes.ProjectRead, "Read Project", "Read a project", "project", "read");
+        yield return SystemPermission(PermissionCodes.ProjectUpdate, "Update Project", "Update a project", "project", "update");
+        yield return SystemPermission(PermissionCodes.ProjectDelete, "Delete Project", "Delete a project", "project", "delete");
 
         // Task permissions
-        yield return new Permission("task:create", "Create Task", "Create a task", "task", "create");
-        yield return new Permission("task:read", "Read Task", "Read a task", "task", "read");
-        yield return new Permission("task:update", "Update Task", "Update a task", "task", "update");
-        yield return new Permission("task:delete", "Delete Task", "Delete a task", "task", "delete");
+        yield return SystemPermission(PermissionCodes.TaskCreate, "Create Task", "Create a task", "task", "create");
+        yield return SystemPermission(PermissionCodes.TaskRead, "Read Task", "Read a task", "task", "read");
+        yield return SystemPermission(PermissionCodes.TaskUpdate, "Update Task", "Update a task", "task", "update");
+        yield return SystemPermission(PermissionCodes.TaskDelete, "Delete Task", "Delete a task", "task", "delete");
+
+        // Knowledge permissions
+        yield return SystemPermission(PermissionCodes.KnowledgeRead, "Read Knowledge", "Read knowledge pages", "knowledge", "read");
+        yield return SystemPermission(PermissionCodes.KnowledgeCreate, "Create Knowledge", "Create knowledge pages", "knowledge", "create");
+        yield return SystemPermission(PermissionCodes.KnowledgeUpdate, "Update Knowledge", "Update knowledge pages", "knowledge", "update");
+        yield return SystemPermission(PermissionCodes.KnowledgeArchive, "Archive Knowledge", "Archive knowledge pages", "knowledge", "archive");
+        yield return SystemPermission(PermissionCodes.KnowledgePublish, "Publish Knowledge", "Publish knowledge pages", "knowledge", "publish");
+        yield return SystemPermission(PermissionCodes.KnowledgeAdmin, "Administer Knowledge", "Administer project knowledge", "knowledge", "admin");
     }
 }

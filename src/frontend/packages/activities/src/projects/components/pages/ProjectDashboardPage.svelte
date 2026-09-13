@@ -5,7 +5,7 @@
   import { PageShell, PageHeader, PageBody, RouterService, Avatar, toast } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail, OwnershipItem } from '../../types';
-  import { getProjectService } from '../../services/ProjectService';
+  import { createProjectService } from '../../services/ProjectService';
   import { StatCard } from '../../../shared/components/idioms';
   import { ActivityLog } from '../../../dashboard/components/sections';
   import type { ActivityLogEntry } from '../../../dashboard/types';
@@ -73,8 +73,7 @@
       if (!authState.user?.tenantId) {
         throw new Error('User not authenticated or missing tenant');
       }
-      const service = getProjectService();
-      service.setTenantId(authState.user.tenantId);
+      const service = createProjectService(authState.user.tenantId, projectId);
       const detail = await service.getProjectById(projectId);
       project = detail;
     } catch (err) {
@@ -112,8 +111,7 @@
 
     ownershipLoading = true;
     try {
-      const service = getProjectService();
-      service.setTenantId(tenantId);
+      const service = createProjectService(tenantId, projectId);
       const data = await service.getProjectOwnership(projectId);
       ownershipItems = data.items;
     } catch {
@@ -152,126 +150,124 @@
       <div class="flex flex-col items-center justify-center h-64">
         <Icon name="alert-circle" size="lg" class="text-red-500 mb-4" />
         <p class="text-[var(--color-text-tertiary)]">{error}</p>
-        <Button variant="ghost" size="sm" class="mt-4" onclick={handleRefresh}>
-          Retry
-        </Button>
+        <Button variant="ghost" size="sm" class="mt-4" onclick={handleRefresh}>Retry</Button>
       </div>
     {:else if project && stats}
       <div class="dashboard-content mx-3">
-      <!-- Statistics Grid -->
-      <CardGrid cols={4} gap="md">
-        <StatCard
-          title="Conversations"
-          value={stats.conversations?.total ?? 0}
-          subtitle="{stats.conversations?.secondary ?? 0} active"
-          icon="message-square"
-          onClick={() => navigateToProjectPage('conversations')}
-        />
-        <StatCard
-          title="Requirements"
-          value={stats.requirements?.total ?? 0}
-          subtitle="{stats.requirements?.secondary ?? 0} pending"
-          icon="file-text"
-          onClick={() => navigateToProjectPage('requirements')}
-        />
-        <StatCard
-          title="Specs"
-          value={stats.specs?.total ?? 0}
-          subtitle="{stats.specs?.secondary ?? 0} in review"
-          icon="file-code"
-          onClick={() => navigateToProjectPage('specs')}
-        />
-        <StatCard
-          title="Glossary"
-          value={stats.glossary?.total ?? 0}
-          subtitle="{stats.glossary?.secondary ?? 0} pending"
-          icon="book-open"
-          onClick={() => navigateToProjectPage('glossary')}
-        />
-        <StatCard
-          title="Artifacts"
-          value={stats.artifacts?.total ?? 0}
-          subtitle="{stats.artifacts?.secondary ?? 0} recent"
-          icon="package"
-          onClick={() => navigateToProjectPage('artifacts')}
-        />
-        <StatCard
-          title="Tasks"
-          value={stats.tasks?.total ?? 0}
-          subtitle="{stats.tasks?.secondary ?? 0} in progress"
-          icon="check-square"
-          onClick={() => navigateToProjectPage('tasks')}
-        />
-        <StatCard
-          title="Effort"
-          value="{stats.effort?.total ?? 0}h"
-          subtitle="{stats.effort?.secondary ?? 0} contributors"
-          icon="clock"
-          onClick={() => navigateToProjectPage('effort')}
-        />
-      </CardGrid>
+        <!-- Statistics Grid -->
+        <CardGrid cols={4} gap="md">
+          <StatCard
+            title="Conversations"
+            value={stats.conversations?.total ?? 0}
+            subtitle="{stats.conversations?.secondary ?? 0} active"
+            icon="message-square"
+            onClick={() => navigateToProjectPage('conversations')}
+          />
+          <StatCard
+            title="Requirements"
+            value={stats.requirements?.total ?? 0}
+            subtitle="{stats.requirements?.secondary ?? 0} pending"
+            icon="file-text"
+            onClick={() => navigateToProjectPage('requirements')}
+          />
+          <StatCard
+            title="Specs"
+            value={stats.specs?.total ?? 0}
+            subtitle="{stats.specs?.secondary ?? 0} in review"
+            icon="file-code"
+            onClick={() => navigateToProjectPage('specs')}
+          />
+          <StatCard
+            title="Glossary"
+            value={stats.glossary?.total ?? 0}
+            subtitle="{stats.glossary?.secondary ?? 0} pending"
+            icon="book-open"
+            onClick={() => navigateToProjectPage('glossary')}
+          />
+          <StatCard
+            title="Artifacts"
+            value={stats.artifacts?.total ?? 0}
+            subtitle="{stats.artifacts?.secondary ?? 0} recent"
+            icon="package"
+            onClick={() => navigateToProjectPage('artifacts')}
+          />
+          <StatCard
+            title="Tasks"
+            value={stats.tasks?.total ?? 0}
+            subtitle="{stats.tasks?.secondary ?? 0} in progress"
+            icon="check-square"
+            onClick={() => navigateToProjectPage('tasks')}
+          />
+          <StatCard
+            title="Effort"
+            value="{stats.effort?.total ?? 0}h"
+            subtitle="{stats.effort?.secondary ?? 0} contributors"
+            icon="clock"
+            onClick={() => navigateToProjectPage('effort')}
+          />
+        </CardGrid>
 
-      <!-- Team Members -->
-      {#if project.members && project.members.length > 0}
-        <div>
-          <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
-            Team Members
-          </h3>
-          <div class="flex flex-wrap gap-2">
-            {#each project.members as member (member.userId)}
-              <div
-                class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
-              >
-                <Avatar
-                  name={member.displayName}
-                  avatarUrl={getMemberAvatarUrl(member)}
-                  isAI={isAiMember(member)}
-                  size="sm"
-                />
-                <span class="text-sm text-[var(--color-text-primary)]">
-                  {member.displayName}
-                </span>
-                {#if onlineUsers.has(member.userId)}
-                  <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                {/if}
-              </div>
-            {/each}
+        <!-- Team Members -->
+        {#if project.members && project.members.length > 0}
+          <div>
+            <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
+              Team Members
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              {#each project.members as member (member.userId)}
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
+                >
+                  <Avatar
+                    name={member.displayName}
+                    avatarUrl={getMemberAvatarUrl(member)}
+                    isAI={isAiMember(member)}
+                    size="sm"
+                  />
+                  <span class="text-sm text-[var(--color-text-primary)]">
+                    {member.displayName}
+                  </span>
+                  {#if onlineUsers.has(member.userId)}
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                  {/if}
+                </div>
+              {/each}
+            </div>
           </div>
-        </div>
-      {/if}
-
-      <!-- Ownership Map -->
-      {#if ownershipLoading}
-        <div>
-          <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
-            Ownership Map
-          </h3>
-          <div class="flex items-center justify-center py-8">
-            <Spinner size="sm" />
-          </div>
-        </div>
-      {:else if ownershipItems.length > 0}
-        <div>
-          <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
-            Ownership Map
-          </h3>
-          <OwnershipTreemap items={ownershipItems} members={project.members} />
-        </div>
-      {/if}
-
-      <!-- Recent Activity (Today) -->
-      <div>
-        <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
-          Recent Activity (Today)
-        </h3>
-        {#if activitiesLoading}
-          <div class="flex items-center justify-center py-8">
-            <Spinner size="sm" />
-          </div>
-        {:else}
-          <ActivityLog activities={recentActivities} />
         {/if}
-      </div>
+
+        <!-- Ownership Map -->
+        {#if ownershipLoading}
+          <div>
+            <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
+              Ownership Map
+            </h3>
+            <div class="flex items-center justify-center py-8">
+              <Spinner size="sm" />
+            </div>
+          </div>
+        {:else if ownershipItems.length > 0}
+          <div>
+            <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
+              Ownership Map
+            </h3>
+            <OwnershipTreemap items={ownershipItems} members={project.members} />
+          </div>
+        {/if}
+
+        <!-- Recent Activity (Today) -->
+        <div>
+          <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
+            Recent Activity (Today)
+          </h3>
+          {#if activitiesLoading}
+            <div class="flex items-center justify-center py-8">
+              <Spinner size="sm" />
+            </div>
+          {:else}
+            <ActivityLog activities={recentActivities} />
+          {/if}
+        </div>
       </div>
     {:else}
       <div class="flex flex-col items-center justify-center h-64">

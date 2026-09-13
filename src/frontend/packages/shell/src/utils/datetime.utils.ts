@@ -61,7 +61,7 @@ export function formatTime(date: Date | string | number, options?: TimeFormatOpt
 /** Format date and time */
 export function formatDateTime(
   date: Date | string | number,
-  options?: DateTimeFormatOptions,
+  options?: DateTimeFormatOptions
 ): string {
   const d = toDate(date);
   const locale = options?.locale ?? DEFAULT_LOCALE;
@@ -79,7 +79,7 @@ export function formatDateTime(
 /** Format date/time with raw Intl options (no defaults applied) */
 export function formatDateWithOptions(
   date: Date | string | number,
-  options?: IntlDateTimeFormatOptions,
+  options?: IntlDateTimeFormatOptions
 ): string {
   const d = toDate(date);
   const locale = options?.locale ?? DEFAULT_LOCALE;
@@ -99,7 +99,7 @@ export function formatMonthShort(date: Date | string | number, locale?: string):
 export function formatRelativeTime(
   date: Date | string | number,
   base: Date | string | number = new Date(),
-  options?: RelativeTimeOptions,
+  options?: RelativeTimeOptions
 ): string {
   const d = toDate(date);
   const b = toDate(base);
@@ -241,7 +241,7 @@ export function endOfDay(date: Date | string | number): Date {
  */
 export function formatSmartTime(
   date: Date | string | number,
-  options?: { locale?: string },
+  options?: { locale?: string }
 ): string {
   const d = toDate(date);
   const now = new Date();
@@ -330,11 +330,17 @@ function getDateFormatPreference(): DateFormatPreference {
     const stored = localStorage.getItem('sddp-preferences');
     if (stored) {
       const prefs = JSON.parse(stored);
-      if (prefs.dateFormat === 'relative' || prefs.dateFormat === 'absolute' || prefs.dateFormat === 'iso') {
+      if (
+        prefs.dateFormat === 'relative' ||
+        prefs.dateFormat === 'absolute' ||
+        prefs.dateFormat === 'iso'
+      ) {
         return prefs.dateFormat;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'relative';
 }
 
@@ -342,8 +348,11 @@ function getDateFormatPreference(): DateFormatPreference {
 export function formatDateByPreference(date: Date | string | number): string {
   const pref = getDateFormatPreference();
   switch (pref) {
-    case 'relative': return formatSmartTime(date);
-    case 'absolute': return formatDateTime(date);
-    case 'iso': return toDate(date).toISOString();
+    case 'relative':
+      return formatSmartTime(date);
+    case 'absolute':
+      return formatDateTime(date);
+    case 'iso':
+      return toDate(date).toISOString();
   }
 }

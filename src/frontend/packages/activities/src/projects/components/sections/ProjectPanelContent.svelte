@@ -6,7 +6,12 @@
 -->
 <script lang="ts">
   import { Icon, Button } from '@sddp/ui';
-  import type { Project, ProjectSidebarBadges, ProjectTreeNode, ProjectPageType } from '../../types';
+  import type {
+    Project,
+    ProjectSidebarBadges,
+    ProjectTreeNode,
+    ProjectPageType,
+  } from '../../types';
   import { generateProjectTreeNodes } from '../../types';
 
   interface Props {
@@ -16,19 +21,13 @@
     onNodeSelect?: (projectId: string, nodeType: ProjectPageType) => void;
   }
 
-  let {
-    project,
-    badges,
-    selectedNodePath = null,
-    onNodeSelect,
-  }: Props = $props();
+  let { project, badges, selectedNodePath = null, onNodeSelect }: Props = $props();
 
   const treeNodes = $derived(generateProjectTreeNodes(project, badges));
 
   function handleNodeClick(node: ProjectTreeNode) {
     onNodeSelect?.(project.id, node.type);
   }
-
 </script>
 
 <div class="project-tree">
@@ -39,15 +38,15 @@
       class="
         flex items-center gap-2 w-full text-left px-2 py-1.5 cursor-pointer border rounded transition-colors
         {isSelected
-          ? 'border-[var(--color-accent-primary)]/30 bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
-          : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
+        ? 'border-[var(--color-accent-primary)]/30 bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
+        : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
       "
       onclick={() => handleNodeClick(node)}
     >
       <Icon
         name={node.icon}
         size="sm"
-        class={isSelected ? 'text-[var(--color-accent-primary)]' : 'text-[var(--color-text-tertiary)]'}
+        class={isSelected ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-text-tertiary)]'}
       />
       <span class="flex-1 text-sm truncate">
         {node.label}
@@ -57,8 +56,8 @@
           class="
             px-1.5 py-0.5 text-[0.625rem] rounded-full min-w-[18px] text-center
             {isSelected
-              ? 'bg-[var(--color-accent-primary)] text-white'
-              : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
+            ? 'bg-[var(--color-accent-primary)] text-white'
+            : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
           "
         >
           {node.badge}

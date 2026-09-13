@@ -71,6 +71,10 @@ public class SddpDbContext : DbContext
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<KnowledgePage> KnowledgePages => Set<KnowledgePage>();
+    public DbSet<KnowledgePageVersion> KnowledgePageVersions => Set<KnowledgePageVersion>();
+    public DbSet<KnowledgePageLink> KnowledgePageLinks => Set<KnowledgePageLink>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

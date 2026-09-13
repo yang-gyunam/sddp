@@ -7,10 +7,22 @@
 
   import { untrack } from 'svelte';
   import { MemberDetailPanel } from '../sections';
-  import { toast, getAuthState, subscribeAuth, getTabState, setTabState, PageHeader, PageShell, SidebarDetailLayout, Avatar, UserListItem } from '@sddp/shell';
+  import {
+    toast,
+    getAuthState,
+    subscribeAuth,
+    getTabState,
+    setTabState,
+    PageHeader,
+    PageShell,
+    SidebarDetailLayout,
+    Avatar,
+    UserListItem,
+  } from '@sddp/shell';
   import { Icon, IconButton, Button, Spinner, SearchField } from '@sddp/ui';
   import type { ProjectMember } from '../../../projects/types/project.types';
-  import { getProjectService } from '../../../projects/services/ProjectService';
+  import { getSystemRoleBadge } from '../../../shared/types';
+  import { createProjectService } from '../../../projects/services/ProjectService';
   import { subscribeConversation, getConversationStoreState } from '../../../conversations/stores';
 
   interface Props {
@@ -37,7 +49,7 @@
     }
   });
 
-  const projectService = getProjectService();
+  let projectService = $derived(createProjectService(effectiveTenantId, projectId));
 
   let members = $state<ProjectMember[]>([]);
   let loading = $state(false);
@@ -134,7 +146,6 @@
     error = null;
 
     try {
-      projectService.setTenantId(effectiveTenantId);
       const projectDetail = await projectService.getProjectById(projectId);
       members = projectDetail.members;
     } catch (err) {
@@ -167,7 +178,6 @@
   async function handleInvited(userId: string, role: string) {
     if (!effectiveTenantId || !projectId) return;
     try {
-      projectService.setTenantId(effectiveTenantId);
       const newMember = await projectService.addProjectMember(projectId, { userId, role });
       members = [...members, newMember];
       closePanel();
@@ -186,7 +196,6 @@
   async function handleDeactivated(userId: string) {
     if (!effectiveTenantId || !projectId) return;
     try {
-      projectService.setTenantId(effectiveTenantId);
       await projectService.deactivateProjectMember(projectId, userId);
       members = members.filter((m) => m.userId !== userId);
       closePanel();
@@ -200,7 +209,6 @@
   async function handleRemoved(userId: string) {
     if (!effectiveTenantId || !projectId) return;
     try {
-      projectService.setTenantId(effectiveTenantId);
       await projectService.removeProjectMember(projectId, userId);
       members = members.filter((m) => m.userId !== userId);
       closePanel();
@@ -227,12 +235,12 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="Members ({members.length}/10)" {loading}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" title="Refresh" onclick={loadMembers} />
-      <IconButton icon="plus" title="Invite Member" onclick={openInvite} />
-    {/snippet}
-  </PageHeader>
+    <PageHeader title="Members ({members.length}/10)" {loading}>
+      {#snippet actions()}
+        <IconButton icon="refresh-cw" title="Refresh" onclick={loadMembers} />
+        <IconButton icon="plus" title="Invite Member" onclick={openInvite} />
+      {/snippet}
+    </PageHeader>
     <SidebarDetailLayout
       showRightPanel={false}
       sidebarWidth={360}
@@ -265,18 +273,27 @@
                   <Avatar name={member.displayName} size="md" />
                 {/snippet}
                 {#snippet trailing()}
+                  {@const systemRoleBadge = getSystemRoleBadge(member.role)}
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    {#if member.role === 'Admin'}
-                      <span class="inline-block px-1.5 py-px rounded text-[0.6875rem] bg-amber-500/10 text-amber-600">
-                        Admin
+                    {#if systemRoleBadge}
+                      <span
+                        class="inline-block px-1.5 py-px rounded text-[0.6875rem] bg-amber-500/10 text-amber-600"
+                      >
+                        {systemRoleBadge}
                       </span>
                     {:else if member.role === 'ProductOwner'}
-                      <span class="inline-block px-1.5 py-px rounded text-[0.6875rem] bg-purple-500/10 text-purple-500">
+                      <span
+                        class="inline-block px-1.5 py-px rounded text-[0.6875rem] bg-purple-500/10 text-purple-500"
+                      >
                         PO
                       </span>
                     {/if}
-                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0
-                                 {member.isOnline ? 'bg-green-500' : 'bg-[var(--color-text-tertiary)]'}"></span>
+                    <span
+                      class="w-1.5 h-1.5 rounded-full flex-shrink-0
+                                 {member.isOnline
+                        ? 'bg-green-500'
+                        : 'bg-[var(--color-text-tertiary)]'}"
+                    ></span>
                   </div>
                 {/snippet}
               </UserListItem>
@@ -329,4 +346,3 @@
     </SidebarDetailLayout>
   {/if}
 </PageShell>
-

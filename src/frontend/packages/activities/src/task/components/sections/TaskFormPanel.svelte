@@ -58,7 +58,10 @@
   const statusOptions = $derived.by(() => {
     const base = ['ToDo', 'InProgress', 'Done'] as const;
     const includeBacklog =
-      allowBacklogStatus || defaultStatus === 'Backlog' || task?.status === 'Backlog' || status === 'Backlog';
+      allowBacklogStatus ||
+      defaultStatus === 'Backlog' ||
+      task?.status === 'Backlog' ||
+      status === 'Backlog';
     return includeBacklog ? (['Backlog', ...base] as const) : base;
   });
 
@@ -110,7 +113,9 @@
   onkeydown={handleKeydown}
 >
   <!-- Header -->
-  <div class="flex-shrink-0 flex items-center justify-between min-h-12 px-4 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-primary)]">
+  <div
+    class="flex-shrink-0 flex items-center justify-between min-h-12 px-4 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-primary)]"
+  >
     <div class="flex items-center gap-2 min-w-0">
       <Icon name="check-square" size="sm" class="text-[var(--color-text-tertiary)]" />
       <span class="text-sm font-medium text-[var(--color-text-primary)] truncate">
@@ -121,7 +126,14 @@
       {/if}
     </div>
     <div class="flex items-center gap-1 flex-shrink-0">
-      <IconButton icon="check" variant="success" size="sm" title={mode === 'create' ? 'Create' : 'Save'} onclick={handleSubmit} disabled={!isValid} />
+      <IconButton
+        icon="check"
+        variant="success"
+        size="sm"
+        title={mode === 'create' ? 'Create' : 'Save'}
+        onclick={handleSubmit}
+        disabled={!isValid}
+      />
       <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={() => onCancel?.()} />
     </div>
   </div>
@@ -130,7 +142,10 @@
   <div class="flex-1 overflow-y-auto p-3 space-y-3">
     <!-- Title -->
     <div>
-      <label for={titleId} class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+      <label
+        for={titleId}
+        class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
+      >
         Title <span class="text-red-500">*</span>
       </label>
       <Input
@@ -144,7 +159,10 @@
 
     <!-- Description -->
     <div>
-      <label for={descriptionId} class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+      <label
+        for={descriptionId}
+        class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
+      >
         Description
       </label>
       <Textarea
@@ -168,9 +186,9 @@
             variant="unstyled"
             class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors
               {status === s
-                ? `${style.bgColor} ${style.color} ${style.borderColor}`
-                : 'border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-            onclick={() => status = s}
+              ? `${style.bgColor} ${style.color} ${style.borderColor}`
+              : 'border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+            onclick={() => (status = s)}
           >
             <Icon name={style.icon} size="sm" />
             {style.label}
@@ -185,15 +203,15 @@
         Priority
       </span>
       <div class="flex flex-wrap gap-2">
-        {#each (['High', 'Medium', 'Low'] as const) as p (p)}
+        {#each ['High', 'Medium', 'Low'] as const as p (p)}
           {@const style = TASK_PRIORITY_STYLES[p]}
           <Button
             variant="unstyled"
             class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors
               {priority === p
-                ? `${style.bgColor} ${style.color} ${style.borderColor}`
-                : 'border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-            onclick={() => priority = p}
+              ? `${style.bgColor} ${style.color} ${style.borderColor}`
+              : 'border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+            onclick={() => (priority = p)}
           >
             <Icon name={style.icon} size="sm" />
             {style.label}
@@ -216,7 +234,10 @@
 
     <!-- Estimated Hours -->
     <div>
-      <label for={estimatedHoursId} class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+      <label
+        for={estimatedHoursId}
+        class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
+      >
         Estimated Hours
       </label>
       <div class="flex items-center gap-2">
@@ -232,5 +253,4 @@
       </div>
     </div>
   </div>
-
 </div>

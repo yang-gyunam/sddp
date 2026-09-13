@@ -9,7 +9,10 @@
   import MessageInput from '../idioms/MessageInput.svelte';
   import type { Message, CreateMessageRequest } from '../../types';
   import type { Topic, TopicStatus } from '../../types/conversation-entry.types';
-  import { getConversationService, type ForumMessageDto } from '../../services/ConversationService';
+  import {
+    createConversationService,
+    type ForumMessageDto,
+  } from '../../services/ConversationService';
   import {
     getConversationViewMode,
     subscribeConversationView,
@@ -72,8 +75,7 @@
 
     isLoadingMessages = true;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, projectId);
+      const service = createConversationService(tenantId, projectId);
       const result = await service.getTopicMessages(topic.forumId, topic.id);
       messages = result.messages.map(toMessage);
 
@@ -95,7 +97,10 @@
   // Load messages when topic changes
   $effect(() => {
     const topicId = topic.id;
-    if (!topicId) { prevTopicId = null; return; }
+    if (!topicId) {
+      prevTopicId = null;
+      return;
+    }
     if (topicId === prevTopicId) return;
     prevTopicId = topicId;
     untrack(() => loadMessages());
@@ -133,8 +138,7 @@
     if (!tenantId || !topic.forumId) return;
 
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, projectId);
+      const service = createConversationService(tenantId, projectId);
       const dto = await service.postTopicMessage(topic.forumId, topic.id, request);
       const newMessage = toMessage(dto);
       messages = [...messages, newMessage];
@@ -155,8 +159,7 @@
     if (!tenantId || !topic.forumId) return;
 
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, projectId);
+      const service = createConversationService(tenantId, projectId);
       await service.editConversationMessage(topic.forumId, message.id, newContent);
       messages = messages.map((m) =>
         m.id === message.id ? { ...m, content: newContent, isEdited: true } : m
@@ -171,8 +174,7 @@
     if (!tenantId || !topic.forumId) return;
 
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, projectId);
+      const service = createConversationService(tenantId, projectId);
       await service.deleteConversationMessage(topic.forumId, message.id);
       messages = messages.filter((m) => m.id !== message.id);
     } catch (err) {
@@ -188,8 +190,7 @@
     }
 
     try {
-      const conversationService = getConversationService();
-      conversationService.setContext(tenantId, projectId);
+      const conversationService = createConversationService(tenantId, projectId);
       await conversationService.closeTopic(topic.forumId, topic.id);
       toast.success('Topic closed successfully');
       onTopicClosed?.();
@@ -204,18 +205,28 @@
   <DetailHeader>
     {#snippet leading()}
       {#if topic.isPinned}
-        <Icon name="pin" size="sm" class="text-[var(--color-accent-primary)]" />
+        <Icon name="pin" size="sm" class="text-[var(--color-accent-text)]" />
       {/if}
     {/snippet}
     <DetailTitle title={topic.title}>
-      <span class="text-xs text-[var(--color-text-tertiary)] truncate">by {topic.author?.name ?? 'Unknown'} · {topic.messageCount} messages</span>
-      <span class="px-2 py-1 rounded text-xs font-medium flex-shrink-0 {getStatusColor(topic.status)}">
+      <span class="text-xs text-[var(--color-text-tertiary)] truncate"
+        >by {topic.author?.name ?? 'Unknown'} · {topic.messageCount} messages</span
+      >
+      <span
+        class="px-2 py-1 rounded text-xs font-medium flex-shrink-0 {getStatusColor(topic.status)}"
+      >
         {topic.status}
       </span>
     </DetailTitle>
     {#snippet actions()}
       {#if topic.status === 'Open'}
-        <IconButton icon="check-circle" size="sm" variant="success" onclick={handleCloseTopic} title="Close Topic" />
+        <IconButton
+          icon="check-circle"
+          size="sm"
+          variant="success"
+          onclick={handleCloseTopic}
+          title="Close Topic"
+        />
       {/if}
       {#if onBack}
         <IconButton icon="x" size="sm" variant="ghost" onclick={onBack} title="Close" />
@@ -234,7 +245,9 @@
           <Spinner size="lg" />
         </div>
       {:else if messages.length === 0}
-        <div class="flex items-center justify-center h-full py-6 text-sm text-[var(--color-text-tertiary)]">
+        <div
+          class="flex items-center justify-center h-full py-6 text-sm text-[var(--color-text-tertiary)]"
+        >
           No messages yet. Start the discussion!
         </div>
       {:else}
@@ -242,7 +255,7 @@
           <MessageBubble
             {message}
             {messages}
-            viewMode={viewMode}
+            {viewMode}
             {projectId}
             showToolbar={true}
             isOwn={message.sender?.id === currentUserId}
@@ -262,7 +275,7 @@
           onSubmit={handleSendMessage}
           placeholder="Reply to this topic..."
           showToolbar={true}
-          draftKey={draftKey}
+          {draftKey}
           replyTo={replyingTo}
           onCancelReply={handleCancelReply}
         />

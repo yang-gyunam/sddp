@@ -32,3 +32,8 @@ export function getRoleLabel(role: string): string {
 export function isSystemRole(role: string): boolean {
   return role === 'Admin';
 }
+
+/** Short badge label for system-only roles, or null when the role needs no badge. */
+export function getSystemRoleBadge(role: string): string | null {
+  return role === 'Admin' ? 'Admin' : null;
+}

@@ -89,7 +89,7 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         var combinedPath = Path.Combine(rootFullPath, sanitizedPath);
         var fullPath = Path.GetFullPath(combinedPath);
 
-        if (!fullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
+        if (!PathGuard.IsContainedIn(fullPath, rootFullPath))
         {
             return new ArtifactFileInfo(false, null, fullPath);
         }
@@ -101,6 +101,53 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
 
         var hash = await (ComputeHashAsync(fullPath, cancellationToken)).ConfigureAwait(false);
         return new ArtifactFileInfo(true, hash, fullPath);
+    }
+
+    public async Task<ArtifactFileContent?> GetArtifactContentAsync(
+        ArtifactRepositoryContext context,
+        string artifactPath,
+        CancellationToken cancellationToken = default)
+    {
+        var fileInfo = await (GetArtifactFileInfoAsync(context, artifactPath, cancellationToken)).ConfigureAwait(false);
+        if (!fileInfo.Exists)
+        {
+            return null;
+        }
+
+        var length = new FileInfo(fileInfo.FullPath).Length;
+        if (length > _options.MaxArtifactContentBytes)
+        {
+            _logger.LogWarning(
+                "Refused to read artifact {Path}: {Length} bytes exceeds the {Max} byte ceiling",
+                artifactPath, length, _options.MaxArtifactContentBytes);
+            return new ArtifactFileContent(
+                null, null, length, IsBinary: false,
+                TooLarge: true, MaxBytes: _options.MaxArtifactContentBytes);
+        }
+
+        var bytes = await (File.ReadAllBytesAsync(fileInfo.FullPath, cancellationToken)).ConfigureAwait(false);
+
+        // A generated artifact is text, but nothing stops a path from pointing at a binary.
+        // Say so rather than handing back mojibake the editor would render as garbage.
+        if (IsBinary(bytes))
+        {
+            return new ArtifactFileContent(null, fileInfo.Hash, bytes.LongLength, IsBinary: true);
+        }
+
+        var content = new StreamReader(new MemoryStream(bytes), detectEncodingFromByteOrderMarks: true).ReadToEnd();
+        return new ArtifactFileContent(content, fileInfo.Hash, bytes.LongLength, IsBinary: false);
+    }
+
+    private static bool IsBinary(byte[] bytes)
+    {
+        var sampleLength = Math.Min(bytes.Length, 8000);
+        for (var i = 0; i < sampleLength; i++)
+        {
+            if (bytes[i] == 0)
+                return true;
+        }
+
+        return false;
     }
 
     private bool ShouldSync(ArtifactRepositoryContext context)

@@ -16,12 +16,7 @@
     class?: string;
   }
 
-  let {
-    status,
-    showIcon = true,
-    size = 'sm',
-    class: className = '',
-  }: Props = $props();
+  let { status, showIcon = true, size = 'sm', class: className = '' }: Props = $props();
 
   // Cast domain styles to BadgeStyleConfig (they are compatible)
   const styles = SPEC_STATUS_STYLES as unknown as Record<SpecStatus, BadgeStyleConfig>;

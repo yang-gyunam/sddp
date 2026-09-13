@@ -91,50 +91,52 @@
     {/if}
   </select>
 {:else}
-<div class="w-full {className}">
-  {#if label}
-    <label for={selectId} class="block text-xs text-[var(--color-text-muted)] mb-1">
-      {label}
-      {#if required}
-        <span class="text-red-500">*</span>
-      {/if}
-    </label>
-  {/if}
+  <div class="w-full {className}">
+    {#if label}
+      <label for={selectId} class="block text-xs text-[var(--color-text-muted)] mb-1">
+        {label}
+        {#if required}
+          <span class="text-red-500" aria-hidden="true">*</span>
+        {/if}
+      </label>
+    {/if}
 
-  <div class="relative">
-    <select
-      id={selectId}
-      {name}
-      {disabled}
-      {required}
-      bind:value
-      onchange={handleChange}
-      class="{baseClasses} {sizeClasses[size]} {error ? errorClasses : normalClasses} pr-10 select-chevron"
-      aria-required={required ? 'true' : undefined}
-      aria-invalid={error ? 'true' : undefined}
-      aria-describedby={error ? `${selectId}-error` : undefined}
-    >
-      {#if placeholder}
-        <option value="" disabled>{placeholder}</option>
-      {/if}
-      {#each options as option (option.value)}
-        <option value={option.value} disabled={option.disabled}>
-          {option.label}
-        </option>
-      {/each}
-    </select>
+    <div class="relative">
+      <select
+        id={selectId}
+        {name}
+        {disabled}
+        {required}
+        bind:value
+        onchange={handleChange}
+        class="{baseClasses} {sizeClasses[size]} {error
+          ? errorClasses
+          : normalClasses} pr-10 select-chevron"
+        aria-required={required ? 'true' : undefined}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${selectId}-error` : undefined}
+      >
+        {#if placeholder}
+          <option value="" disabled>{placeholder}</option>
+        {/if}
+        {#each options as option (option.value)}
+          <option value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        {/each}
+      </select>
+    </div>
+
+    {#if error}
+      <p id="{selectId}-error" class="mt-1 text-sm text-[var(--color-error-600)]">
+        {error}
+      </p>
+    {:else if hint}
+      <p class="text-xs text-[var(--color-text-muted)] mt-1">
+        {hint}
+      </p>
+    {/if}
   </div>
-
-  {#if error}
-    <p id="{selectId}-error" class="mt-1 text-sm text-[var(--color-error-600)]">
-      {error}
-    </p>
-  {:else if hint}
-    <p class="text-xs text-[var(--color-text-muted)] mt-1">
-      {hint}
-    </p>
-  {/if}
-</div>
 {/if}
 
 <style>

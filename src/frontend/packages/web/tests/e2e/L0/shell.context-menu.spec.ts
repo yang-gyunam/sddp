@@ -20,7 +20,10 @@ import { test, expect } from '../helpers/fixtures';
 import { openEditorTabs } from '../helpers/page-object.helpers';
 
 /** Selector for the ⋮ button */
-const MORE_ACTIONS_BTN = 'button[aria-label="More actions"]';
+// IconButton exposes its `title` as the accessible name, and the product's is
+// "More Actions". The old selector said "More actions" and matched nothing -- which
+// only ever showed up as a skip.
+const MORE_ACTIONS_BTN = 'button[aria-label="More Actions"]';
 /** App custom context menu */
 const CONTEXT_MENU = '[role="menu"]';
 /** Menu item */
@@ -34,17 +37,10 @@ test.describe('Context Menu - Action Menu (⋮)', () => {
   });
 
   test('should show only one context menu at a time', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const moreButtons = page.locator(MORE_ACTIONS_BTN);
-    const btnCount = await moreButtons.count();
-    if (btnCount === 0) {
-      test.skip(true, 'More actions button not rendered');
-      return;
-    }
+    await expect(moreButtons.first()).toBeVisible();
 
     // Click ⋮ -> only one menu should be visible
     await moreButtons.first().click();
@@ -57,16 +53,10 @@ test.describe('Context Menu - Action Menu (⋮)', () => {
   test('should have correct menu items (Close All, Split Right, Split Down)', async ({
     page,
   }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const moreBtn = page.locator(MORE_ACTIONS_BTN).first();
-    if (!(await moreBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      test.skip(true, 'More actions button not visible');
-      return;
-    }
+    await expect(moreBtn).toBeVisible();
 
     await moreBtn.click();
     const menu = page.locator(CONTEXT_MENU);
@@ -92,16 +82,10 @@ test.describe('Context Menu - Close on Events', () => {
   });
 
   test('should close context menu on Escape key', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const moreBtn = page.locator(MORE_ACTIONS_BTN).first();
-    if (!(await moreBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      test.skip(true, 'More actions button not visible');
-      return;
-    }
+    await expect(moreBtn).toBeVisible();
 
     await moreBtn.click();
     const menu = page.locator(CONTEXT_MENU);
@@ -112,16 +96,10 @@ test.describe('Context Menu - Close on Events', () => {
   });
 
   test('should close context menu on outside click', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const moreBtn = page.locator(MORE_ACTIONS_BTN).first();
-    if (!(await moreBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      test.skip(true, 'More actions button not visible');
-      return;
-    }
+    await expect(moreBtn).toBeVisible();
 
     await moreBtn.click();
     const menu = page.locator(CONTEXT_MENU);
@@ -136,16 +114,10 @@ test.describe('Context Menu - Close on Events', () => {
   });
 
   test('should close context menu on browser resize', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const moreBtn = page.locator(MORE_ACTIONS_BTN).first();
-    if (!(await moreBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      test.skip(true, 'More actions button not visible');
-      return;
-    }
+    await expect(moreBtn).toBeVisible();
 
     await moreBtn.click();
     const menu = page.locator(CONTEXT_MENU);
@@ -173,18 +145,12 @@ test.describe('Context Menu - Tab Context Menu', () => {
   });
 
   test('should show tab context menu on right-click', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     // Right-click an editor tab -> app custom context menu (oncontextmenu handler)
     await page.locator(EDITOR_TAB).first().click({ button: 'right' });
     const menu = page.locator(CONTEXT_MENU);
-    if (!(await menu.isVisible({ timeout: 2000 }).catch(() => false))) {
-      test.skip(true, 'Context menu not visible after right-click');
-      return;
-    }
+    await expect(menu).toBeVisible();
 
     await expect(
       menu.locator(`${MENU_ITEM}:has-text("Close")`).first(),
@@ -195,25 +161,16 @@ test.describe('Context Menu - Tab Context Menu', () => {
   test('should close tab context menu when opening action menu', async ({
     page,
   }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     // Right-click a tab -> custom context menu
     await page.locator(EDITOR_TAB).first().click({ button: 'right' });
     const menu = page.locator(CONTEXT_MENU);
-    if (!(await menu.isVisible({ timeout: 2000 }).catch(() => false))) {
-      test.skip(true, 'Context menu not visible after right-click');
-      return;
-    }
+    await expect(menu).toBeVisible();
 
     // Click ⋮ -> previous menu closes and a new one opens (single-menu guarantee)
     const moreBtn = page.locator(MORE_ACTIONS_BTN).first();
-    if (!(await moreBtn.isVisible().catch(() => false))) {
-      test.skip(true, 'More actions button not visible');
-      return;
-    }
+    await expect(moreBtn).toBeVisible();
 
     await moreBtn.click();
 

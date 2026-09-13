@@ -4,7 +4,14 @@
  */
 
 import { get } from 'svelte/store';
-import { toggleSidebar, togglePanel, sidePanel, tabActions, globalActiveTab, commandPalette } from '$stores';
+import {
+  toggleSidebar,
+  togglePanel,
+  sidePanel,
+  requestCloseTab,
+  globalActiveTab,
+  commandPalette,
+} from '$stores';
 
 export interface Shortcut {
   key: string;
@@ -21,7 +28,7 @@ export interface Shortcut {
 function closeCurrentTab() {
   const activeTab = get(globalActiveTab);
   if (activeTab?.id) {
-    tabActions.closeTab(activeTab.id);
+    void requestCloseTab(activeTab.id);
   }
 }
 
@@ -129,15 +136,12 @@ function handleKeydown(event: KeyboardEvent): void {
 
   // Skip if in input, textarea, or contenteditable
   const target = event.target as HTMLElement;
-  const isSaveCombo = (event.ctrlKey || event.metaKey) &&
+  const isSaveCombo =
+    (event.ctrlKey || event.metaKey) &&
     !event.shiftKey &&
     !event.altKey &&
     event.key.toLowerCase() === 's';
-  if (
-    target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' ||
-    target.isContentEditable
-  ) {
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
     if (!isSaveCombo) {
       return;
     }
@@ -190,7 +194,10 @@ export function registerShortcut(shortcut: Shortcut): void {
 /**
  * Unregister a shortcut
  */
-export function unregisterShortcut(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+export function unregisterShortcut(
+  key: string,
+  modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }
+): void {
   shortcuts = shortcuts.filter((s) => {
     if (s.key !== key) return true;
     if (modifiers?.ctrl !== undefined && s.ctrl !== modifiers.ctrl) return true;
@@ -252,7 +259,8 @@ export function formatShortcut(shortcut: Shortcut): string {
   const parts: string[] = [];
 
   // Use platform-specific modifier symbols
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isMac =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
   if (shortcut.ctrl) {
     parts.push(isMac ? '⌘' : 'Ctrl');

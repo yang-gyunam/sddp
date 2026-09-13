@@ -1,8 +1,8 @@
-using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
+using Sddp.Api.Authorization;
 using Sddp.Api.Services;
 using Sddp.Domain.Entities;
 
@@ -15,6 +15,8 @@ namespace Sddp.Api.Middleware;
 /// </summary>
 public class ProjectMembershipMiddleware
 {
+    private static readonly RoleType[] AdminRoles = [RoleType.Admin];
+
     private readonly RequestDelegate _next;
     private readonly ILogger<ProjectMembershipMiddleware> _logger;
 
@@ -35,7 +37,8 @@ public class ProjectMembershipMiddleware
         HttpContext context,
         ITenantContext tenantContext,
         IUnitOfWork unitOfWork,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IScopedAuthorizationService authorizationService)
     {
         // Skip if not authenticated
         if (context.User.Identity?.IsAuthenticated != true)
@@ -46,14 +49,6 @@ public class ProjectMembershipMiddleware
 
         // Skip if no project context
         if (!tenantContext.ProjectId.HasValue)
-        {
-            await _next(context);
-            return;
-        }
-
-        // Admin bypasses project membership check
-        var userRoles = context.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet();
-        if (userRoles.Contains(RoleType.Admin.ToString()))
         {
             await _next(context);
             return;
@@ -75,6 +70,18 @@ public class ProjectMembershipMiddleware
         }
 
         var projectId = tenantContext.ProjectId.Value;
+        if (tenantContext.TenantId.HasValue
+            && await authorizationService.HasAnyRoleAsync(
+                userId.Value,
+                tenantContext.TenantId.Value,
+                projectId,
+                AdminRoles,
+                context.RequestAborted))
+        {
+            await _next(context);
+            return;
+        }
+
         var cacheKey = $"project-membership:{userId.Value}:{projectId}";
 
         var isMember = await cache.GetOrCreateAsync(cacheKey, async entry =>
@@ -93,15 +100,28 @@ public class ProjectMembershipMiddleware
                 "Project membership denied: UserId={UserId}, ProjectId={ProjectId}",
                 userId, projectId);
 
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            var scopeWasDerived = context.Items.ContainsKey(ResourceScopeMiddleware.DerivedItemKey);
+
+            context.Response.StatusCode = scopeWasDerived
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(
-                JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    errorCode = "FORBIDDEN",
-                    errorMessage = "Not a member of this project"
-                }, JsonOptions));
+                JsonSerializer.Serialize(
+                    scopeWasDerived
+                        ? new
+                        {
+                            success = false,
+                            errorCode = "NOT_FOUND",
+                            errorMessage = "Resource not found."
+                        }
+                        : new
+                        {
+                            success = false,
+                            errorCode = "FORBIDDEN",
+                            errorMessage = "Not a member of this project"
+                        },
+                    JsonOptions));
             return;
         }
 

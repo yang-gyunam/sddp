@@ -4,8 +4,7 @@
  */
 
 import { globalActiveTab } from '@sddp/shell/stores';
-import { setSelectedConversation } from '@sddp/activities/conversations';
-import { setSelectedProject } from '@sddp/activities/projects';
+import { setSelectedConversation, setSelectedProject } from '@sddp/activities/runtime';
 
 export function useShellSelectionSync() {
   let selectedMenuId = $state<string | null>(null);

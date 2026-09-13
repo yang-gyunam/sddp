@@ -197,7 +197,7 @@
     <label for={inputId} class="block text-xs text-[var(--color-text-muted)] mb-1">
       {label}
       {#if required}
-        <span class="text-red-500">*</span>
+        <span class="text-red-500" aria-hidden="true">*</span>
       {/if}
     </label>
   {/if}
@@ -207,8 +207,8 @@
     <div
       class="flex items-center gap-1 w-full rounded-lg border transition-colors
         {error
-          ? 'border-[var(--color-error-500)] bg-[var(--color-error-50)] dark:bg-[var(--color-error-900)]/10 focus-within:border-[var(--color-error-500)]'
-          : 'border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] focus-within:border-[var(--color-accent-primary)]'}
+        ? 'border-[var(--color-error-500)] bg-[var(--color-error-50)] dark:bg-[var(--color-error-900)]/10 focus-within:border-[var(--color-error-500)]'
+        : 'border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] focus-within:border-[var(--color-accent-primary)]'}
         {disabled ? 'bg-[var(--color-bg-tertiary)] cursor-not-allowed' : ''}
         {sizeClasses[size]}"
     >
@@ -217,7 +217,9 @@
         <button
           type="button"
           class="flex-1 text-left text-[var(--color-text-primary)] truncate"
-          onclick={() => { if (!disabled) handleInputFocus(); }}
+          onclick={() => {
+            if (!disabled) handleInputFocus();
+          }}
           {disabled}
         >
           {selectedOption.label}
@@ -226,10 +228,21 @@
           <button
             type="button"
             class="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-            onclick={(e) => { e.stopPropagation(); clearSelection(); }}
+            onclick={(e) => {
+              e.stopPropagation();
+              clearSelection();
+            }}
             aria-label="Clear selection"
           >
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              class="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -252,10 +265,20 @@
           aria-expanded={isOpen}
           aria-controls="{inputId}-listbox"
           aria-autocomplete="list"
-          aria-activedescendant={highlightedIndex >= 0 ? `${inputId}-option-${highlightedIndex}` : undefined}
+          aria-activedescendant={highlightedIndex >= 0
+            ? `${inputId}-option-${highlightedIndex}`
+            : undefined}
           class="flex-1 bg-transparent outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] min-w-0"
         />
-        <svg class="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)]"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
@@ -272,9 +295,7 @@
         class="overflow-y-auto rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] shadow-lg"
       >
         {#if loading}
-          <li class="px-3 py-2 text-sm text-[var(--color-text-muted)]">
-            Searching...
-          </li>
+          <li class="px-3 py-2 text-sm text-[var(--color-text-muted)]">Searching...</li>
         {:else if filteredOptions.length === 0}
           <li class="px-3 py-2 text-sm text-[var(--color-text-muted)]">
             {onsearch && query.trim() === '' ? 'Type to search...' : 'No results found'}
@@ -287,14 +308,21 @@
               aria-selected={option.value === value}
               class="px-3 py-2 cursor-pointer transition-colors
                 {i === highlightedIndex
-                  ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
-                  : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
-              onmousedown={(e) => { e.preventDefault(); selectOption(option); }}
-              onmouseenter={() => { highlightedIndex = i; }}
+                ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
+                : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
+              onmousedown={(e) => {
+                e.preventDefault();
+                selectOption(option);
+              }}
+              onmouseenter={() => {
+                highlightedIndex = i;
+              }}
             >
               <div class="text-sm truncate">{option.label}</div>
               {#if option.description}
-                <div class="text-xs text-[var(--color-text-muted)] truncate">{option.description}</div>
+                <div class="text-xs text-[var(--color-text-muted)] truncate">
+                  {option.description}
+                </div>
               {/if}
             </li>
           {/each}

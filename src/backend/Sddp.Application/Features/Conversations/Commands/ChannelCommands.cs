@@ -2,6 +2,7 @@ using MediatR;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Exceptions;
+using Sddp.Abstractions.Events;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Requests;
@@ -29,12 +30,12 @@ public sealed record ConcludeChannelCommand(
 public sealed class ConcludeChannelCommandHandler : IRequestHandler<ConcludeChannelCommand, ConversationSummaryDto?>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConversationHubService _hubService;
+    private readonly IOutboxEnqueuer _outbox;
 
-    public ConcludeChannelCommandHandler(IUnitOfWork unitOfWork, IConversationHubService hubService)
+    public ConcludeChannelCommandHandler(IUnitOfWork unitOfWork, IOutboxEnqueuer outbox)
     {
         _unitOfWork = unitOfWork;
-        _hubService = hubService;
+        _outbox = outbox;
     }
 
     public async Task<ConversationSummaryDto?> Handle(ConcludeChannelCommand request, CancellationToken cancellationToken)
@@ -66,13 +67,16 @@ public sealed class ConcludeChannelCommandHandler : IRequestHandler<ConcludeChan
         await (channelRepo.UpdateAsync(channel, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
-        // SignalR: currently participating members get immediate readonly-state sync in open views.
         var requesterUser = await (userRepo.GetByIdAsync(request.RequestUserId, cancellationToken)).ConfigureAwait(false);
         var requesterName = requesterUser?.DisplayName ?? "Unknown";
-        await (_hubService.BroadcastConversationClosedAsync(
-            request.ConversationId.ToString(),
-            request.DecisionSpecId?.ToString(),
-            requesterName)).ConfigureAwait(false);
+        await (_outbox.EnqueueAsync(
+            new ConversationClosedEvent(
+                request.ConversationId.ToString(),
+                request.DecisionSpecId?.ToString(),
+                requesterName),
+            "conversation",
+            request.ConversationId,
+            cancellationToken)).ConfigureAwait(false);
 
         var memberCount = (await (memberRepo.FindAsync(
             m => m.ConversationId == request.ConversationId && m.IsActive,

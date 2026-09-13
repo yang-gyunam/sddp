@@ -1,11 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.AuditLogs.Queries;
 using Sddp.Application.Features.Specs.Commands;
 using Sddp.Application.Features.Specs.Queries;
@@ -31,6 +34,7 @@ public class SpecsController : BaseApiController
     }
 
     [HttpGet]
+    [ResourceScopeExempt("Listing endpoint: no resource id in the route, and results are already filtered to the tenant and the requested project.")]
     public async Task<IActionResult> GetSpecs(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -55,7 +59,8 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecPageDto>.Ok(result));
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> GetSpecById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -86,6 +91,7 @@ public class SpecsController : BaseApiController
     }
 
     [HttpGet("code/{code}")]
+    [ResourceScopeExempt("Lookup by human code, not a database id: the query resolves the code inside the requested project, so it cannot reach another one.")]
     public async Task<IActionResult> GetSpecByCode(
         string code,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -115,6 +121,7 @@ public class SpecsController : BaseApiController
     }
 
     [HttpGet("search")]
+    [ResourceScopeExempt("Search endpoint: no resource id in the route, and the query filters to the tenant and the requested project.")]
     public async Task<IActionResult> SearchSpecs(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -139,6 +146,8 @@ public class SpecsController : BaseApiController
     }
 
     [HttpPost]
+    [ResourceScopeExempt("Creation endpoint: the spec does not exist yet, so there is no owning project to resolve from.")]
+    [RequirePermission(PermissionCodes.SpecCreate)]
     [Authorize]
     public async Task<IActionResult> CreateSpec(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -174,7 +183,9 @@ public class SpecsController : BaseApiController
         return Created($"/api/specs/{result.Id}", ApiResponse<SpecDetailDto>.Ok(result));
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateSpec(
         Guid id,
@@ -213,7 +224,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDetailDto>.Ok(result));
     }
 
-    [HttpPatch("{id:guid}/status")]
+    [HttpPatch("{id}/status")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecLock)]
     [Authorize]
     public async Task<IActionResult> TransitionStatus(
         Guid id,
@@ -253,7 +266,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/submit-review")]
+    [HttpPost("{id}/submit-review")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecUpdate)]
     [Authorize]
     public async Task<IActionResult> SubmitForReview(
         Guid id,
@@ -291,7 +306,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/approve")]
+    [HttpPost("{id}/approve")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecApprove)]
     [Authorize]
     public async Task<IActionResult> ApproveSpec(
         Guid id,
@@ -329,7 +346,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/reject")]
+    [HttpPost("{id}/reject")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecApprove)]
     [Authorize]
     public async Task<IActionResult> RejectSpec(
         Guid id,
@@ -368,7 +387,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/lock")]
+    [HttpPost("{id}/lock")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecLock)]
     [Authorize]
     public async Task<IActionResult> LockSpec(
         Guid id,
@@ -406,7 +427,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecDelete)]
     [Authorize]
     public async Task<IActionResult> DeleteSpec(
         Guid id,
@@ -438,7 +461,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse.Ok());
     }
 
-    [HttpPut("{id:guid}/activate")]
+    [HttpPut("{id}/activate")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecUpdate)]
     [Authorize]
     public async Task<IActionResult> ActivateSpec(
         Guid id,
@@ -470,7 +495,8 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse.Ok());
     }
 
-    [HttpGet("{id:guid}/sign-offs")]
+    [HttpGet("{id}/sign-offs")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> GetSignOffs(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -495,7 +521,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<List<SignOffDto>>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/sign-off")]
+    [HttpPost("{id}/sign-off")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecApprove)]
     [Authorize]
     public async Task<IActionResult> SubmitSignOff(
         Guid id,
@@ -528,7 +556,8 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SignOffDto>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/sign-off-summary")]
+    [HttpGet("{id}/sign-off-summary")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> GetSignOffSummary(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -553,7 +582,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SignOffSummaryDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/link-requirement")]
+    [HttpPost("{id}/link-requirement")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecUpdate)]
     [Authorize]
     public async Task<IActionResult> LinkRequirement(
         Guid id,
@@ -597,7 +628,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpDelete("{id:guid}/link-requirement")]
+    [HttpDelete("{id}/link-requirement")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecUpdate)]
     [Authorize]
     public async Task<IActionResult> UnlinkRequirement(
         Guid id,
@@ -635,7 +668,9 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<SpecDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/new-version")]
+    [HttpPost("{id}/new-version")]
+    [ResourceScope<Spec>("id")]
+    [RequirePermission(PermissionCodes.SpecCreate)]
     [Authorize]
     public async Task<IActionResult> CreateNewVersion(
         Guid id,
@@ -673,7 +708,8 @@ public class SpecsController : BaseApiController
         return Created($"/api/specs/{result.Id}", ApiResponse<SpecDetailDto>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/versions")]
+    [HttpGet("{id}/versions")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> GetVersionHistory(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -698,7 +734,8 @@ public class SpecsController : BaseApiController
         return Ok(ApiResponse<List<SpecDto>>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/diff/{compareToId:guid}")]
+    [HttpGet("{id}/diff/{compareToId}")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> CompareSpecVersions(
         Guid id,
         Guid compareToId,
@@ -728,7 +765,8 @@ public class SpecsController : BaseApiController
     /// <summary>
     /// spec update get
     /// </summary>
-    [HttpGet("{id:guid}/field-authors")]
+    [HttpGet("{id}/field-authors")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> GetFieldAuthors(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -764,7 +802,8 @@ public class SpecsController : BaseApiController
     /// <summary>
     /// spec change get ()
     /// </summary>
-    [HttpGet("{id:guid}/timeline")]
+    [HttpGet("{id}/timeline")]
+    [ResourceScope<Spec>("id")]
     public async Task<IActionResult> GetTimeline(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

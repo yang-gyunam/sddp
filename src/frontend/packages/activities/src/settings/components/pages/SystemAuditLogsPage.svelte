@@ -8,10 +8,22 @@
 
   import { untrack } from 'svelte';
   import { AuditLogDetailPanel } from '../sections';
-  import { formatDateTime, toast, getAuthState, subscribeAuth, getTabState, setTabState, PageHeader, PageShell, SidebarDetailLayout, Dropdown, ListItem } from '@sddp/shell';
+  import {
+    formatDateTime,
+    toast,
+    getAuthState,
+    subscribeAuth,
+    getTabState,
+    setTabState,
+    PageHeader,
+    PageShell,
+    SidebarDetailLayout,
+    Dropdown,
+    ListItem,
+  } from '@sddp/shell';
   import { Icon, Input, IconButton, Button, Spinner } from '@sddp/ui';
   import type { AuditLog } from '../../types';
-  import { getAuditLogService } from '../../services';
+  import { createAuditLogService } from '../../services';
   import { getAuditActionColor } from '../../../shared/constants/semanticColors';
 
   interface Props {
@@ -36,7 +48,7 @@
     }
   });
 
-  const auditLogService = getAuditLogService();
+  let auditLogService = $derived(createAuditLogService(effectiveTenantId));
 
   const PAGE_SIZE = 50;
 
@@ -97,7 +109,8 @@
         log.action.toLowerCase().includes(query) ||
         log.resourceType.toLowerCase().includes(query);
       const matchesAction = filterAction === 'all' || log.action.toLowerCase() === filterAction;
-      const matchesResource = filterResource === 'all' || log.resourceType.toLowerCase() === filterResource;
+      const matchesResource =
+        filterResource === 'all' || log.resourceType.toLowerCase() === filterResource;
       return matchesSearch && matchesAction && matchesResource;
     })
   );
@@ -167,7 +180,6 @@
     currentPage = 1;
 
     try {
-      auditLogService.setContext(effectiveTenantId);
       const result = await auditLogService.getAuditLogs({
         action: filterAction !== 'all' ? filterAction : undefined,
         resourceType: filterResource !== 'all' ? filterResource : undefined,
@@ -194,7 +206,6 @@
     const nextPage = currentPage + 1;
 
     try {
-      auditLogService.setContext(effectiveTenantId);
       const result = await auditLogService.getAuditLogs({
         action: filterAction !== 'all' ? filterAction : undefined,
         resourceType: filterResource !== 'all' ? filterResource : undefined,
@@ -254,11 +265,11 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="Audit Logs" {loading}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" title="Refresh" onclick={loadLogs} />
-    {/snippet}
-  </PageHeader>
+    <PageHeader title="Audit Logs" {loading}>
+      {#snippet actions()}
+        <IconButton icon="refresh-cw" title="Refresh" onclick={loadLogs} />
+      {/snippet}
+    </PageHeader>
     <SidebarDetailLayout
       showRightPanel={false}
       sidebarWidth={420}
@@ -268,7 +279,9 @@
       {#snippet sidebar()}
         <div class="flex flex-col h-full min-h-0 bg-[var(--color-bg-primary)]">
           <!-- Sidebar Header: Search + Filters -->
-          <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+          <div
+            class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+          >
             <div class="flex items-center gap-1 w-full">
               <div class="relative flex-1">
                 <Icon
@@ -290,12 +303,22 @@
 
               <!-- Filter Dropdown -->
               <Dropdown position="bottom-right">
-                {#snippet trigger()}
-                  <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+                {#snippet trigger({ toggle, open })}
+                  <IconButton
+                    onclick={toggle}
+                    ariaHasPopup
+                    ariaExpanded={open}
+                    icon="more-vertical"
+                    size="sm"
+                    variant="ghost"
+                    title="Filter options"
+                  />
                 {/snippet}
                 <div class="py-1 min-w-[180px]">
                   <!-- Action Filter -->
-                  <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                  <div
+                    class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                  >
                     Action
                   </div>
                   {#each actionFilterOptions as option (option.value)}
@@ -303,11 +326,14 @@
                       variant="unstyled"
                       class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
                              hover:bg-[var(--color-bg-tertiary)] transition-colors"
-                      onclick={() => { filterAction = option.value; loadLogs(); }}
+                      onclick={() => {
+                        filterAction = option.value;
+                        loadLogs();
+                      }}
                     >
                       <span class="flex-1">{option.label}</span>
                       {#if filterAction === option.value}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                     </Button>
                   {/each}
@@ -315,7 +341,9 @@
                   <div class="my-1 border-t border-[var(--color-border-primary)]"></div>
 
                   <!-- Resource Filter -->
-                  <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                  <div
+                    class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                  >
                     Resource
                   </div>
                   {#each resourceFilterOptions as option (option.value)}
@@ -323,11 +351,14 @@
                       variant="unstyled"
                       class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
                              hover:bg-[var(--color-bg-tertiary)] transition-colors"
-                      onclick={() => { filterResource = option.value; loadLogs(); }}
+                      onclick={() => {
+                        filterResource = option.value;
+                        loadLogs();
+                      }}
                     >
                       <span class="flex-1">{option.label}</span>
                       {#if filterResource === option.value}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                     </Button>
                   {/each}
@@ -339,24 +370,35 @@
           <!-- Log List (infinite scroll) -->
           <div class="flex-1 overflow-y-auto pb-1" onscroll={handleListScroll}>
             {#each filteredLogs as log (log.id)}
-              <ListItem selected={selectedLogId === log.id}
-                onclick={() => selectLog(log)} class="gap-2.5">
+              <ListItem
+                selected={selectedLogId === log.id}
+                onclick={() => selectLog(log)}
+                class="gap-2.5"
+              >
                 <div class="flex-1 min-w-0 flex flex-col gap-0.5">
                   <div class="flex items-center gap-2">
                     <span
                       class="inline-block px-1.5 py-px rounded text-[0.6875rem] font-medium capitalize"
-                      style="background: {getActionColor(log.action)}15; color: {getActionColor(log.action)}"
+                      style="background: {getActionColor(log.action)}15; color: {getActionColor(
+                        log.action
+                      )}"
                     >
                       {log.action}
                     </span>
-                    <span class="text-[0.8125rem] font-medium text-[var(--color-text-primary)] truncate">
+                    <span
+                      class="text-[0.8125rem] font-medium text-[var(--color-text-primary)] truncate"
+                    >
                       {log.userName}
                     </span>
                   </div>
-                  <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] pl-1.5">
+                  <div
+                    class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] pl-1.5"
+                  >
                     <span class="capitalize">{log.resourceType}</span>
                     <span class="flex-1"></span>
-                    <span class="text-[var(--color-text-tertiary)] flex-shrink-0">{formatDateStr(log.timestamp)}</span>
+                    <span class="text-[var(--color-text-tertiary)] flex-shrink-0"
+                      >{formatDateStr(log.timestamp)}</span
+                    >
                   </div>
                 </div>
               </ListItem>
@@ -376,7 +418,9 @@
           </div>
 
           <!-- Footer: Count -->
-          <div class="flex-shrink-0 px-3 py-1.5 border-t border-[var(--color-border-primary)] text-xs text-[var(--color-text-tertiary)]">
+          <div
+            class="flex-shrink-0 px-3 py-1.5 border-t border-[var(--color-border-primary)] text-xs text-[var(--color-text-tertiary)]"
+          >
             {filteredLogs.length} of {totalCount} entries
             {#if hasMore}
               <span class="text-[var(--color-text-quaternary)]">&middot; scroll for more</span>
@@ -387,10 +431,7 @@
 
       <!-- Main Content: Detail Panel -->
       {#if showPanel && selectedLog}
-        <AuditLogDetailPanel
-          log={selectedLog}
-          onClose={closePanel}
-        />
+        <AuditLogDetailPanel log={selectedLog} onClose={closePanel} />
       {:else}
         <div class="flex-1 flex items-center justify-center h-full">
           <div class="flex flex-col items-center gap-2 text-[var(--color-text-tertiary)]">

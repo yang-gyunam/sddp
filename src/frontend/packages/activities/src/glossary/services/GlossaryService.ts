@@ -91,10 +91,10 @@ export async function autocomplete(
     limit: limit.toString(),
   });
 
-  return fetchWithAuth<GlossaryTermSummary[]>(
-    `/glossary/autocomplete?${params}`,
-    { tenantId, projectId }
-  );
+  return fetchWithAuth<GlossaryTermSummary[]>(`/glossary/autocomplete?${params}`, {
+    tenantId,
+    projectId,
+  });
 }
 
 /**
@@ -119,10 +119,10 @@ export async function getTermByTerm(
   projectId: string,
   term: string
 ): Promise<GlossaryTermDetail> {
-  return fetchWithAuth<GlossaryTermDetail>(
-    `/glossary/term/${encodeURIComponent(term)}`,
-    { tenantId, projectId }
-  );
+  return fetchWithAuth<GlossaryTermDetail>(`/glossary/term/${encodeURIComponent(term)}`, {
+    tenantId,
+    projectId,
+  });
 }
 
 /**
@@ -323,16 +323,34 @@ export class GlossaryServiceClass {
   private tenantId: string = '';
   private projectId: string = '';
 
+  constructor(tenantId: string = '', projectId?: string) {
+    this.tenantId = tenantId;
+    this.projectId = projectId || '';
+  }
+
   setContext(tenantId: string, projectId?: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId || '';
   }
 
-  getTerms(options?: { page?: number; pageSize?: number; category?: TermCategory; status?: GlossaryTermStatus; }): Promise<GlossaryTermPage> {
+  getTerms(options?: {
+    page?: number;
+    pageSize?: number;
+    category?: TermCategory;
+    status?: GlossaryTermStatus;
+  }): Promise<GlossaryTermPage> {
     return getTerms(this.tenantId, this.projectId || null, options);
   }
 
-  searchTerms(query: string, options?: { page?: number; pageSize?: number; category?: TermCategory; status?: GlossaryTermStatus; }): Promise<GlossaryTermPage> {
+  searchTerms(
+    query: string,
+    options?: {
+      page?: number;
+      pageSize?: number;
+      category?: TermCategory;
+      status?: GlossaryTermStatus;
+    }
+  ): Promise<GlossaryTermPage> {
     return searchTerms(this.tenantId, this.projectId, query, options);
   }
 
@@ -395,6 +413,11 @@ export class GlossaryServiceClass {
   getFieldAuthors(termId: string): Promise<FieldAuthor[]> {
     return getFieldAuthors(this.tenantId, this.projectId, termId);
   }
+}
+
+/** Create a context-bound service for a single tab or request flow. */
+export function createGlossaryService(tenantId: string, projectId?: string): GlossaryServiceClass {
+  return new GlossaryServiceClass(tenantId, projectId);
 }
 
 // Singleton instance

@@ -13,11 +13,15 @@ export { default as DynamicContentRenderer } from './DynamicContentRenderer.svel
 export { default as ListItem } from './ListItem.svelte';
 export { default as RichListItem } from './RichListItem.svelte';
 export { default as SurfaceCard } from './SurfaceCard.svelte';
+export { default as CodeEditor } from './CodeEditor.svelte';
 
 // Panel Content Components
 export { default as TerminalContent } from './TerminalContent.svelte';
 export { default as ProblemsContent } from './ProblemsContent.svelte';
 export { default as OutputContent } from './OutputContent.svelte';
+
+// Tab Close Prompt
+export { default as TabClosePrompt } from './TabClosePrompt.svelte';
 
 // Toast Components
 export { default as Toast } from './Toast.svelte';

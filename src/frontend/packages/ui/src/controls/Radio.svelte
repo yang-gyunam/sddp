@@ -55,46 +55,55 @@
     {name}
     {value}
     {disabled}
-    checked={checked}
+    {checked}
     onchange={handleChange}
     class={className}
   />
 {:else}
-<div class="flex items-start gap-3 {className}">
-  <label for={radioId} class="relative flex items-center {disabled ? 'cursor-not-allowed' : 'cursor-pointer'}">
-    <input
-      type="radio"
-      id={radioId}
-      {name}
-      {value}
-      {disabled}
-      checked={checked}
-      onchange={handleChange}
-      class="peer sr-only"
-    />
-    <div
-      class="{sizeClasses[size].box} rounded-full border-2 flex items-center justify-center transition-colors
+  <div class="flex items-start gap-3 {className}">
+    <label
+      for={radioId}
+      class="relative flex items-center {disabled ? 'cursor-not-allowed' : 'cursor-pointer'}"
+    >
+      <input
+        type="radio"
+        id={radioId}
+        {name}
+        {value}
+        {disabled}
+        {checked}
+        onchange={handleChange}
+        class="peer sr-only"
+      />
+      <div
+        class="{sizeClasses[size]
+          .box} rounded-full border-2 flex items-center justify-center transition-colors
         {disabled
           ? 'border-[var(--color-neutral-300)] bg-[var(--color-neutral-100)] cursor-not-allowed dark:border-[var(--color-neutral-600)] dark:bg-[var(--color-neutral-800)]'
           : checked
             ? 'border-[var(--color-accent-primary)] bg-[var(--color-bg-primary)]'
             : 'border-[var(--color-neutral-400)] bg-[var(--color-bg-primary)] hover:border-[var(--color-accent-primary)]'}"
-    >
-      {#if checked}
-        <div class="{sizeClasses[size].dot} rounded-full bg-[var(--color-accent-primary)]"></div>
-      {/if}
-    </div>
-  </label>
-
-  {#if label || description}
-    <label for={radioId} class="flex flex-col cursor-pointer {disabled ? 'cursor-not-allowed opacity-50' : ''}">
-      {#if label}
-        <span class="{sizeClasses[size].text} font-medium text-[var(--color-text-primary)]">{label}</span>
-      {/if}
-      {#if description}
-        <span class="text-sm text-[var(--color-text-tertiary)]">{description}</span>
-      {/if}
+      >
+        {#if checked}
+          <div class="{sizeClasses[size].dot} rounded-full bg-[var(--color-accent-primary)]"></div>
+        {/if}
+      </div>
     </label>
-  {/if}
-</div>
+
+    {#if label || description}
+      <label
+        for={radioId}
+        class="flex flex-col cursor-pointer {disabled ? 'cursor-not-allowed opacity-50' : ''}"
+      >
+        {#if label}
+          <span class="{sizeClasses[size].text} font-medium text-[var(--color-text-primary)]"
+            >{label}</span
+          >
+        {/if}
+        {#if description}
+          <span class="text-sm text-[var(--color-text-tertiary)]">{description}</span>
+        {/if}
+      </label>
+    {/if}
+  </div>
 {/if}

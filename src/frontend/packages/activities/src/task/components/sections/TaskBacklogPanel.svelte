@@ -14,11 +14,7 @@
     onProjectSelect?: (projectId: string) => void;
   }
 
-  let {
-    backlogSummary = null,
-    selectedProjectId = null,
-    onProjectSelect,
-  }: Props = $props();
+  let { backlogSummary = null, selectedProjectId = null, onProjectSelect }: Props = $props();
 </script>
 
 <div>
@@ -36,19 +32,23 @@
           class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer border
             transition-colors duration-150
             {isSelected
-              ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30'
-              : 'border-transparent hover:bg-[var(--color-bg-tertiary)]'}"
+            ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30'
+            : 'border-transparent hover:bg-[var(--color-bg-tertiary)]'}"
           onclick={() => onProjectSelect?.(project.projectId)}
         >
           <Icon
             name={project.isOwner ? 'shield' : 'folder'}
             size="sm"
-            class={isSelected ? 'text-[var(--color-accent-primary)]' : 'text-[var(--color-text-tertiary)]'}
+            class={isSelected
+              ? 'text-[var(--color-accent-text)]'
+              : 'text-[var(--color-text-tertiary)]'}
           />
           <span class="flex-1 min-w-0 text-sm truncate text-[var(--color-text-primary)]">
             {project.projectName}
           </span>
-          <span class="flex-shrink-0 text-xs leading-none px-1 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]">
+          <span
+            class="flex-shrink-0 text-xs leading-none px-1 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]"
+          >
             {project.activeTaskCount}
           </span>
         </Button>

@@ -86,7 +86,7 @@ Code keeps changing. The faster AI generates it, the faster it changes. But agre
 
 ---
 
-*SDDP is an open-source project. Check it out on [GitHub](https://github.com/user/sddp).*
+*SDDP is an open-source project. Check it out on [GitHub](https://github.com/yang-gyunam/sddp).*
 
 <!--
   Image Placeholders (screenshot/illustration replacement guide)

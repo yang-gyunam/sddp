@@ -42,11 +42,15 @@
   }
 </script>
 
-<ListItem {selected} onclick={handleClick} role="treeitem"
+<ListItem
+  {selected}
+  onclick={handleClick}
+  role="treeitem"
   aria-selected={selected}
   aria-expanded={requirement.hasChildren ? expanded : undefined}
   style="padding-left: {paddingLeft}px"
-  class="group {className}">
+  class="group {className}"
+>
   <!-- Expand/Collapse Toggle -->
   {#if requirement.hasChildren}
     <IconButton

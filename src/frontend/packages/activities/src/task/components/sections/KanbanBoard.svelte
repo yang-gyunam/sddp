@@ -111,7 +111,9 @@
     // Sort
     const priorityOrder: Record<TaskPriority, number> = { High: 0, Medium: 1, Low: 2 };
     if (filter.sortBy === 'priority') {
-      result = [...result].sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+      result = [...result].sort(
+        (a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1)
+      );
     } else if (filter.sortBy === 'title') {
       result = [...result].sort((a, b) => a.title.localeCompare(b.title));
     } else if (filter.sortBy === 'effort') {
@@ -143,7 +145,12 @@
     dropTargetStatus = status;
   }
 
-  function handleDragOverCard(event: DragEvent, status: TaskStatus, cardIndex: number, cardElement: HTMLElement) {
+  function handleDragOverCard(
+    event: DragEvent,
+    status: TaskStatus,
+    cardIndex: number,
+    cardElement: HTMLElement
+  ) {
     event.preventDefault();
     event.stopPropagation();
     if (event.dataTransfer) {
@@ -173,14 +180,14 @@
 
     if (draggedTaskId) {
       const columnTasks = getTasksByStatus(targetStatus);
-      const draggedTask = tasks.find(t => t.id === draggedTaskId);
+      const draggedTask = tasks.find((t) => t.id === draggedTaskId);
 
       // Calculate final target index
       let finalIndex = dropTargetIndex ?? columnTasks.length;
 
       // If moving within the same column, adjust index
       if (draggedTask && draggedTask.status === targetStatus) {
-        const currentIndex = columnTasks.findIndex(t => t.id === draggedTaskId);
+        const currentIndex = columnTasks.findIndex((t) => t.id === draggedTaskId);
         if (currentIndex !== -1 && currentIndex < finalIndex) {
           finalIndex = Math.max(0, finalIndex - 1);
         }
@@ -219,7 +226,9 @@
             {projectName}
           </h2>
           <p class="text-sm text-[var(--color-text-tertiary)]">
-            {tasks.length} tasks ({getTasksByStatus('ToDo').length} to do, {getTasksByStatus('InProgress').length} in progress)
+            {tasks.length} tasks ({getTasksByStatus('ToDo').length} to do, {getTasksByStatus(
+              'InProgress'
+            ).length} in progress)
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -251,14 +260,17 @@
           {@const allColumnTasks = getTasksByStatus(column.status)}
           {@const columnTasks = getFilteredColumnTasks(column.status)}
           {@const columnStyle = getColumnStyle(column.status)}
-          {@const isDropTarget = dropTargetStatus === column.status && draggedFromStatus !== column.status}
+          {@const isDropTarget =
+            dropTargetStatus === column.status && draggedFromStatus !== column.status}
           {@const isFiltered = hasActiveFilter(column.status)}
           {@const colFilter = columnFilters[column.status]}
 
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="flex flex-col flex-1 min-w-[240px] rounded-lg shadow-sm transition-colors
-              {isDropTarget ? 'bg-[var(--color-accent-primary)]/5 ring-2 ring-[var(--color-accent-primary)]/30' : 'bg-[var(--color-bg-primary)]'}"
+              {isDropTarget
+              ? 'bg-[var(--color-accent-primary)]/5 ring-2 ring-[var(--color-accent-primary)]/30'
+              : 'bg-[var(--color-bg-primary)]'}"
             ondragover={(e) => handleDragOver(e, column.status)}
             ondragleave={handleDragLeave}
             ondrop={(e) => handleDrop(e, column.status)}
@@ -269,14 +281,13 @@
               style="border-color: {column.color};"
             >
               <div class="flex items-center gap-2">
-                <div
-                  class="w-2 h-2 rounded-full"
-                  style="background-color: {column.color};"
-                ></div>
+                <div class="w-2 h-2 rounded-full" style="background-color: {column.color};"></div>
                 <span class="font-medium text-sm text-[var(--color-text-primary)]">
                   {column.label}
                 </span>
-                <span class="text-xs px-1.5 py-0.5 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
+                <span
+                  class="text-xs px-1.5 py-0.5 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                >
                   {#if isFiltered}
                     {columnTasks.length}/{allColumnTasks.length}
                   {:else}
@@ -287,8 +298,11 @@
               <div class="flex items-center gap-0.5">
                 <!-- Column filter dropdown -->
                 <Dropdown position="bottom-right" closeOnSelect={false}>
-                  {#snippet trigger()}
+                  {#snippet trigger({ toggle, open })}
                     <IconButton
+                      onclick={toggle}
+                      ariaHasPopup
+                      ariaExpanded={open}
                       icon="more-vertical"
                       size="sm"
                       variant={isFiltered ? 'primary' : 'ghost'}
@@ -298,7 +312,9 @@
 
                   <div class="py-1 min-w-[160px]">
                     <!-- Priority filter -->
-                    <div class="px-3 py-1 text-[0.625rem] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider">
+                    <div
+                      class="px-3 py-1 text-[0.625rem] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider"
+                    >
                       Priority
                     </div>
                     {#each priorityOptions as p (p.value)}
@@ -306,7 +322,9 @@
                       <Button
                         variant="unstyled"
                         class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-[var(--color-bg-tertiary)] transition-colors
-                          {checked ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}"
+                          {checked
+                          ? 'text-[var(--color-text-primary)]'
+                          : 'text-[var(--color-text-secondary)]'}"
                         onclick={() => togglePriorityFilter(column.status, p.value)}
                       >
                         <Icon name={checked ? 'check-square' : 'square'} size="sm" />
@@ -319,7 +337,9 @@
                     <div class="border-t border-[var(--color-border)] my-1"></div>
 
                     <!-- Sort options -->
-                    <div class="px-3 py-1 text-[0.625rem] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider">
+                    <div
+                      class="px-3 py-1 text-[0.625rem] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider"
+                    >
                       Sort by
                     </div>
                     {#each sortOptions as opt (opt.value)}
@@ -327,10 +347,16 @@
                       <Button
                         variant="unstyled"
                         class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-[var(--color-bg-tertiary)] transition-colors
-                          {active ? 'text-[var(--color-accent-primary)] font-medium' : 'text-[var(--color-text-secondary)]'}"
+                          {active
+                          ? 'text-[var(--color-accent-text)] font-medium'
+                          : 'text-[var(--color-text-secondary)]'}"
                         onclick={() => setSortOption(column.status, opt.value)}
                       >
-                        <Icon name={active ? 'check' : opt.icon} size="sm" class={active ? '' : 'opacity-0'} />
+                        <Icon
+                          name={active ? 'check' : opt.icon}
+                          size="sm"
+                          class={active ? '' : 'opacity-0'}
+                        />
                         <Icon name={opt.icon} size="xs" />
                         <span>{opt.label}</span>
                       </Button>
@@ -355,8 +381,15 @@
               {#each columnTasks as task, taskIndex (task.id)}
                 {@const isDragging = draggedTaskId === task.id}
                 {@const isSelected = selectedTaskId === task.id}
-                {@const showDropIndicatorBefore = dropTargetStatus === column.status && dropTargetIndex === taskIndex && draggedTaskId !== task.id}
-                {@const showDropIndicatorAfter = dropTargetStatus === column.status && dropTargetIndex === taskIndex + 1 && taskIndex === columnTasks.length - 1 && draggedTaskId !== task.id}
+                {@const showDropIndicatorBefore =
+                  dropTargetStatus === column.status &&
+                  dropTargetIndex === taskIndex &&
+                  draggedTaskId !== task.id}
+                {@const showDropIndicatorAfter =
+                  dropTargetStatus === column.status &&
+                  dropTargetIndex === taskIndex + 1 &&
+                  taskIndex === columnTasks.length - 1 &&
+                  draggedTaskId !== task.id}
                 <div
                   draggable="true"
                   role="button"
@@ -365,11 +398,12 @@
                   class="relative p-3 rounded-lg border cursor-grab transition-all
                     {isDragging ? 'opacity-50 cursor-grabbing' : ''}
                     {isSelected
-                      ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-border-primary)]'
-                      : 'bg-[var(--color-bg-primary)] border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)]'}"
+                    ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-border-primary)]'
+                    : 'bg-[var(--color-bg-primary)] border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)]'}"
                   ondragstart={(e) => handleDragStart(e, task)}
                   ondragend={handleDragEnd}
-                  ondragover={(e) => handleDragOverCard(e, column.status, taskIndex, e.currentTarget as HTMLElement)}
+                  ondragover={(e) =>
+                    handleDragOverCard(e, column.status, taskIndex, e.currentTarget as HTMLElement)}
                   onclick={() => onSelectTask?.(task.id)}
                   onkeydown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -380,11 +414,15 @@
                 >
                   <!-- Drop indicator at top edge -->
                   {#if showDropIndicatorBefore}
-                    <div class="absolute -top-1 left-0 right-0 h-0.5 bg-[var(--color-accent-primary)] rounded-full"></div>
+                    <div
+                      class="absolute -top-1 left-0 right-0 h-0.5 bg-[var(--color-accent-primary)] rounded-full"
+                    ></div>
                   {/if}
                   <!-- Drop indicator at bottom edge (for last card) -->
                   {#if showDropIndicatorAfter}
-                    <div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-[var(--color-accent-primary)] rounded-full"></div>
+                    <div
+                      class="absolute -bottom-1 left-0 right-0 h-0.5 bg-[var(--color-accent-primary)] rounded-full"
+                    ></div>
                   {/if}
                   <!-- Priority Badge & Menu -->
                   <div class="flex items-center justify-between mb-2">
@@ -394,23 +432,31 @@
                       size="sm"
                       variant="ghost"
                       title="More options"
-                      onclick={(e) => { e.stopPropagation(); }}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                      }}
                     />
                   </div>
 
                   <!-- Title -->
-                  <div class="font-medium text-sm text-[var(--color-text-primary)] mb-2 line-clamp-2">
+                  <div
+                    class="font-medium text-sm text-[var(--color-text-primary)] mb-2 line-clamp-2"
+                  >
                     {task.title}
                   </div>
 
                   <!-- Assignee -->
-                  <div class="flex items-center gap-1 mb-2 text-xs text-[var(--color-text-secondary)]">
+                  <div
+                    class="flex items-center gap-1 mb-2 text-xs text-[var(--color-text-secondary)]"
+                  >
                     <Icon name="user" size="xs" />
                     <span>@{task.assignee?.name}</span>
                   </div>
 
                   <!-- Links & Effort -->
-                  <div class="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
+                  <div
+                    class="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]"
+                  >
                     {#if task.linkedItemCount > 0}
                       <span class="flex items-center gap-1">
                         <Icon name="link" size="xs" />
@@ -421,7 +467,11 @@
                     {/if}
 
                     {#if task.estimatedHours > 0}
-                      <span class="flex items-center gap-1 {task.hasOverdueEffort ? 'text-red-500' : ''}">
+                      <span
+                        class="flex items-center gap-1 {task.hasOverdueEffort
+                          ? 'text-red-500'
+                          : ''}"
+                      >
                         <Icon name="clock" size="xs" />
                         {task.actualHours}h / {task.estimatedHours}h
                       </span>
@@ -431,7 +481,9 @@
                   <!-- Project badge (for My Tasks integrated view) -->
                   {#if showProjectBadge}
                     <div class="mt-2 pt-2 border-t border-[var(--color-border-primary)]">
-                      <span class="text-xs text-[var(--color-text-tertiary)] px-1.5 py-0.5 bg-[var(--color-bg-tertiary)] rounded">
+                      <span
+                        class="text-xs text-[var(--color-text-tertiary)] px-1.5 py-0.5 bg-[var(--color-bg-tertiary)] rounded"
+                      >
                         {task.projectName}
                       </span>
                     </div>
@@ -443,15 +495,18 @@
               {#if columnTasks.length === 0}
                 <!-- Drop indicator for empty column (at top) -->
                 {#if dropTargetStatus === column.status && draggedTaskId}
-                  <div class="h-0.5 bg-[var(--color-accent-primary)] rounded-full transition-all"></div>
+                  <div
+                    class="h-0.5 bg-[var(--color-accent-primary)] rounded-full transition-all"
+                  ></div>
                 {/if}
-                <div class="flex flex-col items-center justify-center flex-1 text-[var(--color-text-tertiary)]">
+                <div
+                  class="flex flex-col items-center justify-center flex-1 text-[var(--color-text-tertiary)]"
+                >
                   <Icon name={columnStyle.icon} size="lg" class="mb-2 opacity-30" />
                   <p class="text-xs">No tasks</p>
                 </div>
               {/if}
             </div>
-
           </div>
         {/each}
       </div>

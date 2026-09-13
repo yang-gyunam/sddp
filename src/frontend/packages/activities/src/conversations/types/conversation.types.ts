@@ -328,7 +328,7 @@ export const MESSAGE_TYPE_STYLES: Record<MessageType, MessageTypeStyle> = {
   Proposal: {
     bgColor: 'bg-[var(--color-bg-secondary)]',
     borderColor: 'border-[var(--color-accent-primary)]',
-    textColor: 'text-[var(--color-accent-primary)]',
+    textColor: 'text-[var(--color-accent-text)]',
     icon: 'lightbulb',
   },
   Question: {

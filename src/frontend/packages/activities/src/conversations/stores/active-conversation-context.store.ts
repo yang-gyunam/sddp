@@ -18,9 +18,11 @@ function isSameContext(
   current: Omit<ActiveConversationContext, 'tabId'> | undefined,
   next: Omit<ActiveConversationContext, 'tabId'>
 ): boolean {
-  return current?.conversationId === next.conversationId
-    && current?.projectId === next.projectId
-    && current?.kind === next.kind;
+  return (
+    current?.conversationId === next.conversationId &&
+    current?.projectId === next.projectId &&
+    current?.kind === next.kind
+  );
 }
 
 export function setActiveConversationContext(context: ActiveConversationContext): void {

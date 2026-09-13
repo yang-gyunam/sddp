@@ -62,13 +62,11 @@
 
 <div class="flex flex-col h-full bg-[var(--color-bg-primary)] {className}">
   <!-- Header: icon + title + check/x -->
-  <div class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]">
+  <div
+    class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]"
+  >
     <div class="flex items-center">
-      <Icon
-        name={icon}
-        size="md"
-        class="text-[var(--color-text-tertiary)] mr-2"
-      />
+      <Icon name={icon} size="md" class="text-[var(--color-text-tertiary)] mr-2" />
       <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">
         {title}
       </h2>
@@ -81,13 +79,7 @@
         disabled={loading || !isValid}
         title="Create"
       />
-      <IconButton
-        icon="x"
-        variant="ghost"
-        onclick={onCancel}
-        disabled={loading}
-        title="Cancel"
-      />
+      <IconButton icon="x" variant="ghost" onclick={onCancel} disabled={loading} title="Cancel" />
     </div>
   </div>
 
@@ -95,12 +87,7 @@
   <div class="flex-1 overflow-auto p-6">
     <div class="max-w-xl mx-auto space-y-4">
       {#if showName}
-        <Input
-          label={nameLabel}
-          required
-          bind:value={name}
-          placeholder={namePlaceholder}
-        />
+        <Input label={nameLabel} required bind:value={name} placeholder={namePlaceholder} />
       {/if}
 
       {#if showDescription}

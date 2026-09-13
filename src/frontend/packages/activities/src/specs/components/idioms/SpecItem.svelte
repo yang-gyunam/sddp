@@ -15,12 +15,7 @@
     class?: string;
   }
 
-  let {
-    spec,
-    selected = false,
-    onSelect,
-    class: className = '',
-  }: Props = $props();
+  let { spec, selected = false, onSelect, class: className = '' }: Props = $props();
 
   const statusStyle = $derived(SPEC_STATUS_STYLES[spec.status]);
   const signOffLabel = $derived(
@@ -34,8 +29,13 @@
   }
 </script>
 
-<ListItem {selected} onclick={handleClick} role="treeitem"
-  aria-selected={selected} class="group {className}">
+<ListItem
+  {selected}
+  onclick={handleClick}
+  role="treeitem"
+  aria-selected={selected}
+  class="group {className}"
+>
   <!-- Status Icon -->
   <Icon
     name={statusStyle.icon}
@@ -63,10 +63,7 @@
 
   <!-- Sign-off Progress (for InReview) -->
   {#if spec.status === 'InReview' && spec.signOffProgress !== undefined}
-    <div
-      class="flex-shrink-0 w-8 h-8 relative"
-      title="Sign-off progress: {signOffLabel}"
-    >
+    <div class="flex-shrink-0 w-8 h-8 relative" title="Sign-off progress: {signOffLabel}">
       <svg class="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
         <circle
           cx="16"

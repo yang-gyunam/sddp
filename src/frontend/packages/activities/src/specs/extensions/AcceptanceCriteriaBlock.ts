@@ -20,7 +20,9 @@ export interface AcceptanceCriteriaBlockAttributes {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     acceptanceCriteriaBlock: {
-      insertAcceptanceCriteriaBlock: (attrs?: Partial<AcceptanceCriteriaBlockAttributes>) => ReturnType;
+      insertAcceptanceCriteriaBlock: (
+        attrs?: Partial<AcceptanceCriteriaBlockAttributes>
+      ) => ReturnType;
     };
   }
 }
@@ -72,7 +74,8 @@ export const AcceptanceCriteriaBlock = Node.create({
       'div',
       mergeAttributes(HTMLAttributes, {
         'data-type': 'acceptance-criteria-block',
-        class: 'acceptance-criteria-block border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20 p-4 my-2 rounded-r',
+        class:
+          'acceptance-criteria-block border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20 p-4 my-2 rounded-r',
       }),
       [
         'div',
@@ -83,7 +86,10 @@ export const AcceptanceCriteriaBlock = Node.create({
           { class: 'flex items-center justify-between' },
           [
             'div',
-            { class: 'flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold text-sm' },
+            {
+              class:
+                'flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold text-sm',
+            },
             ['span', { class: 'text-lg' }, '✅'],
             ['span', {}, attrs.title],
           ],
@@ -126,11 +132,7 @@ export const AcceptanceCriteriaBlock = Node.create({
                 [
                   'div',
                   { class: 'flex items-start gap-2' },
-                  [
-                    'span',
-                    { class: 'text-xs font-mono text-gray-400' },
-                    item.checked ? '☑' : '☐',
-                  ],
+                  ['span', { class: 'text-xs font-mono text-gray-400' }, item.checked ? '☑' : '☐'],
                   [
                     'div',
                     { class: 'flex-1 space-y-1' },
@@ -138,7 +140,11 @@ export const AcceptanceCriteriaBlock = Node.create({
                       ? [
                           'div',
                           {},
-                          ['span', { class: 'font-medium text-purple-600 dark:text-purple-400' }, 'Given '],
+                          [
+                            'span',
+                            { class: 'font-medium text-purple-600 dark:text-purple-400' },
+                            'Given ',
+                          ],
                           ['span', { class: 'text-gray-700 dark:text-gray-300' }, item.given],
                         ]
                       : '',
@@ -146,7 +152,11 @@ export const AcceptanceCriteriaBlock = Node.create({
                       ? [
                           'div',
                           {},
-                          ['span', { class: 'font-medium text-blue-600 dark:text-blue-400' }, 'When '],
+                          [
+                            'span',
+                            { class: 'font-medium text-blue-600 dark:text-blue-400' },
+                            'When ',
+                          ],
                           ['span', { class: 'text-gray-700 dark:text-gray-300' }, item.when],
                         ]
                       : '',
@@ -154,7 +164,11 @@ export const AcceptanceCriteriaBlock = Node.create({
                       ? [
                           'div',
                           {},
-                          ['span', { class: 'font-medium text-green-600 dark:text-green-400' }, 'Then '],
+                          [
+                            'span',
+                            { class: 'font-medium text-green-600 dark:text-green-400' },
+                            'Then ',
+                          ],
                           ['span', { class: 'text-gray-700 dark:text-gray-300' }, item.then],
                         ]
                       : '',

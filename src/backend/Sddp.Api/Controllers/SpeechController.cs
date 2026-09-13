@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Interfaces;
+using Sddp.Api.Authorization;
 
 namespace Sddp.Api.Controllers;
 
@@ -41,6 +42,7 @@ public class SpeechController : BaseApiController
     /// STT 기능 활성화 상태 조회
     /// </summary>
     [HttpGet("status")]
+        [ResourceScopeExempt("Feature flag probe that reads build configuration only and touches no tenant or project owned data.")]
     public IActionResult GetStatus()
     {
         return Ok(ApiResponse<SpeechStatusDto>.Ok(new SpeechStatusDto
@@ -53,6 +55,8 @@ public class SpeechController : BaseApiController
     /// 음성 전사 (multipart/form-data, 필드명 audio, 최대 10MB)
     /// </summary>
     [HttpPost("transcriptions")]
+        [ResourceScopeExempt("Stateless transcription of an uploaded audio stream; nothing is persisted and no resource id appears in the route.")]
+    [MutationAuthorizationExempt("Speech transcription does not persist application data.", allowsAutomatedCaller: true)]
     [RequestSizeLimit(MaxAudioBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes)]
     public async Task<IActionResult> Transcribe(

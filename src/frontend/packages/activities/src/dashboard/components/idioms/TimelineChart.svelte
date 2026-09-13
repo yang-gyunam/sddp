@@ -17,9 +17,9 @@
 
   // ---- Layout constants ------------------------------------------------
   const SVG_HEIGHT = 120;
-  const PADDING_X = 48;   // horizontal padding for axis labels
+  const PADDING_X = 48; // horizontal padding for axis labels
   const PADDING_TOP = 28; // space above the axis line (for labels)
-  const AXIS_Y = 72;      // y position of the centre axis line
+  const AXIS_Y = 72; // y position of the centre axis line
   const DOT_RADIUS = 6;
   const DOT_RADIUS_HOVER = 8;
   const DAY_MIN = -30;
@@ -71,7 +71,7 @@
   let hoveredTaskId = $state<string | null>(null);
 
   const hoveredDot = $derived(
-    hoveredTaskId ? dotData.find((d) => d.task.taskId === hoveredTaskId) ?? null : null
+    hoveredTaskId ? (dotData.find((d) => d.task.taskId === hoveredTaskId) ?? null) : null
   );
 
   // Format ISO date string to readable form (YYYY-MM-DD → MM/DD)
@@ -102,7 +102,9 @@
         height={SVG_HEIGHT}
         role="img"
         aria-label="Due date timeline chart"
-        onmouseleave={() => { hoveredTaskId = null; }}
+        onmouseleave={() => {
+          hoveredTaskId = null;
+        }}
       >
         <!-- Axis baseline -->
         <line
@@ -175,7 +177,12 @@
               hoveredTaskId = task.taskId;
             }}
             onclick={() => onTaskClick?.(task.taskId)}
-            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTaskClick?.(task.taskId); } }}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onTaskClick?.(task.taskId);
+              }
+            }}
           />
         {/each}
 
@@ -218,7 +225,9 @@
           <!-- Tooltip content: project -->
           {#if task.projectName}
             <text x={TX + 10} y={TY + 64} class="tooltip-project">
-              {task.projectName.length > 24 ? task.projectName.slice(0, 24) + '…' : task.projectName}
+              {task.projectName.length > 24
+                ? task.projectName.slice(0, 24) + '…'
+                : task.projectName}
             </text>
           {/if}
 

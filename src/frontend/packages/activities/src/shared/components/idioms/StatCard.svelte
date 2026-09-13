@@ -79,18 +79,14 @@
   };
 
   const displayValue = $derived(
-    value !== undefined
-      ? typeof value === 'number' ? formatNumber(value) : value
-      : ''
+    value !== undefined ? (typeof value === 'number' ? formatNumber(value) : value) : ''
   );
   const trendLabel = $derived(
     trend ? formatPercent(Math.abs(trend.value) / 100, { maximumFractionDigits: 0 }) : ''
   );
 
   const selectedClass = $derived(
-    selected
-      ? 'border-[var(--color-accent-primary)]/50 bg-[var(--color-accent-primary)]/10'
-      : ''
+    selected ? 'border-[var(--color-accent-primary)]/50 bg-[var(--color-accent-primary)]/10' : ''
   );
 </script>
 
@@ -121,7 +117,9 @@
     padding={size === 'sm' ? 'md' : 'lg'}
     interactive={Boolean(onClick)}
     {selected}
-    class="stat-card text-left w-full {onClick ? 'cursor-pointer' : 'cursor-default'} {selectedClass} {className}"
+    class="stat-card text-left w-full {onClick
+      ? 'cursor-pointer'
+      : 'cursor-default'} {selectedClass} {className}"
     onclick={onClick}
   >
     {#if iconColor && icon}

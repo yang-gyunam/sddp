@@ -131,7 +131,10 @@
       rightPanelRafId = requestAnimationFrame(() => {
         // Reverse direction: drag left = increase width
         const delta = startX - moveEvent.clientX;
-        const newWidth = Math.min(maxRightPanelWidth, Math.max(minRightPanelWidth, startWidth + delta));
+        const newWidth = Math.min(
+          maxRightPanelWidth,
+          Math.max(minRightPanelWidth, startWidth + delta)
+        );
         rightPanelWidth = newWidth;
         rightPanelRafId = null;
       });

@@ -5,11 +5,7 @@
 <script lang="ts">
   import { Icon } from '@sddp/ui';
   import type { RelationType, EntityType } from '../../types';
-  import {
-    RELATION_TYPE_STYLES,
-    ENTITY_TYPE_STYLES,
-    PRIMARY_FLOW_STYLES,
-  } from '../../types';
+  import { RELATION_TYPE_STYLES, ENTITY_TYPE_STYLES, PRIMARY_FLOW_STYLES } from '../../types';
 
   interface Props {
     showRelationTypes?: boolean;
@@ -49,7 +45,11 @@
       </div>
       <div class="flex flex-wrap gap-2">
         {#each Object.entries(PRIMARY_FLOW_STYLES) as [_key, style] (_key)}
-          <div class="flex items-center gap-1.5 {compact ? '' : 'px-2 py-1 rounded bg-[var(--color-bg-tertiary)]'}">
+          <div
+            class="flex items-center gap-1.5 {compact
+              ? ''
+              : 'px-2 py-1 rounded bg-[var(--color-bg-tertiary)]'}"
+          >
             <Icon name={style.icon} size="sm" class={style.color} />
             <span class="text-[var(--color-text-secondary)]">{style.label}</span>
           </div>
@@ -66,7 +66,9 @@
       <div class="grid {compact ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'} gap-1.5">
         {#each relationTypes as type (type)}
           {@const style = RELATION_TYPE_STYLES[type]}
-          <div class="flex items-center gap-1.5 {compact ? '' : 'px-2 py-1 rounded ' + style.bgColor}">
+          <div
+            class="flex items-center gap-1.5 {compact ? '' : 'px-2 py-1 rounded ' + style.bgColor}"
+          >
             <Icon name={style.icon} size="sm" class={style.color} />
             <span class="text-[var(--color-text-secondary)] truncate">{style.label}</span>
           </div>
@@ -83,7 +85,9 @@
       <div class="flex flex-wrap gap-2">
         {#each entityTypes as type (type)}
           {@const style = ENTITY_TYPE_STYLES[type]}
-          <div class="flex items-center gap-1.5 {compact ? '' : 'px-2 py-1 rounded ' + style.bgColor}">
+          <div
+            class="flex items-center gap-1.5 {compact ? '' : 'px-2 py-1 rounded ' + style.bgColor}"
+          >
             <Icon name={style.icon} size="sm" class={style.color} />
             <span class="text-[var(--color-text-secondary)]">{style.label}</span>
           </div>

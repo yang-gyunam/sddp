@@ -28,7 +28,10 @@
       {#each displayedMembers as member (member.userId)}
         <li class="member-item">
           <div class="member-info">
-            <div class="member-avatar" style="background-color: {getAvatarHexColor(member.userName)}">
+            <div
+              class="member-avatar"
+              style="background-color: {getAvatarHexColor(member.userName)}"
+            >
               {member.userName.substring(0, 2).toUpperCase()}
             </div>
             <div class="member-details">
@@ -42,7 +45,7 @@
         </li>
       {/each}
     </ul>
-    
+
     {#if hasMore}
       <Button variant="ghost">View All Members ({members.length})</Button>
     {/if}
@@ -122,5 +125,4 @@
     font-size: 0.75rem;
     color: var(--text-secondary);
   }
-
 </style>

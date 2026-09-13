@@ -1,10 +1,7 @@
 <!-- Section: DirectMessageList — Projects > Conversations -->
 <script lang="ts">
   import { Button } from '@sddp/ui';
-  import {
-    formatDateByPreference,
-    Avatar,
-  } from '@sddp/shell';
+  import { formatDateByPreference, Avatar } from '@sddp/shell';
 
   interface DirectMessage {
     id: string;
@@ -23,19 +20,11 @@
     query?: string;
   }
 
-  let {
-    items,
-    selectedId = null,
-    onSelect,
-    class: className = '',
-    query = '',
-  }: Props = $props();
+  let { items, selectedId = null, onSelect, class: className = '', query = '' }: Props = $props();
 
   const filteredItems = $derived(
     query.trim()
-      ? items.filter((item) =>
-          item.name.toLowerCase().includes(query.trim().toLowerCase())
-        )
+      ? items.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()))
       : items
   );
 
@@ -45,7 +34,7 @@
   }
 </script>
 
-<div class="{className}">
+<div class={className}>
   {#if filteredItems.length === 0}
     <div class="flex flex-col items-center justify-center h-20 text-center px-4">
       <p class="text-sm text-[var(--color-text-muted)]">No direct messages</p>
@@ -57,8 +46,8 @@
         class="w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer
           transition-colors duration-150
           {selectedId === item.id
-            ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
-            : 'hover:bg-[var(--color-bg-tertiary)] border border-transparent'}"
+          ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
+          : 'hover:bg-[var(--color-bg-tertiary)] border border-transparent'}"
         onclick={() => onSelect(item)}
       >
         <!-- Avatar (compact) -->

@@ -18,16 +18,6 @@ export const TEST_USERS = {
   david: { username: 'david.seo', password: 'Test@123!', userId: '00000000-0000-0000-0005-000000000105' },
 } as const;
 
-// DevFlow Story users (matches 91-data-test-persons.sql)
-export const DEVFLOW_USERS = {
-  alex: { username: 'alex.kim', password: 'Test@123!', role: 'PRODUCT_OWNER', userId: '00000000-0000-0000-0005-000000000201' },
-  jordan: { username: 'jordan.lee', password: 'Test@123!', role: 'DOMAIN_EXPERT', userId: '00000000-0000-0000-0005-000000000202' },
-  taylor: { username: 'taylor.park', password: 'Test@123!', role: 'DEVELOPER', userId: '00000000-0000-0000-0005-000000000203' },
-  morgan: { username: 'morgan.choi', password: 'Test@123!', role: 'DEVELOPER', userId: '00000000-0000-0000-0005-000000000204' },
-  casey: { username: 'casey.seo', password: 'Test@123!', role: 'REVIEWER', userId: '00000000-0000-0000-0005-000000000205' },
-  riley: { username: 'riley.han', password: 'Test@123!', role: 'QA_TESTER', userId: '00000000-0000-0000-0005-000000000206' },
-} as const;
-
 // API base URL
 export const E2E_API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:5001/api';
 export const E2E_HEALTH_URL = process.env.E2E_HEALTH_URL ?? 'http://localhost:5001/health';
@@ -40,10 +30,6 @@ export const TEST_PROJECT_ID = '00000000-0000-0000-0020-000000000099'; // E2E te
 // ACME tenant/project (test users john, sarah, mike, jane, david belong here)
 export const ACME_TENANT_ID = '00000000-0000-0000-0010-000000000001';
 export const ACME_PROJECT_ID = '00000000-0000-0000-0020-000000000001';
-
-// DevFlow tenant/project
-export const DEVFLOW_TENANT_ID = '00000000-0000-0000-0010-000000000001';
-export const DEVFLOW_PROJECT_ID = '00000000-0000-0000-0020-000000000011';
 
 // OnBrick tenant/project
 export const ONBRICK_TENANT_ID = '00000000-0000-0000-0010-000000000001';

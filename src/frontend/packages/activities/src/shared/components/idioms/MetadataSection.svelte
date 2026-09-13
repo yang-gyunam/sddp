@@ -36,10 +36,7 @@
     class?: string;
   }
 
-  let {
-    items,
-    class: className = '',
-  }: Props = $props();
+  let { items, class: className = '' }: Props = $props();
 </script>
 
 {#if items.length > 0}
@@ -49,12 +46,16 @@
         <dt class="text-xs text-[var(--color-text-muted)]">{item.label}</dt>
         <dd class="mt-1">
           {#if item.type === 'person' && item.value}
-            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-primary)]">
+            <span
+              class="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-primary)]"
+            >
               <Avatar name={item.value} avatarUrl={item.avatarUrl} size="xs" />
               {item.value}
             </span>
           {:else}
-            <span class="text-sm font-medium {item.class || 'text-[var(--color-text-primary)]'}">{item.value}</span>
+            <span class="text-sm font-medium {item.class || 'text-[var(--color-text-primary)]'}"
+              >{item.value}</span
+            >
           {/if}
         </dd>
       </div>

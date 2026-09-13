@@ -55,7 +55,9 @@
   {#if requirement}
     <!-- Quick Info -->
     <div class="panel-section p-3 border-b border-[var(--color-border-primary)]">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+      <h3
+        class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+      >
         Quick Info
       </h3>
       <div class="space-y-2 text-sm">
@@ -77,7 +79,9 @@
     <!-- Status Actions -->
     {#if transitionActions().length > 0}
       <div class="panel-section p-3 border-b border-[var(--color-border-primary)]">
-        <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+        <h3
+          class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+        >
           Actions
         </h3>
         <div class="space-y-2">
@@ -99,7 +103,9 @@
 
     <!-- Related Specs -->
     <div class="panel-section p-3 border-b border-[var(--color-border-primary)]">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+      <h3
+        class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+      >
         Related Specs
       </h3>
       {#if relatedSpecs.length > 0}
@@ -122,14 +128,12 @@
           {/each}
         </div>
       {:else}
-        <p class="text-sm text-[var(--color-text-tertiary)] italic">
-          No related specs
-        </p>
+        <p class="text-sm text-[var(--color-text-tertiary)] italic">No related specs</p>
       {/if}
       <Button
         variant="unstyled"
         class="mt-2 w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded
-               text-[var(--color-accent-primary)]
+               text-[var(--color-accent-text)]
                hover:bg-[var(--color-bg-tertiary)]"
       >
         <Icon name="link" size="xs" />
@@ -140,7 +144,9 @@
     <!-- Sibling Requirements -->
     {#if siblingRequirements.length > 0}
       <div class="panel-section p-3 border-b border-[var(--color-border-primary)]">
-        <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+        <h3
+          class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+        >
           Sibling Requirements
         </h3>
         <div class="space-y-1 max-h-48 overflow-y-auto">
@@ -148,7 +154,9 @@
             <Button
               variant="unstyled"
               class="w-full flex items-center gap-2 p-2 text-sm rounded text-left
-                     {sibling.id === requirement.id ? 'bg-[var(--color-accent-primary)]/10' : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                     {sibling.id === requirement.id
+                ? 'bg-[var(--color-accent-primary)]/10'
+                : 'hover:bg-[var(--color-bg-tertiary)]'}"
               onclick={() => onRequirementClick?.(sibling.id)}
             >
               <span
@@ -172,7 +180,9 @@
 
     <!-- Activity Log -->
     <div class="panel-section flex-1 p-3 overflow-y-auto">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+      <h3
+        class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+      >
         Recent Activity
       </h3>
       <div class="space-y-2 text-sm">
@@ -202,7 +212,11 @@
     <!-- Empty State -->
     <div class="flex-1 flex items-center justify-center p-4">
       <div class="text-center">
-        <Icon name="file-text" size="lg" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70" />
+        <Icon
+          name="file-text"
+          size="lg"
+          class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70"
+        />
         <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a requirement</p>
         <p class="text-xs text-[var(--color-text-secondary)] mt-1">
           Choose a requirement to view details.

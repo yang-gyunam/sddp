@@ -83,13 +83,12 @@ public sealed class UpdateTaskCategoryCommandHandler
         var repo = _unitOfWork.Repository<TaskCategory>();
 
         var category = await (repo.GetByIdAsync(request.CategoryId, cancellationToken)).ConfigureAwait(false);
-        if (category is null || !category.IsActive)
-            return null;
-
-        //
-        if (category.UserId != request.UserId)
+        if (category is null
+            || !category.IsActive
+            || category.TenantId != request.TenantId
+            || category.UserId != request.UserId)
         {
-            throw new SddpException("FORBIDDEN", "Cannot update another user's category");
+            return null;
         }
 
         // change
@@ -141,13 +140,12 @@ public sealed class DeleteTaskCategoryCommandHandler
         var repo = _unitOfWork.Repository<TaskCategory>();
 
         var category = await (repo.GetByIdAsync(request.CategoryId, cancellationToken)).ConfigureAwait(false);
-        if (category is null || !category.IsActive)
-            return false;
-
-        //
-        if (category.UserId != request.UserId)
+        if (category is null
+            || !category.IsActive
+            || category.TenantId != request.TenantId
+            || category.UserId != request.UserId)
         {
-            throw new SddpException("FORBIDDEN", "Cannot delete another user's category");
+            return false;
         }
 
         category.Deactivate();
@@ -187,7 +185,10 @@ public sealed class ReorderTaskCategoriesCommandHandler
                 continue;
 
             var category = await (repo.GetByIdAsync(categoryId, cancellationToken)).ConfigureAwait(false);
-            if (category is null || !category.IsActive || category.UserId != request.UserId)
+            if (category is null
+                || !category.IsActive
+                || category.TenantId != request.TenantId
+                || category.UserId != request.UserId)
                 continue;
 
             category.Update(sortOrder: item.SortOrder);

@@ -19,22 +19,34 @@ import type {
 // Initial State
 // ============================================
 
-const initialState: TaskSidebarState = {
-  searchQuery: '',
-  filterType: 'all',
-  selectedTaskId: null,
-  myTasksStats: { toDoCount: 0, inProgressCount: 0, doneCount: 0, blockedCount: 0, totalCount: 0 },
-  projectGroups: [],
-  expandedProjects: new Set<string>(),
-  viewMode: 'myTasks',
-  selectedProjectId: null,
-  backlogSummary: null,
-  backlogStats: null,
-  backlogLoading: false,
-};
+function createInitialState(): TaskSidebarState {
+  return {
+    searchQuery: '',
+    filterType: 'all',
+    selectedTaskId: null,
+    myTasksStats: {
+      toDoCount: 0,
+      inProgressCount: 0,
+      doneCount: 0,
+      blockedCount: 0,
+      totalCount: 0,
+    },
+    projectGroups: [],
+    expandedProjects: new Set<string>(),
+    viewMode: 'myTasks',
+    selectedProjectId: null,
+    backlogSummary: null,
+    backlogStats: null,
+    backlogLoading: false,
+  };
+}
 
-// Create the store
-const taskStore: Store<TaskSidebarState> = createStore<TaskSidebarState>(initialState);
+/** Create an isolated task state store for a single editor tab. */
+export function createTaskStoreInstance(): Store<TaskSidebarState> {
+  return createStore<TaskSidebarState>(createInitialState());
+}
+
+const taskStore: Store<TaskSidebarState> = createTaskStoreInstance();
 
 // ============================================
 // Actions
@@ -43,8 +55,11 @@ const taskStore: Store<TaskSidebarState> = createStore<TaskSidebarState>(initial
 /**
  * Set project groups
  */
-export function setTaskProjectGroups(groups: ProjectTaskGroup[]): void {
-  taskStore.update((state) => ({
+export function setTaskProjectGroups(
+  groups: ProjectTaskGroup[],
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     projectGroups: groups,
   }));
@@ -53,8 +68,11 @@ export function setTaskProjectGroups(groups: ProjectTaskGroup[]): void {
 /**
  * Set my tasks stats
  */
-export function setMyTasksStats(stats: MyTasksStats): void {
-  taskStore.update((state) => ({
+export function setMyTasksStats(
+  stats: MyTasksStats,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     myTasksStats: stats,
   }));
@@ -81,8 +99,11 @@ export function toggleTaskProjectExpanded(projectId: string): void {
 /**
  * Set selected task
  */
-export function setSelectedTask(taskId: string | null): void {
-  taskStore.update((state) => ({
+export function setSelectedTask(
+  taskId: string | null,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     selectedTaskId: taskId,
   }));
@@ -91,8 +112,11 @@ export function setSelectedTask(taskId: string | null): void {
 /**
  * Set search query
  */
-export function setTaskSearchQuery(query: string): void {
-  taskStore.update((state) => ({
+export function setTaskSearchQuery(
+  query: string,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     searchQuery: query,
   }));
@@ -101,8 +125,11 @@ export function setTaskSearchQuery(query: string): void {
 /**
  * Set filter type
  */
-export function setTaskFilterType(filterType: TaskFilterType): void {
-  taskStore.update((state) => ({
+export function setTaskFilterType(
+  filterType: TaskFilterType,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     filterType,
   }));
@@ -111,8 +138,11 @@ export function setTaskFilterType(filterType: TaskFilterType): void {
 /**
  * Set view mode
  */
-export function setTaskViewMode(mode: 'myTasks' | 'backlog'): void {
-  taskStore.update((state) => ({
+export function setTaskViewMode(
+  mode: 'myTasks' | 'backlog',
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     viewMode: mode,
   }));
@@ -132,8 +162,11 @@ export function setSelectedProject(projectId: string | null): void {
 /**
  * Select a backlog project (switches to backlog view)
  */
-export function selectBacklogProject(projectId: string): void {
-  taskStore.update((state) => ({
+export function selectBacklogProject(
+  projectId: string,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     selectedProjectId: projectId,
     viewMode: 'backlog',
@@ -143,8 +176,11 @@ export function selectBacklogProject(projectId: string): void {
 /**
  * Set backlog summary
  */
-export function setBacklogSummary(summary: BacklogSummary | null): void {
-  taskStore.update((state) => ({
+export function setBacklogSummary(
+  summary: BacklogSummary | null,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     backlogSummary: summary,
   }));
@@ -153,8 +189,11 @@ export function setBacklogSummary(summary: BacklogSummary | null): void {
 /**
  * Set backlog stats
  */
-export function setBacklogStats(stats: BacklogStats | null): void {
-  taskStore.update((state) => ({
+export function setBacklogStats(
+  stats: BacklogStats | null,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     backlogStats: stats,
   }));
@@ -163,8 +202,11 @@ export function setBacklogStats(stats: BacklogStats | null): void {
 /**
  * Set backlog loading
  */
-export function setBacklogLoading(loading: boolean): void {
-  taskStore.update((state) => ({
+export function setBacklogLoading(
+  loading: boolean,
+  target: Store<TaskSidebarState> = taskStore
+): void {
+  target.update((state) => ({
     ...state,
     backlogLoading: loading,
   }));
@@ -185,7 +227,7 @@ export function clearTaskFilters(): void {
  * Reset store to initial state
  */
 export function resetTaskStore(): void {
-  taskStore.set(initialState);
+  taskStore.set(createInitialState());
 }
 
 // ============================================
@@ -203,9 +245,30 @@ export function getTaskState(): TaskSidebarState {
  * Subscribe to store changes
  */
 export function subscribeTask(
-  callback: (state: TaskSidebarState) => void
+  callback: (state: TaskSidebarState) => void,
+  target: Store<TaskSidebarState> = taskStore
 ): () => void {
-  return taskStore.subscribe(callback);
+  return target.subscribe(callback);
+}
+
+/** Actions bound to one task tab store. */
+export function createTaskStoreScope() {
+  const store = createTaskStoreInstance();
+
+  return {
+    getState: () => store.get(),
+    subscribe: (callback: (state: TaskSidebarState) => void) => subscribeTask(callback, store),
+    setSelectedTask: (taskId: string | null) => setSelectedTask(taskId, store),
+    setTaskSearchQuery: (query: string) => setTaskSearchQuery(query, store),
+    setTaskFilterType: (filterType: TaskFilterType) => setTaskFilterType(filterType, store),
+    setTaskViewMode: (mode: 'myTasks' | 'backlog') => setTaskViewMode(mode, store),
+    selectBacklogProject: (projectId: string) => selectBacklogProject(projectId, store),
+    setBacklogSummary: (summary: BacklogSummary | null) => setBacklogSummary(summary, store),
+    setBacklogStats: (stats: BacklogStats | null) => setBacklogStats(stats, store),
+    setBacklogLoading: (loading: boolean) => setBacklogLoading(loading, store),
+    setMyTasksStats: (stats: MyTasksStats) => setMyTasksStats(stats, store),
+    setTaskProjectGroups: (groups: ProjectTaskGroup[]) => setTaskProjectGroups(groups, store),
+  };
 }
 
 /**

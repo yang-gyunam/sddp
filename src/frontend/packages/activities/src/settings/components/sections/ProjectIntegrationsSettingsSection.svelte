@@ -6,7 +6,15 @@
    */
 
   import { untrack } from 'svelte';
-  import { config as appConfig, toast, SingleColumnLayout, PageHeader, PageShell, getTabState, setTabState } from '@sddp/shell';
+  import {
+    config as appConfig,
+    toast,
+    SingleColumnLayout,
+    PageHeader,
+    PageShell,
+    getTabState,
+    setTabState,
+  } from '@sddp/shell';
   import { Icon, IconButton, Switch, Input, CheckboxList, Button, Spinner } from '@sddp/ui';
   import type { ProjectIntegration, Webhook } from '../../types';
   import { SettingGroupHeader } from '../idioms';
@@ -116,9 +124,7 @@
       return;
     }
 
-    integrations = integrations.map((i) =>
-      i.type === type ? { ...i, enabled: !i.enabled } : i
-    );
+    integrations = integrations.map((i) => (i.type === type ? { ...i, enabled: !i.enabled } : i));
     toast.info('Integration toggle not yet implemented (backend API pending)');
   }
 
@@ -163,112 +169,132 @@
     webhooks = webhooks.filter((w) => w.id !== id);
     toast.info('Webhook deleted locally (backend API pending)');
   }
-
 </script>
 
 <PageShell>
   {#if loading}
     <div class="flex-1 flex items-center justify-center pb-28"><Spinner size="lg" /></div>
   {:else}
-  <PageHeader title="Integrations" {loading}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" variant="ghost" size="sm" title="Refresh" onclick={loadData} />
-    {/snippet}
-  </PageHeader>
+    <PageHeader title="Integrations" {loading}>
+      {#snippet actions()}
+        <IconButton
+          icon="refresh-cw"
+          variant="ghost"
+          size="sm"
+          title="Refresh"
+          onclick={loadData}
+        />
+      {/snippet}
+    </PageHeader>
 
-  <SingleColumnLayout>
-    {#if !projectIntegrationsEnabled}
-      <SettingGroupHeader title="Connected Services" />
-      <p class="section-desc">
-        Coming Soon. Project integration management is disabled in this environment.
-      </p>
-      <div class="coming-soon-panel">
-        <Icon name="clock-3" size="sm" />
-        <span>Enable `VITE_ENABLE_PROJECT_INTEGRATIONS=true` to expose this screen.</span>
-      </div>
-    {:else}
-      <!-- Connected Services -->
-      <SettingGroupHeader title="Connected Services" />
-
-      {#each integrations as integration (integration.type)}
-        <div class="integration-row">
-          <div class="integration-info">
-            <div class="integration-icon">
-              <Icon name="git-branch" size="sm" />
-            </div>
-            <div>
-              <div class="integration-name">Git Repository</div>
-              <div class="integration-desc">Connect a Git repository for version control and Spec Drift detection.</div>
-            </div>
-          </div>
-          <Switch checked={integration.enabled} onchange={() => toggleIntegration(integration.type)} />
-        </div>
-      {/each}
-
-      <!-- Webhooks -->
-      <SettingGroupHeader title="Webhooks" />
-      <p class="section-desc">Receive HTTP notifications when events occur in this project.</p>
-
-      {#if webhooks.length > 0}
-        <div class="webhooks-list">
-          {#each webhooks as webhook (webhook.id)}
-            <div class="webhook-item">
-              <div class="webhook-info">
-                <span class="webhook-url">{webhook.url}</span>
-                <div class="webhook-events">
-                  {#each webhook.events as event (event)}
-                    <span class="event-tag">{event}</span>
-                  {/each}
-                </div>
-              </div>
-              <div class="webhook-actions">
-                <Switch checked={webhook.enabled} size="sm" onchange={() => toggleWebhook(webhook.id)} />
-                <IconButton icon="trash" variant="danger" size="sm" title="Delete" onclick={() => deleteWebhook(webhook.id)} />
-              </div>
-            </div>
-          {/each}
+    <SingleColumnLayout>
+      {#if !projectIntegrationsEnabled}
+        <SettingGroupHeader title="Connected Services" />
+        <p class="section-desc">
+          Coming Soon. Project integration management is disabled in this environment.
+        </p>
+        <div class="coming-soon-panel">
+          <Icon name="clock-3" size="sm" />
+          <span>Enable `VITE_ENABLE_PROJECT_INTEGRATIONS=true` to expose this screen.</span>
         </div>
       {:else}
-        <p class="empty-state">No webhooks configured.</p>
-      {/if}
+        <!-- Connected Services -->
+        <SettingGroupHeader title="Connected Services" />
 
-      <!-- Add Webhook -->
-      <div class="add-webhook-section">
-        <div class="add-webhook-header">Add Webhook</div>
-        <div class="add-webhook-form">
-          <div class="form-field">
-            <span class="field-label">URL</span>
-            <Input
-              type="url"
-              placeholder="https://example.com/webhook"
-              bind:value={newWebhookUrl}
+        {#each integrations as integration (integration.type)}
+          <div class="integration-row">
+            <div class="integration-info">
+              <div class="integration-icon">
+                <Icon name="git-branch" size="sm" />
+              </div>
+              <div>
+                <div class="integration-name">Git Repository</div>
+                <div class="integration-desc">
+                  Connect a Git repository for version control and Spec Drift detection.
+                </div>
+              </div>
+            </div>
+            <Switch
+              checked={integration.enabled}
+              onchange={() => toggleIntegration(integration.type)}
             />
           </div>
-          <fieldset class="contents">
-            <legend class="sr-only">Webhook Events</legend>
+        {/each}
+
+        <!-- Webhooks -->
+        <SettingGroupHeader title="Webhooks" />
+        <p class="section-desc">Receive HTTP notifications when events occur in this project.</p>
+
+        {#if webhooks.length > 0}
+          <div class="webhooks-list">
+            {#each webhooks as webhook (webhook.id)}
+              <div class="webhook-item">
+                <div class="webhook-info">
+                  <span class="webhook-url">{webhook.url}</span>
+                  <div class="webhook-events">
+                    {#each webhook.events as event (event)}
+                      <span class="event-tag">{event}</span>
+                    {/each}
+                  </div>
+                </div>
+                <div class="webhook-actions">
+                  <Switch
+                    checked={webhook.enabled}
+                    size="sm"
+                    onchange={() => toggleWebhook(webhook.id)}
+                  />
+                  <IconButton
+                    icon="trash"
+                    variant="danger"
+                    size="sm"
+                    title="Delete"
+                    onclick={() => deleteWebhook(webhook.id)}
+                  />
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="empty-state">No webhooks configured.</p>
+        {/if}
+
+        <!-- Add Webhook -->
+        <div class="add-webhook-section">
+          <div class="add-webhook-header">Add Webhook</div>
+          <div class="add-webhook-form">
             <div class="form-field">
-              <span class="field-label">Events</span>
-              <CheckboxList
-                options={availableEventOptions}
-                bind:selected={newWebhookEvents}
-                orientation="horizontal"
-                size="sm"
+              <span class="field-label">URL</span>
+              <Input
+                type="url"
+                placeholder="https://example.com/webhook"
+                bind:value={newWebhookUrl}
               />
             </div>
-          </fieldset>
-          <Button
-            variant="primary"
-            size="sm"
-            onclick={addWebhook}
-            disabled={!newWebhookUrl.trim() || newWebhookEvents.length === 0}
-            class="btn-align-end"
-          >
-            Add Webhook
-          </Button>
+            <fieldset class="contents">
+              <legend class="sr-only">Webhook Events</legend>
+              <div class="form-field">
+                <span class="field-label">Events</span>
+                <CheckboxList
+                  options={availableEventOptions}
+                  bind:selected={newWebhookEvents}
+                  orientation="horizontal"
+                  size="sm"
+                />
+              </div>
+            </fieldset>
+            <Button
+              variant="primary"
+              size="sm"
+              onclick={addWebhook}
+              disabled={!newWebhookUrl.trim() || newWebhookEvents.length === 0}
+              class="btn-align-end"
+            >
+              Add Webhook
+            </Button>
+          </div>
         </div>
-      </div>
-    {/if}
-  </SingleColumnLayout>
+      {/if}
+    </SingleColumnLayout>
   {/if}
 </PageShell>
 
@@ -323,7 +349,6 @@
     color: var(--color-text-tertiary, #9ca3af);
     margin-top: 0.0625rem;
   }
-
 
   /* Section desc */
   .section-desc {
@@ -389,7 +414,6 @@
     flex-shrink: 0;
     margin-left: 0.75rem;
   }
-
 
   .empty-state {
     font-size: 0.8125rem;

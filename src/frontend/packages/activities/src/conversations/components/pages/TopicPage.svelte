@@ -4,7 +4,7 @@
   import { Icon, Button } from '@sddp/ui';
   import { PageShell, PageHeader, PageBody, getTabState, setTabState } from '@sddp/shell';
   import { MessageStream, ParticipantsPanel } from '../sections';
-  import { getConversationService } from '../../services';
+  import { createConversationService } from '../../services';
   import { getAuthState } from '@sddp/shell/auth';
   import type { Message, ChannelDetail, MessageType, ConversationSummary } from '../../types';
 
@@ -24,7 +24,7 @@
     class: className = '',
   }: Props = $props();
 
-  const service = getConversationService();
+  let service = $derived(createConversationService(tenantId, projectId));
 
   const currentUserId = $derived(getAuthState().user?.id ?? null);
 
@@ -84,7 +84,6 @@
       pageError = 'Missing tenant or project context';
       return false;
     }
-    service.setContext(tenantId, projectId);
     return true;
   }
 
@@ -127,7 +126,7 @@
     if (!ensureContext()) return;
 
     try {
-      const cursor = reset ? undefined : nextCursor ?? undefined;
+      const cursor = reset ? undefined : (nextCursor ?? undefined);
       const page = await service.getMessages(topicId, { cursor, limit: 50 });
       const batch = page.messages.map(normalizeMessage).reverse();
       messages = reset ? batch : [...batch, ...messages];
@@ -200,7 +199,7 @@
       <div class="flex h-full">
         <MessageStream
           conversation={space}
-          channel={channel}
+          {channel}
           {messages}
           {typingUsers}
           {loading}
@@ -211,7 +210,7 @@
         />
 
         {#if showParticipants}
-          <ParticipantsPanel channel={channel} {currentUserId} class="w-64 flex-shrink-0" />
+          <ParticipantsPanel {channel} {currentUserId} class="w-64 flex-shrink-0" />
         {/if}
       </div>
     {/if}

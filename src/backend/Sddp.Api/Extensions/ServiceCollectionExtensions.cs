@@ -12,17 +12,21 @@ using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.Interfaces.Snapshots;
 using Sddp.Api.Constants;
 using Sddp.Api.Services;
+using StackExchange.Redis;
 using Sddp.Application.Telemetry;
 using Sddp.Domain.Events;
 using Sddp.Infrastructure.Jobs.Quartz;
 using Sddp.Infrastructure.Persistence;
 using Sddp.Infrastructure.Persistence.Contexts;
 using Sddp.Infrastructure.Persistence.Interceptors;
+using Sddp.Application.Services;
 using Sddp.Infrastructure.Persistence.Outbox;
 using Sddp.Infrastructure.Persistence.Projections;
 using Sddp.Infrastructure.Persistence.Repositories;
 using Sddp.Infrastructure.Services;
 using Sddp.Infrastructure.Speech;
+using System.Security.Claims;
+using Sddp.Abstractions.ValueObjects;
 
 namespace Sddp.Api.Extensions;
 
@@ -69,8 +73,22 @@ public static class ServiceCollectionExtensions
         services.Configure<GitRepositoryOptions>(configuration.GetSection("Git"));
         services.AddScoped<IArtifactRepositoryService, GitArtifactRepositoryService>();
 
+        // Artifact descriptors (SDDP-owned storage, separate from the customer checkout)
+        services.Configure<ArtifactDescriptorOptions>(configuration.GetSection("ArtifactDescriptor"));
+        services.AddSingleton<IArtifactDescriptorSerializer, YamlArtifactDescriptorSerializer>();
+        services.AddScoped<IArtifactDescriptorStore, FileArtifactDescriptorStore>();
+
         services.AddScoped<IOutboxProcessor, OutboxProcessor>();
-        services.AddScoped<IOutboxMessageHandler, ProjectionOutboxMessageHandler>();
+        services.AddScoped<ProjectionOutboxMessageHandler>();
+        services.AddScoped<TimelineOutboxMessageHandler>();
+        services.AddScoped<ConversationOutboxMessageHandler>();
+        services.AddScoped<IOutboxMessageHandler>(sp => new CompositeOutboxMessageHandler(
+        [
+            sp.GetRequiredService<ProjectionOutboxMessageHandler>(),
+            sp.GetRequiredService<TimelineOutboxMessageHandler>(),
+            sp.GetRequiredService<ConversationOutboxMessageHandler>(),
+        ]));
+        services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
         services.AddHostedService<OutboxBackgroundService>();
 
         services.AddScoped<IProjectSnapshotService, ProjectSnapshotService>();
@@ -132,6 +150,29 @@ public static class ServiceCollectionExtensions
                         context.Response.Headers.Append("X-Token-Expired", "true");
                     }
                     return Task.CompletedTask;
+                },
+
+                OnTokenValidated = async context =>
+                {
+                    // Same order the rest of the pipeline reads it in (BaseApiController,
+                    // TenantContextMiddleware) so this cannot disagree about who the caller is.
+                    var subject = context.Principal?.FindFirst("sub")?.Value
+                        ?? context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                    if (!GlobalUniqueId.TryParse(subject, out var userId))
+                    {
+                        // A token carrying no usable subject cannot be checked, so it is not trusted.
+                        context.Fail("Token has no usable subject claim.");
+                        return;
+                    }
+
+                    var gate = context.HttpContext.RequestServices
+                        .GetRequiredService<IActiveUserGate>();
+
+                    if (!await gate.IsActiveAsync(userId, context.HttpContext.RequestAborted))
+                    {
+                        context.Fail("The account behind this token is no longer active.");
+                    }
                 }
             };
         });
@@ -157,6 +198,10 @@ public static class ServiceCollectionExtensions
                 "X-Correlation-Id",
                 "X-Tenant-Id",
                 "X-Project-Id",
+                AuthCookieNames.CsrfHeader,
+                // Knowledge mutations carry the expected revision for optimistic concurrency.
+                // Omitting it here passes preflight but makes the browser drop the PUT itself.
+                "If-Match",
                 "X-Requested-With",
                 "X-SignalR-User-Agent"
             };
@@ -248,6 +293,13 @@ public static class ServiceCollectionExtensions
             options.Configuration = connectionString;
             options.InstanceName = instanceName;
         });
+
+        // Refresh token rotation needs an atomic take, which IDistributedCache cannot express,
+        // so the store also reaches Redis directly. One multiplexer is shared per process, as
+        // StackExchange.Redis intends.
+        services.AddSingleton<IConnectionMultiplexer>(
+            _ => ConnectionMultiplexer.Connect(connectionString));
+        services.AddSingleton(new RedisCacheKeyPrefix(instanceName));
 
         services.AddScoped<IRefreshTokenStore, RedisRefreshTokenStore>();
 

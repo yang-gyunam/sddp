@@ -2,6 +2,7 @@ using MediatR;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Exceptions;
+using Sddp.Abstractions.Events;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Requests;
@@ -149,12 +150,12 @@ public sealed record RemoveConversationMemberCommand(
 public sealed class RemoveConversationMemberCommandHandler : IRequestHandler<RemoveConversationMemberCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConversationHubService _hubService;
+    private readonly IOutboxEnqueuer _outbox;
 
-    public RemoveConversationMemberCommandHandler(IUnitOfWork unitOfWork, IConversationHubService hubService)
+    public RemoveConversationMemberCommandHandler(IUnitOfWork unitOfWork, IOutboxEnqueuer outbox)
     {
         _unitOfWork = unitOfWork;
-        _hubService = hubService;
+        _outbox = outbox;
     }
 
     public async Task<bool> Handle(RemoveConversationMemberCommand request, CancellationToken cancellationToken)
@@ -229,12 +230,17 @@ public sealed class RemoveConversationMemberCommandHandler : IRequestHandler<Rem
             }
         }
 
-        // Broadcast MemberRemoved event via SignalR
         var userRepo = _unitOfWork.Repository<User>();
         var removedUser = await (userRepo.GetByIdAsync(request.TargetUserId, cancellationToken)).ConfigureAwait(false);
         var removedUserName = removedUser?.DisplayName ?? "Unknown";
-        await (_hubService.BroadcastMemberRemovedAsync(
-            request.ConversationId.ToString(), request.TargetUserId.ToString(), removedUserName)).ConfigureAwait(false);
+        await (_outbox.EnqueueAsync(
+            new ConversationMemberRemovedEvent(
+                request.ConversationId.ToString(),
+                request.TargetUserId.ToString(),
+                removedUserName),
+            "conversation",
+            request.ConversationId,
+            cancellationToken)).ConfigureAwait(false);
 
         request.AuditLog = new AuditLogRequest(
             ActorId: request.RequestUserId,

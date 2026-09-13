@@ -76,7 +76,6 @@
     parentId = initialData.parentId || '';
     ownerUserId = initialData.ownerUserId || '';
     conversationId = initialData.conversationId || '';
-
   });
 
   const priorityOptions: SelectOption[] = [
@@ -109,9 +108,7 @@
   );
 
   const isValid = $derived(
-    mode === 'create'
-      ? code.trim() !== '' && title.trim() !== ''
-      : title.trim() !== ''
+    mode === 'create' ? code.trim() !== '' && title.trim() !== '' : title.trim() !== ''
   );
 
   function handlePriorityChange(value: string): void {
@@ -152,13 +149,21 @@
   }
 </script>
 
-<form id={formId} novalidate onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="flex flex-col gap-4 {className}">
+<form
+  id={formId}
+  novalidate
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSubmit();
+  }}
+  class="flex flex-col gap-4 {className}"
+>
   <!-- Basic Information -->
   <CollapsibleGroup
     title="Basic Information"
     variant="plain"
     expanded={basicExpanded}
-    onToggle={() => basicExpanded = !basicExpanded}
+    onToggle={() => (basicExpanded = !basicExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       {#if mode === 'create'}
@@ -177,12 +182,7 @@
         </div>
       {/if}
 
-      <Input
-        label="Title"
-        required
-        bind:value={title}
-        placeholder="Enter requirement title..."
-      />
+      <Input label="Title" required bind:value={title} placeholder="Enter requirement title..." />
 
       <Textarea
         label="Description"
@@ -217,7 +217,7 @@
     variant="plain"
     allowOverflow
     expanded={referencesExpanded}
-    onToggle={() => referencesExpanded = !referencesExpanded}
+    onToggle={() => (referencesExpanded = !referencesExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <!-- Source Conversation -->
@@ -244,7 +244,9 @@
 
       <!-- Auto-determined Level (create only) -->
       {#if mode === 'create' && autoLevel}
-        <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-secondary)]">
+        <div
+          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-secondary)]"
+        >
           <span class="text-xs font-medium text-[var(--color-text-secondary)]">Level:</span>
           <span class="text-xs font-bold text-[var(--color-text-primary)]">{autoLevel}</span>
           {#if autoLevelDescription}
@@ -254,5 +256,4 @@
       {/if}
     </div>
   </CollapsibleGroup>
-
 </form>

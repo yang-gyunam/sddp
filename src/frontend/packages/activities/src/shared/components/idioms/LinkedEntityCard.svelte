@@ -21,7 +21,7 @@
 
   let {
     icon,
-    iconClass = 'text-[var(--color-accent-primary)]',
+    iconClass = 'text-[var(--color-accent-text)]',
     label,
     sublabel,
     onclick,

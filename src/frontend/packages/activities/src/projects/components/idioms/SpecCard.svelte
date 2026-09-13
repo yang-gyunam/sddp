@@ -14,11 +14,7 @@
     class?: string;
   }
 
-  let {
-    spec,
-    onclick,
-    class: className = '',
-  }: Props = $props();
+  let { spec, onclick, class: className = '' }: Props = $props();
 
   function formatDateStr(dateStr: string): string {
     return formatDateUtil(dateStr, { month: 'short' });
@@ -27,13 +23,13 @@
 
 <Button
   variant="unstyled"
-  onclick={onclick}
+  {onclick}
   class="w-full text-left p-4 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-50)] hover:bg-[var(--color-surface-200)] hover:border-[var(--color-accent-primary)] transition-all {className}"
 >
   <!-- Header -->
   <div class="flex items-start justify-between gap-2 mb-3">
     <div class="flex items-center gap-2">
-      <Icon name="file-signature" size="sm" class="text-[var(--color-accent-primary)]" />
+      <Icon name="file-signature" size="sm" class="text-[var(--color-accent-text)]" />
       <span class="text-xs text-[var(--color-text-muted)] font-mono">
         {spec.code}
       </span>
@@ -58,7 +54,9 @@
 
   <!-- Decision (if exists) -->
   {#if spec.decision}
-    <div class="mb-3 p-2 rounded bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)]">
+    <div
+      class="mb-3 p-2 rounded bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)]"
+    >
       <div class="flex items-center gap-1 mb-1">
         <Icon name="check-circle" size="xs" class="text-[var(--color-success-500)]" />
         <span class="text-xs font-medium text-[var(--color-text-secondary)]">Decision</span>
@@ -70,7 +68,9 @@
   {/if}
 
   <!-- Footer -->
-  <div class="flex items-center justify-between gap-2 pt-3 border-t border-[var(--color-border-secondary)]">
+  <div
+    class="flex items-center justify-between gap-2 pt-3 border-t border-[var(--color-border-secondary)]"
+  >
     <div class="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
       {#if spec.requirementId}
         <span class="flex items-center gap-1">

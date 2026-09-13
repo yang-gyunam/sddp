@@ -15,15 +15,18 @@ public class ConversationHubService : IConversationHubService
     private readonly IHubContext<ConversationHub> _hubContext;
     private readonly ILogger<ConversationHubService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IPresenceTracker _presenceTracker;
 
     public ConversationHubService(
         IHubContext<ConversationHub> hubContext,
         ILogger<ConversationHubService> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IPresenceTracker presenceTracker)
     {
         _hubContext = hubContext;
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _presenceTracker = presenceTracker;
     }
 
     public async Task BroadcastNewMessageAsync(string conversationId, MessageDto message)
@@ -32,49 +35,34 @@ public class ConversationHubService : IConversationHubService
             "Broadcasting new message {MessageId} to conversation {ConversationId}",
             message.Id, conversationId);
 
-        var memberUserIds = await GetActiveMemberUserIdsAsync(conversationId).ConfigureAwait(false);
-        if (memberUserIds.Count > 0)
-        {
-            await _hubContext.Clients.Users(memberUserIds).SendAsync("NewMessage", message).ConfigureAwait(false);
-            return;
-        }
-
-        // Fallback keeps legacy behavior for conversations without persisted active members.
-        var groupName = GetGroupName(conversationId);
-        await _hubContext.Clients.Group(groupName).SendAsync("NewMessage", message).ConfigureAwait(false);
+        await SendToActiveMembersAsync(conversationId, "NewMessage", message).ConfigureAwait(false);
     }
 
     public async Task BroadcastMessageEditedAsync(string conversationId, MessageDto message)
     {
-        var groupName = GetGroupName(conversationId);
-
         _logger.LogDebug(
             "Broadcasting message edit {MessageId} to conversation {ConversationId}",
             message.Id, conversationId);
 
-        await _hubContext.Clients.Group(groupName).SendAsync("MessageEdited", message);
+        await SendToActiveMembersAsync(conversationId, "MessageEdited", message);
     }
 
     public async Task BroadcastMessageDeletedAsync(string conversationId, string messageId)
     {
-        var groupName = GetGroupName(conversationId);
-
         _logger.LogDebug(
             "Broadcasting message deletion {MessageId} to conversation {ConversationId}",
             messageId, conversationId);
 
-        await _hubContext.Clients.Group(groupName).SendAsync("MessageDeleted", messageId);
+        await SendToActiveMembersAsync(conversationId, "MessageDeleted", messageId);
     }
 
     public async Task BroadcastConversationClosedAsync(string conversationId, string? decisionSpecId, string? concludedByUserName = null)
     {
-        var groupName = GetGroupName(conversationId);
-
         _logger.LogInformation(
             "Broadcasting conversation closed {ConversationId}, DecisionSpecId: {DecisionSpecId}",
             conversationId, decisionSpecId);
 
-        await _hubContext.Clients.Group(groupName).SendAsync("ConversationClosed", new
+        await SendToActiveMembersAsync(conversationId, "ConversationClosed", new
         {
             ConversationId = conversationId,
             DecisionSpecId = decisionSpecId,
@@ -112,7 +100,9 @@ public class ConversationHubService : IConversationHubService
 
     public async Task NotifyDMConcludedAsync(IEnumerable<string> memberUserIds, string conversationId, string concludedByUserName)
     {
-        var userIds = memberUserIds.ToList();
+        var activeUserIds = await GetActiveMemberUserIdsAsync(conversationId).ConfigureAwait(false);
+        var userIds = memberUserIds.Intersect(activeUserIds, StringComparer.Ordinal).ToList();
+        if (userIds.Count == 0) return;
         _logger.LogInformation(
             "Notifying DM concluded {ConversationId} to {UserCount} users",
             conversationId, userIds.Count);
@@ -127,13 +117,11 @@ public class ConversationHubService : IConversationHubService
 
     public async Task BroadcastMemberJoinedAsync(string conversationId, string userId, string displayName)
     {
-        var groupName = GetGroupName(conversationId);
-
         _logger.LogDebug(
             "Broadcasting member joined {UserId} to conversation {ConversationId}",
             userId, conversationId);
 
-        await _hubContext.Clients.Group(groupName).SendAsync("MemberJoined", new
+        await SendToActiveMembersAsync(conversationId, "MemberJoined", new
         {
             ConversationId = conversationId,
             UserId = userId,
@@ -144,13 +132,25 @@ public class ConversationHubService : IConversationHubService
 
     public async Task BroadcastMemberRemovedAsync(string conversationId, string removedUserId, string removedUserName)
     {
-        var groupName = GetGroupName(conversationId);
+        if (!GlobalUniqueId.TryParse(conversationId, out _) || !GlobalUniqueId.TryParse(removedUserId, out _)) return;
 
         _logger.LogDebug(
             "Broadcasting member removed {UserId} from conversation {ConversationId}",
             removedUserId, conversationId);
 
-        await _hubContext.Clients.Group(groupName).SendAsync("MemberRemoved", new
+        var activeUserIds = await GetActiveMemberUserIdsAsync(conversationId).ConfigureAwait(false);
+        // An older outbox event must not evict a member who has since rejoined.
+        if (activeUserIds.Contains(removedUserId, StringComparer.Ordinal)) return;
+
+        var groupName = GetGroupName(conversationId);
+        foreach (var connectionId in _presenceTracker.GetConnectionIds(removedUserId))
+        {
+            await _hubContext.Groups.RemoveFromGroupAsync(connectionId, groupName).ConfigureAwait(false);
+        }
+
+        // The removed user still needs the existing notification to clean up their UI.
+        var recipients = activeUserIds.Append(removedUserId).Distinct(StringComparer.Ordinal).ToList();
+        await _hubContext.Clients.Users(recipients).SendAsync("MemberRemoved", new
         {
             ConversationId = conversationId,
             RemovedUserId = removedUserId,
@@ -159,9 +159,18 @@ public class ConversationHubService : IConversationHubService
         });
     }
 
+    private async Task SendToActiveMembersAsync(string conversationId, string eventName, object payload)
+    {
+        var recipients = await GetActiveMemberUserIdsAsync(conversationId).ConfigureAwait(false);
+        if (recipients.Count == 0) return;
+        await _hubContext.Clients.Users(recipients).SendAsync(eventName, payload).ConfigureAwait(false);
+    }
+
     private static string GetGroupName(string conversationId)
     {
-        return $"conversation:{conversationId}";
+        // GUID spelling must not create a second group that server-side removal cannot find.
+        var canonicalId = GlobalUniqueId.TryParse(conversationId, out var id) ? id.ToString() : conversationId;
+        return $"conversation:{canonicalId}";
     }
 
     private async Task<IReadOnlyList<string>> GetActiveMemberUserIdsAsync(string conversationId)

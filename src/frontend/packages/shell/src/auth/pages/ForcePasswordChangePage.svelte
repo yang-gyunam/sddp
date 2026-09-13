@@ -50,7 +50,10 @@
 >
   <form
     class="flex flex-col gap-4"
-    onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+    onsubmit={(e) => {
+      e.preventDefault();
+      handleSubmit();
+    }}
   >
     <Input
       type="password"

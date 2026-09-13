@@ -22,14 +22,21 @@
 </script>
 
 {#if isVisible}
-  <div
-    class="flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-muted)] {className}"
-  >
+  <div class="flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-muted)] {className}">
     <!-- Animated dots -->
     <div class="flex gap-0.5">
-      <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce" style="animation-delay: 0ms;"></span>
-      <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce" style="animation-delay: 150ms;"></span>
-      <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce" style="animation-delay: 300ms;"></span>
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce"
+        style="animation-delay: 0ms;"
+      ></span>
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce"
+        style="animation-delay: 150ms;"
+      ></span>
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce"
+        style="animation-delay: 300ms;"
+      ></span>
     </div>
     <span>{displayText}</span>
   </div>
@@ -37,7 +44,9 @@
 
 <style>
   @keyframes bounce {
-    0%, 60%, 100% {
+    0%,
+    60%,
+    100% {
       transform: translateY(0);
     }
     30% {

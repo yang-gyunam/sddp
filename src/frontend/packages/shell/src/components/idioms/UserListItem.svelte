@@ -61,7 +61,7 @@
     {#if trailingSnippet}
       {@render trailingSnippet()}
     {:else if user.isAi}
-      <span class="text-xs text-[var(--color-accent-primary)]">AI</span>
+      <span class="text-xs text-[var(--color-accent-text)]">AI</span>
     {/if}
   {/snippet}
 </RichListItem>

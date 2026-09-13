@@ -8,11 +8,7 @@
   import type { ComboboxOption } from '@sddp/ui';
   import { formatPercent } from '@sddp/shell';
   import type { EntityType, RelationType, CreateRelationshipRequest } from '../../types';
-  import {
-    ENTITY_TYPE_STYLES,
-    RELATION_TYPE_STYLES,
-    getAvailableRelationTypes,
-  } from '../../types';
+  import { ENTITY_TYPE_STYLES, RELATION_TYPE_STYLES, getAvailableRelationTypes } from '../../types';
 
   interface Props {
     /** Source entity type (fixed) */
@@ -76,9 +72,7 @@
   let relationType = $state<RelationType>('DependsOn');
   let reason = $state('');
   let strength = $state(50);
-  const strengthLabel = $derived(
-    formatPercent(strength / 100, { maximumFractionDigits: 0 })
-  );
+  const strengthLabel = $derived(formatPercent(strength / 100, { maximumFractionDigits: 0 }));
   const fromStyle = $derived(ENTITY_TYPE_STYLES[fromEntityType]);
 
   // Available relationship types based on entity types
@@ -139,12 +133,16 @@
 >
   <!-- Header -->
   <div class="flex items-center justify-between">
-    <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">
-      Create Relationship
-    </h3>
+    <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Create Relationship</h3>
     <div class="flex items-center gap-1">
       <IconButton icon="rotate-ccw" variant="ghost" onclick={handleReset} title="Reset" />
-      <IconButton icon="check" variant={isValid ? 'success' : 'ghost'} type="submit" disabled={!isValid || loading} title="Create" />
+      <IconButton
+        icon="check"
+        variant={isValid ? 'success' : 'ghost'}
+        type="submit"
+        disabled={!isValid || loading}
+        title="Create"
+      />
       {#if onCancel}
         <IconButton icon="x" variant="ghost" onclick={onCancel} title="Cancel" />
       {/if}
@@ -156,7 +154,9 @@
     <span class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
       From (Source)
     </span>
-    <div class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div
+      class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+    >
       <div class="flex items-center justify-center w-6 h-6 rounded {fromStyle.bgColor}">
         <Icon name={fromStyle.icon} size="sm" class={fromStyle.color} />
       </div>
@@ -209,12 +209,16 @@
           variant="unstyled"
           class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-left
             {relationType === type
-              ? `${style.bgColor} ${style.borderColor} border-2`
-              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
+            ? `${style.bgColor} ${style.borderColor} border-2`
+            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
           onclick={() => (relationType = type)}
         >
           <Icon name={style.icon} size="sm" class={style.color} />
-          <span class="text-sm {relationType === type ? style.color : 'text-gray-600 dark:text-gray-400'}">
+          <span
+            class="text-sm {relationType === type
+              ? style.color
+              : 'text-gray-600 dark:text-gray-400'}"
+          >
             {style.label}
           </span>
         </Button>
@@ -229,7 +233,10 @@
 
   <!-- Strength -->
   <div>
-    <label for={strengthId} class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+    <label
+      for={strengthId}
+      class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5"
+    >
       Relationship Strength: {strengthLabel}
     </label>
     <!-- eslint-disable-next-line svelte/no-restricted-html-elements -->
@@ -263,10 +270,11 @@
 
   <!-- Error -->
   {#if error}
-    <div class="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-lg text-sm">
+    <div
+      class="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-lg text-sm"
+    >
       <Icon name="alert-circle" size="sm" />
       {error}
     </div>
   {/if}
-
 </form>

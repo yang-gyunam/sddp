@@ -1,10 +1,5 @@
 import type { Subscriber, Unsubscriber } from 'svelte/store';
-import type {
-  BottomPanelState,
-  PanelTab,
-  StatusBarItem,
-  StatusBarState,
-} from '../types';
+import type { BottomPanelState, PanelTab, StatusBarItem, StatusBarState } from '../types';
 import { clamp } from '../utils/number.utils';
 import type { PanelStoreLike, StatusBarStoreLike } from './panel.store';
 
@@ -119,7 +114,7 @@ export function createRunesPanelStore(initialState: BottomPanelState): PanelStor
       commit({
         ...state,
         tabs: nextTabs,
-        activeTab: state.activeTab === tabId ? nextTabs[0]?.id ?? '' : state.activeTab,
+        activeTab: state.activeTab === tabId ? (nextTabs[0]?.id ?? '') : state.activeTab,
       });
     },
 

@@ -48,7 +48,9 @@
       </div>
 
       <!-- Card Container -->
-      <div class="bg-[var(--color-bg-card)] rounded-lg border border-[var(--color-border)] shadow-lg p-6">
+      <div
+        class="bg-[var(--color-bg-card)] rounded-lg border border-[var(--color-border)] shadow-lg p-6"
+      >
         {@render children()}
       </div>
 
@@ -75,9 +77,13 @@
     <div class="flex items-center justify-center gap-1 text-[var(--color-text-secondary)]">
       <span class="text-xs">© {currentYear} {appName}</span>
       <span class="text-xs opacity-50">│</span>
-      <a href="#privacy" class="text-xs hover:text-[var(--color-text-primary)] hover:underline">Privacy</a>
+      <a href="#privacy" class="text-xs hover:text-[var(--color-text-primary)] hover:underline"
+        >Privacy</a
+      >
       <span class="text-xs opacity-50">│</span>
-      <a href="#terms" class="text-xs hover:text-[var(--color-text-primary)] hover:underline">Terms</a>
+      <a href="#terms" class="text-xs hover:text-[var(--color-text-primary)] hover:underline"
+        >Terms</a
+      >
     </div>
   </footer>
 </div>

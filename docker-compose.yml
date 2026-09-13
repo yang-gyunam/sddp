@@ -1,8 +1,10 @@
+# Loopback-only evaluation profile. This file uses known development credentials.
+# Production deployments must use Production environment, private service ports, TLS, and a reset admin password.
 name: sddp-public
 
 services:
   sddp-db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:0.8.6-pg16  # Pin updated: 2026-08-30
     container_name: sddp-public-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sddp}
@@ -12,7 +14,7 @@ services:
       SDDP_STORAGE_TABLESPACE_PATH: ${SDDP_STORAGE_TABLESPACE_PATH:-/var/lib/postgresql/tablespaces/sddp_data}
       SDDP_STORAGE_QUOTA_GB: ${SDDP_STORAGE_QUOTA_GB:-20}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - postgres_tablespace:/var/lib/postgresql/tablespaces
@@ -28,11 +30,11 @@ services:
       - sddp-network
 
   sddp-redis:
-    image: redis:7-alpine
+    image: redis:7.4.11-alpine  # Pin updated: 2026-08-30
     container_name: sddp-public-redis
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -49,9 +51,16 @@ services:
       context: ./src/backend
       dockerfile: Dockerfile
     container_name: sddp-public-api
+    # Before upgrading an existing container, migrate /app/data into this volume.
+    # See docs/deploy/api-data.md. Do not recreate the old container first.
+    volumes:
+      - api_data:/app/data
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5001
+      - Authentication__LoginProtection__TrustForwardedFor=true
+      - Authentication__DevelopmentCredentials__AllowKnownCredentials=true
+      - Authentication__DevelopmentCredentials__ExposureMode=Loopback
       - ConnectionStrings__DefaultConnection=Host=sddp-db;Port=5432;Database=${POSTGRES_DB:-sddp};Username=${POSTGRES_USER:-sddp};Password=${POSTGRES_PASSWORD:-sddp_password}
       - Redis__ConnectionString=sddp-redis:6379
       - Ollama__Url=http://sddp-ollama:11434
@@ -69,7 +78,7 @@ services:
       - Git__ServerUrl=http://sddp-gitea:3100
       - OpenTelemetry__Endpoint=http://sddp-aspire:18889
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     depends_on:
       sddp-db:
         condition: service_healthy
@@ -86,14 +95,14 @@ services:
       - sddp-network
 
   sddp-ollama:
-    image: ollama/ollama:0.17.6
+    image: ollama/ollama:0.17.6  # Pin updated: 2026-03-05
     container_name: sddp-public-ollama
     entrypoint: ["/bin/sh", "/ollama-entrypoint.sh"]
     environment:
       OLLAMA_CHAT_MODEL: phi4-mini
       OLLAMA_EMBED_MODEL: nomic-embed-text
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
       - ./docker/ollama-entrypoint.sh:/ollama-entrypoint.sh:ro
@@ -115,10 +124,10 @@ services:
   # Whisper STT (speech-to-text, OpenAI-compatible /v1/audio/transcriptions)
   # Model downloads lazily on first request (~460MB); run `make whisper-warmup` to preload.
   sddp-whisper:
-    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu  # Pin updated: 2026-06-11
     container_name: sddp-public-whisper
     ports:
-      - "9020:8000"
+      - "127.0.0.1:9020:8000"
     volumes:
       - whisper_data:/home/ubuntu/.cache/huggingface/hub
     deploy:
@@ -137,24 +146,24 @@ services:
       - sddp-network
 
   sddp-aspire:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.2.0
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.2.0  # Pin updated: 2026-03-05
     container_name: sddp-public-aspire
     environment:
       DASHBOARD__FRONTEND__AUTHMODE: ${ASPIRE_AUTH_MODE:-Unsecured}
     ports:
-      - "18888:18888"
-      - "4317:18889"
+      - "127.0.0.1:18888:18888"
+      - "127.0.0.1:4317:18889"
     restart: unless-stopped
     networks:
       - sddp-network
 
   sddp-gitea:
-    image: gitea/gitea:1.25.0
+    image: gitea/gitea:1.25.0  # Pin updated: 2026-03-05
     container_name: sddp-public-gitea
     profiles: ["tools"]
     ports:
-      - "3100:3000"
-      - "2222:22"
+      - "127.0.0.1:3100:3000"
+      - "127.0.0.1:2222:22"
     volumes:
       - gitea_data:/data
       - gitea_config:/config
@@ -166,13 +175,36 @@ services:
     build:
       context: ./src/frontend
       dockerfile: packages/web/Dockerfile
+      args:
+        VITE_API_URL: "${VITE_API_URL:-}"
+        VITE_API_VERSION: "${VITE_API_VERSION:-v1}"
+        VITE_ENABLE_DEBUG: "${VITE_ENABLE_DEBUG:-false}"
+        VITE_ENABLE_ANALYTICS: "${VITE_ENABLE_ANALYTICS:-false}"
+        VITE_ENABLE_AI_FEATURES: "${VITE_ENABLE_AI_FEATURES:-false}"
+        VITE_ENABLE_SPEECH_TO_TEXT: "${VITE_ENABLE_SPEECH_TO_TEXT:-true}"
+        VITE_ENABLE_ARTIFACT_MAINTENANCE: "${VITE_ENABLE_ARTIFACT_MAINTENANCE:-false}"
+        VITE_ENABLE_PROJECT_INTEGRATIONS: "${VITE_ENABLE_PROJECT_INTEGRATIONS:-false}"
+        VITE_ENABLE_SPEC_SUPPLEMENTARY_TABS: "${VITE_ENABLE_SPEC_SUPPLEMENTARY_TABS:-false}"
+        VITE_ENABLE_SYSTEM_CONFIG_AUTHENTICATION: "${VITE_ENABLE_SYSTEM_CONFIG_AUTHENTICATION:-false}"
+        VITE_ENABLE_SYSTEM_CONFIG_PERFORMANCE: "${VITE_ENABLE_SYSTEM_CONFIG_PERFORMANCE:-false}"
+        VITE_ENABLE_RUNES_TOAST_STORE: "${VITE_ENABLE_RUNES_TOAST_STORE:-false}"
+        VITE_ENABLE_RUNES_PANEL_STORE: "${VITE_ENABLE_RUNES_PANEL_STORE:-false}"
+        VITE_ENABLE_RUNES_TAB_STATE_STORE: "${VITE_ENABLE_RUNES_TAB_STATE_STORE:-false}"
+        VITE_ENABLE_RUNES_COMMAND_STORE: "${VITE_ENABLE_RUNES_COMMAND_STORE:-false}"
+        VITE_ENABLE_RUNES_MENU_STORE: "${VITE_ENABLE_RUNES_MENU_STORE:-false}"
+        VITE_ENABLE_RUNES_SIDE_PANEL_STORE: "${VITE_ENABLE_RUNES_SIDE_PANEL_STORE:-false}"
+        VITE_ENABLE_RUNES_PANEL_CONTENT_STORE: "${VITE_ENABLE_RUNES_PANEL_CONTENT_STORE:-false}"
+        VITE_ENABLE_RUNES_TABS_STORE: "${VITE_ENABLE_RUNES_TABS_STORE:-false}"
+        VITE_ENABLE_RUNES_STORE_SHADOW_PARITY: "${VITE_ENABLE_RUNES_STORE_SHADOW_PARITY:-true}"
+        VITE_AUTH_TOKEN_EXPIRY: "${VITE_AUTH_TOKEN_EXPIRY:-900}"
     container_name: sddp-public-front
-    # CSP defaults to http://localhost:5001 (set in Dockerfile).
-    # Override API_ORIGIN / WS_ORIGIN for remote access, e.g.:
-    #   API_ORIGIN=http://192.168.1.10:5001
-    #   WS_ORIGIN=ws://192.168.1.10:5001
+    # The default bundle uses same-origin /api and /hubs/* through nginx.
+    # Set VITE_API_URL + API_ORIGIN + WS_ORIGIN only for a separate public API origin.
+    environment:
+      API_ORIGIN: "${API_ORIGIN:-}"
+      WS_ORIGIN: "${WS_ORIGIN:-}"
     ports:
-      - "9010:8080"
+      - "127.0.0.1:9010:8080"
     depends_on:
       sddp-api:
         condition: service_healthy
@@ -181,6 +213,7 @@ services:
       - sddp-network
 
 volumes:
+  api_data:
   postgres_data:
   postgres_tablespace:
   redis_data:

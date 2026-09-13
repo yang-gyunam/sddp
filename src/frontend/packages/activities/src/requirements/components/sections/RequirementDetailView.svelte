@@ -59,7 +59,11 @@
 
   async function loadFieldAuthors(): Promise<void> {
     try {
-      fieldAuthors = await getFieldAuthors(requirement.tenantId, requirement.projectId, requirement.id);
+      fieldAuthors = await getFieldAuthors(
+        requirement.tenantId,
+        requirement.projectId,
+        requirement.id
+      );
     } catch {
       fieldAuthors = [];
     }
@@ -75,7 +79,11 @@
     if (!requirement.id) return;
     if (requirement.id === prevRequirementId) return;
     prevRequirementId = requirement.id;
-    untrack(() => loadFieldAuthors().catch((err) => console.warn('[RequirementDetail] loadFieldAuthors failed:', err)));
+    untrack(() =>
+      loadFieldAuthors().catch((err) =>
+        console.warn('[RequirementDetail] loadFieldAuthors failed:', err)
+      )
+    );
   });
 
   // CollapsibleGroup expanded states (always expanded)
@@ -94,9 +102,12 @@
     const items: ReferenceItem[] = [];
     // Source Conversation
     if (requirement.conversationId) {
-      const icon = requirement.conversationType === 'Channel' ? 'hash'
-        : requirement.conversationType === 'Forum' ? 'clipboard-list'
-        : 'message-circle';
+      const icon =
+        requirement.conversationType === 'Channel'
+          ? 'hash'
+          : requirement.conversationType === 'Forum'
+            ? 'clipboard-list'
+            : 'message-circle';
       const prefix = requirement.conversationType === 'Channel' ? '#' : '';
       const name = requirement.conversationName
         ? `${prefix}${requirement.conversationName}`
@@ -132,33 +143,59 @@
     const statusStyle = REQUIREMENT_STATUS_STYLES[requirement.status];
     // Row 1: Status | Owner
     items.push({ label: 'Status', value: statusStyle.label, class: statusStyle.textColor });
-    items.push({ label: 'Owner', value: requirement.owner?.name || 'Unassigned', type: requirement.owner?.name ? 'person' : 'text', avatarUrl: requirement.owner?.avatarUrl });
+    items.push({
+      label: 'Owner',
+      value: requirement.owner?.name || 'Unassigned',
+      type: requirement.owner?.name ? 'person' : 'text',
+      avatarUrl: requirement.owner?.avatarUrl,
+    });
     // Row 2: Version | Valid From
     items.push({ label: 'Version', value: requirement.version });
     if (requirement.validFrom) {
-      items.push({ label: 'Valid From', value: formatDateTime(requirement.validFrom, { month: 'short' }) });
+      items.push({
+        label: 'Valid From',
+        value: formatDateTime(requirement.validFrom, { month: 'short' }),
+      });
     }
     // Row 3: Created By | Created
     if (requirement.createdBy?.name) {
-      items.push({ label: 'Created By', value: requirement.createdBy.name, type: 'person', avatarUrl: requirement.createdBy.avatarUrl });
+      items.push({
+        label: 'Created By',
+        value: requirement.createdBy.name,
+        type: 'person',
+        avatarUrl: requirement.createdBy.avatarUrl,
+      });
     }
     if (requirement.createdAt) {
-      items.push({ label: 'Created', value: formatDateTime(requirement.createdAt, { month: 'short' }) });
+      items.push({
+        label: 'Created',
+        value: formatDateTime(requirement.createdAt, { month: 'short' }),
+      });
     }
     // Row 4: Updated By | Updated
     if (requirement.updatedBy?.name) {
-      items.push({ label: 'Updated By', value: requirement.updatedBy.name, type: 'person', avatarUrl: requirement.updatedBy.avatarUrl });
+      items.push({
+        label: 'Updated By',
+        value: requirement.updatedBy.name,
+        type: 'person',
+        avatarUrl: requirement.updatedBy.avatarUrl,
+      });
     }
     if (requirement.updatedAt) {
-      items.push({ label: 'Updated', value: formatDateTime(requirement.updatedAt, { month: 'short' }) });
+      items.push({
+        label: 'Updated',
+        value: formatDateTime(requirement.updatedAt, { month: 'short' }),
+      });
     }
     // Valid To (if exists)
     if (requirement.validTo) {
-      items.push({ label: 'Valid To', value: formatDateTime(requirement.validTo, { month: 'short' }) });
+      items.push({
+        label: 'Valid To',
+        value: formatDateTime(requirement.validTo, { month: 'short' }),
+      });
     }
     return items;
   });
-
 </script>
 
 <div class="flex flex-col h-full {className}">
@@ -166,7 +203,7 @@
     <!-- Header -->
     <DetailHeader>
       {#snippet leading()}
-        <RequirementLevelBadge level={requirement.level} size="md" />
+        <RequirementLevelBadge level={requirement.level} size="icon" />
       {/snippet}
       <DetailTitle title={requirement.title} code={requirement.code} />
       {#snippet actions()}
@@ -179,19 +216,31 @@
         <!-- More actions (rightmost) -->
         {#if !isReadOnly && (availableTransitions.length > 0 || (canPromote && onPromoteToSpec))}
           <Dropdown position="bottom-right">
-            {#snippet trigger()}
-              <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+            {#snippet trigger({ toggle, open })}
+              <IconButton
+                onclick={toggle}
+                ariaHasPopup
+                ariaExpanded={open}
+                icon="more-vertical"
+                variant="ghost"
+                size="sm"
+                title="More actions"
+              />
             {/snippet}
             <div class="py-1 min-w-[160px]">
               {#if availableTransitions.length > 0}
-                <div class="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                <div
+                  class="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]"
+                >
                   Transition to
                 </div>
                 {#each availableTransitions as status (status)}
                   <Button
                     variant="unstyled"
                     onclick={() => onStatusChange?.(status)}
-                    class="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-surface-200)] transition-colors {REQUIREMENT_STATUS_STYLES[status].textColor}"
+                    class="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-surface-200)] transition-colors {REQUIREMENT_STATUS_STYLES[
+                      status
+                    ].textColor}"
                   >
                     {REQUIREMENT_STATUS_STYLES[status].label}
                   </Button>
@@ -231,11 +280,13 @@
           title="Basic Information"
           variant="plain"
           expanded={basicExpanded}
-          onToggle={() => basicExpanded = !basicExpanded}
+          onToggle={() => (basicExpanded = !basicExpanded)}
         >
           <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
             <DetailField label="Description" author={getFieldAuthor('Description')}>
-              <div class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap">
+              <div
+                class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap"
+              >
                 {requirement.description || 'No description provided.'}
               </div>
             </DetailField>
@@ -252,7 +303,7 @@
             variant="plain"
             badge={referenceItems.length + (requirement.children?.length ?? 0)}
             expanded={referencesExpanded}
-            onToggle={() => referencesExpanded = !referencesExpanded}
+            onToggle={() => (referencesExpanded = !referencesExpanded)}
           >
             <div class="pl-5 pt-2 pb-3 space-y-4">
               {#if referenceItems.length > 0}
@@ -284,7 +335,7 @@
           title="Metadata"
           variant="plain"
           expanded={metadataExpanded}
-          onToggle={() => metadataExpanded = !metadataExpanded}
+          onToggle={() => (metadataExpanded = !metadataExpanded)}
         >
           <div class="pl-5 pt-2 pb-3">
             <MetadataSection items={metadataItems} />

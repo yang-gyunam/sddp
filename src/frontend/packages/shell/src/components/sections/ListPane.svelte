@@ -44,7 +44,7 @@
 
 <PageShell class="h-full bg-[var(--color-bg-section)] {className}">
   <PageHeader
-    title={title}
+    {title}
     {actions}
     {leading}
     titleAddon={badge !== undefined && badge !== null && badge !== '' ? badgeAddon : undefined}

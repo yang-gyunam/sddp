@@ -34,22 +34,28 @@
     children,
   }: Props = $props();
 
-  const paddingClass = $derived({
-    none: 'surface-card--pad-none',
-    sm: 'surface-card--pad-sm',
-    md: 'surface-card--pad-md',
-    lg: 'surface-card--pad-lg',
-  }[padding]);
+  const paddingClass = $derived(
+    {
+      none: 'surface-card--pad-none',
+      sm: 'surface-card--pad-sm',
+      md: 'surface-card--pad-md',
+      lg: 'surface-card--pad-lg',
+    }[padding]
+  );
 
   const needsButtonRole = $derived(Boolean(onclick) && as !== 'button');
 
-  const classes = $derived([
-    'surface-card',
-    paddingClass,
-    interactive && 'surface-card--interactive',
-    selected && 'surface-card--selected',
-    className,
-  ].filter(Boolean).join(' '));
+  const classes = $derived(
+    [
+      'surface-card',
+      paddingClass,
+      interactive && 'surface-card--interactive',
+      selected && 'surface-card--selected',
+      className,
+    ]
+      .filter(Boolean)
+      .join(' ')
+  );
 
   function handleKeydown(event: KeyboardEvent) {
     if (!needsButtonRole) return;
@@ -62,7 +68,7 @@
 
 <svelte:element
   this={as}
-  {...(as === 'button' ? { type } : {})}
+  {...as === 'button' ? { type } : {}}
   class={classes}
   {onclick}
   role={needsButtonRole ? 'button' : undefined}
@@ -99,7 +105,9 @@
   }
 
   .surface-card--interactive {
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .surface-card--interactive:hover {
@@ -108,11 +116,19 @@
 
   .surface-card--selected {
     border-color: var(--color-accent-primary, var(--color-primary-500));
-    background-color: color-mix(in srgb, var(--color-accent-primary, var(--color-primary-500)) 10%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--color-accent-primary, var(--color-primary-500)) 10%,
+      transparent
+    );
   }
 
   .surface-card--selected.surface-card--interactive:hover {
-    background-color: color-mix(in srgb, var(--color-accent-primary, var(--color-primary-500)) 15%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--color-accent-primary, var(--color-primary-500)) 15%,
+      transparent
+    );
   }
 
   :global(.surface-card__label) {

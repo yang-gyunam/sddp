@@ -28,7 +28,9 @@
   });
 
   const filteredEntries = $derived(
-    currentFilter === 'all' ? problemsState.entries : problemsState.entries.filter((e) => e.severity === currentFilter)
+    currentFilter === 'all'
+      ? problemsState.entries
+      : problemsState.entries.filter((e) => e.severity === currentFilter)
   );
 
   function getSeverityIcon(severity: ProblemSeverity): string {
@@ -210,7 +212,9 @@
             onclick={() => entry.stack && toggleStack(entry.id)}
             aria-label="{entry.severity}: {entry.message}"
           >
-            <div class="grid grid-cols-[50px_175px_220px_minmax(180px,1fr)_minmax(260px,2fr)] gap-2 items-center text-xs">
+            <div
+              class="grid grid-cols-[50px_175px_220px_minmax(180px,1fr)_minmax(260px,2fr)] gap-2 items-center text-xs"
+            >
               <span class="flex items-center gap-1">
                 {#if entry.stack}
                   <Icon
@@ -219,19 +223,32 @@
                     class="text-[var(--color-text-muted)]"
                   />
                 {/if}
-                <Icon name={getSeverityIcon(entry.severity)} size="sm" class="{getSeverityColor(entry.severity)}" />
+                <Icon
+                  name={getSeverityIcon(entry.severity)}
+                  size="sm"
+                  class={getSeverityColor(entry.severity)}
+                />
               </span>
-              <span class="font-mono text-[var(--color-text-secondary)] truncate">{formatTimestamp(entry.timestamp)}</span>
-              <span class="font-mono text-[var(--color-text-muted)] truncate">{getCategory(entry)}</span>
+              <span class="font-mono text-[var(--color-text-secondary)] truncate"
+                >{formatTimestamp(entry.timestamp)}</span
+              >
+              <span class="font-mono text-[var(--color-text-muted)] truncate"
+                >{getCategory(entry)}</span
+              >
               <span class="text-[var(--color-text-primary)] truncate">{getTitle(entry)}</span>
-              <span class="text-[var(--color-text-secondary)] truncate">{getDescription(entry)}</span>
+              <span class="text-[var(--color-text-secondary)] truncate"
+                >{getDescription(entry)}</span
+              >
             </div>
           </Button>
 
           <!-- Stack Trace (collapsible) -->
           {#if entry.stack && expandedStacks.has(entry.id)}
-            <div class="px-3 py-2 ml-12 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border-subtle)]">
-              <pre class="text-xs font-mono text-[var(--color-text-secondary)] whitespace-pre-wrap break-all overflow-x-auto">{entry.stack}</pre>
+            <div
+              class="px-3 py-2 ml-12 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border-subtle)]"
+            >
+              <pre
+                class="text-xs font-mono text-[var(--color-text-secondary)] whitespace-pre-wrap break-all overflow-x-auto">{entry.stack}</pre>
             </div>
           {/if}
         </div>

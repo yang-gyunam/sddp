@@ -7,7 +7,14 @@
 
   import { untrack } from 'svelte';
   import { CardGrid, IconButton, Button, Spinner } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, formatDateTime, getTabState, setTabState } from '@sddp/shell';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    formatDateTime,
+    getTabState,
+    setTabState,
+  } from '@sddp/shell';
   import { StatCard } from '../../../shared/components/idioms';
   import type { HealthStatus, HealthMetric } from '../../../shared/components/idioms';
   import { getDashboardService } from '../../../dashboard/services/DashboardService';
@@ -104,20 +111,24 @@
         : 'var(--color-error-600)'
   );
 
-  function toHealthCards(): Array<{ title: string; status: HealthStatus; metrics: HealthMetric[] }> {
+  function toHealthCards(): Array<{
+    title: string;
+    status: HealthStatus;
+    metrics: HealthMetric[];
+  }> {
     if (!healthData?.services) return [];
     return healthData.services.map((svc) => ({
       title: svc.name,
-      status: (
-        svc.status.toLowerCase() === 'healthy'
-          ? 'healthy'
-          : svc.status.toLowerCase() === 'warning'
-            ? 'warning'
-            : 'error'
-      ) as HealthStatus,
+      status: (svc.status.toLowerCase() === 'healthy'
+        ? 'healthy'
+        : svc.status.toLowerCase() === 'warning'
+          ? 'warning'
+          : 'error') as HealthStatus,
       metrics: [
         { label: 'Status', value: svc.status },
-        ...(svc.responseTimeMs !== null ? [{ label: 'Response Time', value: `${svc.responseTimeMs}ms` }] : []),
+        ...(svc.responseTimeMs !== null
+          ? [{ label: 'Response Time', value: `${svc.responseTimeMs}ms` }]
+          : []),
         ...(svc.message ? [{ label: 'Message', value: svc.message }] : []),
       ],
     }));
@@ -139,29 +150,29 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="Health" {loading}>
-    {#snippet actions()}
-      {#if healthData}
-        <div
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold"
-          style="background: {overallColor}15; color: {overallColor}"
-        >
-          <span class="text-sm leading-none">
-            {#if overallStatus === 'healthy'}&#x2713;{:else if overallStatus === 'warning'}&#x26A0;{:else}&#x2717;{/if}
+    <PageHeader title="Health" {loading}>
+      {#snippet actions()}
+        {#if healthData}
+          <div
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold"
+            style="background: {overallColor}15; color: {overallColor}"
+          >
+            <span class="text-sm leading-none">
+              {#if overallStatus === 'healthy'}&#x2713;{:else if overallStatus === 'warning'}&#x26A0;{:else}&#x2717;{/if}
+            </span>
+            <span>{overallLabel}</span>
+          </div>
+        {/if}
+        {#if lastCheckedAt}
+          <span class="text-xs text-[var(--color-text-tertiary)]">
+            {formatCheckedTime(lastCheckedAt)}
           </span>
-          <span>{overallLabel}</span>
-        </div>
-      {/if}
-      {#if lastCheckedAt}
-        <span class="text-xs text-[var(--color-text-tertiary)]">
-          {formatCheckedTime(lastCheckedAt)}
-        </span>
-      {/if}
-      <IconButton icon="refresh-cw" title="Refresh" onclick={loadHealth} />
-    {/snippet}
-  </PageHeader>
+        {/if}
+        <IconButton icon="refresh-cw" title="Refresh" onclick={loadHealth} />
+      {/snippet}
+    </PageHeader>
 
-  <PageBody>
+    <PageBody>
       <!-- Service Health Cards -->
       <CardGrid cols={4} gap="md" class="mx-3 mt-2 mb-8">
         {#each toHealthCards() as card (card.title)}
@@ -172,6 +183,6 @@
           </div>
         {/each}
       </CardGrid>
-  </PageBody>
+    </PageBody>
   {/if}
 </PageShell>

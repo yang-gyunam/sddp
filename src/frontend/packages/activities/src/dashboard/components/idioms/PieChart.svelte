@@ -18,12 +18,7 @@
     size?: number;
   }
 
-  let {
-    data = [],
-    title = '',
-    showLegend = true,
-    size = 160,
-  }: Props = $props();
+  let { data = [], title = '', showLegend = true, size = 160 }: Props = $props();
 
   // Default color palette
   const defaultColors = CHART_PALETTE;
@@ -149,7 +144,9 @@
   }
 
   .slice {
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
     transform-origin: center;
   }
 

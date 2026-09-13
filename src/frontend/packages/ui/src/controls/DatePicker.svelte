@@ -77,7 +77,9 @@
     {onValueChange}
   >
     {#if label}
-      <BitsDatePicker.Label class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+      <BitsDatePicker.Label
+        class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5"
+      >
         {label}
         {#if required}
           <span class="text-[var(--color-error-500)]">*</span>
@@ -161,7 +163,9 @@
     border: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
-    transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+    transition:
+      border-color 150ms ease-in-out,
+      box-shadow 150ms ease-in-out;
   }
 
   :global(.datepicker-input:focus-within) {
@@ -208,7 +212,9 @@
     padding: 0.25rem;
     border-radius: var(--radius-sm, 4px);
     color: var(--color-text-secondary);
-    transition: color 150ms ease-in-out, background-color 150ms ease-in-out;
+    transition:
+      color 150ms ease-in-out,
+      background-color 150ms ease-in-out;
   }
 
   :global(.datepicker-trigger:hover:not(:disabled)) {
@@ -251,7 +257,9 @@
     height: 1.75rem;
     border-radius: var(--radius-md, 6px);
     color: var(--color-text-secondary);
-    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out;
   }
 
   :global(.datepicker-nav-btn:hover) {
@@ -297,7 +305,9 @@
     font-size: var(--text-sm);
     border-radius: var(--radius-md, 6px);
     color: var(--color-text-primary);
-    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out;
   }
 
   :global(.datepicker-day:hover:not([data-disabled]):not([data-unavailable])) {

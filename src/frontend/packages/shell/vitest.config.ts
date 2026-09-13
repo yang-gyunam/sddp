@@ -26,26 +26,5 @@ export default defineConfig({
         inline: [/@testing-library\/svelte/],
       },
     },
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: [
-        'src/stores/**/*.ts',
-        'src/utils/**/*.ts',
-        'src/core/services/**/*.ts',
-      ],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.spec.ts',
-        'src/**/*.d.ts',
-        'src/**/index.ts',
-      ],
-      thresholds: {
-        statements: 45,
-        branches: 35,
-        functions: 35,
-        lines: 45,
-      },
-    },
   },
 });

@@ -3,7 +3,7 @@
  * Mediates between Relationship stores and RelationshipService
  */
 
-import { getRelationshipService } from './services';
+import { createRelationshipService } from './services';
 import {
   setRelationships,
   setRelationshipsLoading,
@@ -30,8 +30,7 @@ export async function loadRelationships(
   setRelationshipsError(null);
 
   try {
-    const service = getRelationshipService();
-    service.setContext(tenantId, projectId);
+    const service = createRelationshipService(tenantId, projectId);
 
     const data = await service.getRelationshipsByEntity(entityType, entityId);
     setRelationships(data);
@@ -58,8 +57,7 @@ export async function loadRelationshipGraph(
   setGraphError(null);
 
   try {
-    const service = getRelationshipService();
-    service.setContext(tenantId, projectId);
+    const service = createRelationshipService(tenantId, projectId);
 
     const data = await service.getRelationshipGraph(entityType, entityId, { maxDepth: depth });
     setGraph(data);
@@ -85,8 +83,7 @@ export async function compareSpecVersions(
   setDiffError(null);
 
   try {
-    const service = getRelationshipService();
-    service.setContext(tenantId, projectId);
+    const service = createRelationshipService(tenantId, projectId);
 
     const data = await service.compareSpecVersions(specId1, specId2);
     setDiff(data);

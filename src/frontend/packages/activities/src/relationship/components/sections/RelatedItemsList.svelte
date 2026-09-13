@@ -128,7 +128,9 @@
               class="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               onclick={() => toggleGroup(groupId)}
             >
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <span
+                class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
+              >
                 {getGroupLabel(groupId)}
                 <Badge variant="secondary" size="sm">{groupItems.length}</Badge>
               </span>
@@ -150,7 +152,9 @@
                       {item.isDeprecated ? 'opacity-50' : ''}"
                     onclick={() => onItemClick?.(item)}
                   >
-                    <div class="flex items-center justify-center w-8 h-8 rounded-lg {entityStyle.bgColor}">
+                    <div
+                      class="flex items-center justify-center w-8 h-8 rounded-lg {entityStyle.bgColor}"
+                    >
                       <Icon name={entityStyle.icon} size="sm" class={entityStyle.color} />
                     </div>
                     <div class="flex-1 min-w-0">

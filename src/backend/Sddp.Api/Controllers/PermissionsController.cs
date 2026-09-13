@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Application.Features.Permissions.Queries;
+using Sddp.Api.Authorization;
 
 namespace Sddp.Api.Controllers;
 
@@ -21,6 +22,7 @@ public class PermissionsController : BaseApiController
     }
 
     [HttpGet]
+    [ResourceScopeExempt("Permission is a global catalog entity with no ProjectId; the controller-level CanManageUsers policy is what guards the list.")]
     public async Task<IActionResult> GetPermissions()
     {
         var dtos = await _sender.Send(new GetPermissionsQuery());
@@ -28,6 +30,7 @@ public class PermissionsController : BaseApiController
     }
 
     [HttpGet("by-resource")]
+    [ResourceScopeExempt("Permission is a global catalog entity with no ProjectId; the controller-level CanManageUsers policy guards this grouped view.")]
     public async Task<IActionResult> GetPermissionsByResource()
     {
         var grouped = await _sender.Send(new GetPermissionsByResourceQuery());

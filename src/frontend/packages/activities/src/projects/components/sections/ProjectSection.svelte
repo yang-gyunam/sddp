@@ -82,9 +82,19 @@
   // New item menu items
   const newItemMenuItems = [
     { id: 'spec', icon: 'file-text', label: 'New Spec', type: 'spec' as NewItemType },
-    { id: 'requirement', icon: 'clipboard-list', label: 'New Requirement', type: 'requirement' as NewItemType },
+    {
+      id: 'requirement',
+      icon: 'clipboard-list',
+      label: 'New Requirement',
+      type: 'requirement' as NewItemType,
+    },
     { id: 'task', icon: 'check-square', label: 'New Task', type: 'task' as NewItemType },
-    { id: 'conversation', icon: 'message-square', label: 'New Conversation', type: 'conversation' as NewItemType },
+    {
+      id: 'conversation',
+      icon: 'message-square',
+      label: 'New Conversation',
+      type: 'conversation' as NewItemType,
+    },
   ];
 
   // Context menu items
@@ -134,21 +144,14 @@
       };
       TabFactory.handleMenuClick(menuNode);
     }
-    
+
     // Also notify parent component
     onNodeSelect?.(node);
   }
-
 </script>
 
 <div class="relative">
-  <CollapsiblePanel
-    title={project.name}
-    {expanded}
-    {actions}
-    onToggle={onToggle}
-    class={className}
-  >
+  <CollapsiblePanel title={project.name} {expanded} {actions} {onToggle} class={className}>
     <div class="project-tree px-1">
       {#each treeNodes as node (node.id)}
         {@const isSelected = selectedNodePath === node.path}
@@ -158,8 +161,8 @@
           class="
             w-full text-left flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer
             {isSelected
-              ? 'bg-[var(--color-accent-primary)] bg-opacity-20 text-[var(--color-text-primary)]'
-              : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
+            ? 'bg-[var(--color-accent-primary)] bg-opacity-20 text-[var(--color-text-primary)]'
+            : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
             transition-colors
           "
           onclick={() => handleNodeClick(node)}
@@ -167,7 +170,9 @@
           <Icon
             name={node.icon}
             size="sm"
-            class={isSelected ? 'text-[var(--color-accent-primary)]' : 'text-[var(--color-text-tertiary)]'}
+            class={isSelected
+              ? 'text-[var(--color-accent-text)]'
+              : 'text-[var(--color-text-tertiary)]'}
           />
           <span class="flex-1 text-sm truncate">
             {node.label}
@@ -177,8 +182,8 @@
               class="
                 px-1.5 py-0.5 text-[0.625rem] rounded-full min-w-[18px] text-center
                 {isSelected
-                  ? 'bg-[var(--color-accent-primary)] text-white'
-                  : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
+                ? 'bg-[var(--color-accent-primary)] text-white'
+                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}
               "
             >
               {node.badge}

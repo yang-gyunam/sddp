@@ -25,7 +25,8 @@ export type PrimaryFlowType =
 export interface PrimaryFlowNode {
   id?: string;
   entityId?: string;
-  entityType: 'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task' | 'SiblingGroup';
+  entityType:
+    'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task' | 'SiblingGroup';
   label: string;
   code?: string;
   flowType?: PrimaryFlowType | null; // null for root node

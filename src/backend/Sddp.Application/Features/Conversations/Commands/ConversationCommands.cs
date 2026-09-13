@@ -3,6 +3,7 @@ using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Exceptions;
+using Sddp.Abstractions.Events;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Features.SystemConfig;
@@ -32,12 +33,12 @@ public sealed record CreateConversationCommand(
 public sealed class CreateConversationCommandHandler : IRequestHandler<CreateConversationCommand, ConversationSummaryDto?>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConversationHubService _hubService;
+    private readonly IOutboxEnqueuer _outbox;
 
-    public CreateConversationCommandHandler(IUnitOfWork unitOfWork, IConversationHubService hubService)
+    public CreateConversationCommandHandler(IUnitOfWork unitOfWork, IOutboxEnqueuer outbox)
     {
         _unitOfWork = unitOfWork;
-        _hubService = hubService;
+        _outbox = outbox;
     }
 
     public async Task<ConversationSummaryDto?> Handle(CreateConversationCommand request, CancellationToken cancellationToken)
@@ -123,12 +124,16 @@ public sealed class CreateConversationCommandHandler : IRequestHandler<CreateCon
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            await (_hubService.NotifyProjectChannelCreatedAsync(
-                memberUserIds,
-                conversation.Id.ToString(),
-                request.ProjectId.Value.ToString(),
-                conversation.Name,
-                request.UserId.ToString())).ConfigureAwait(false);
+            await (_outbox.EnqueueAsync(
+                new ProjectChannelCreatedEvent(
+                    memberUserIds,
+                    conversation.Id.ToString(),
+                    request.ProjectId.Value.ToString(),
+                    conversation.Name,
+                    request.UserId.ToString()),
+                "conversation",
+                conversation.Id,
+                cancellationToken)).ConfigureAwait(false);
         }
 
         request.AuditLog = new AuditLogRequest(

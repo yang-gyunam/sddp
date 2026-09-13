@@ -25,8 +25,7 @@ const initialState: ArtifactSidebarState = {
 };
 
 // Create the store
-const artifactStore: Store<ArtifactSidebarState> =
-  createStore<ArtifactSidebarState>(initialState);
+const artifactStore: Store<ArtifactSidebarState> = createStore<ArtifactSidebarState>(initialState);
 
 // ============================================
 // Actions
@@ -179,9 +178,7 @@ export function getArtifactState(): ArtifactSidebarState {
 /**
  * Subscribe to store changes
  */
-export function subscribeArtifact(
-  callback: (state: ArtifactSidebarState) => void
-): () => void {
+export function subscribeArtifact(callback: (state: ArtifactSidebarState) => void): () => void {
   return artifactStore.subscribe(callback);
 }
 

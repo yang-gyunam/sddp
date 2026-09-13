@@ -37,7 +37,9 @@ export function getVisibleSettingsProjects({
     return [];
   }
 
-  const visibleProjects = projects.filter((project) => resolveProjectOwnerId(project) === currentUserId);
+  const visibleProjects = projects.filter(
+    (project) => resolveProjectOwnerId(project) === currentUserId
+  );
 
   return visibleProjects.map(({ id, name }) => ({ id, name }));
 }

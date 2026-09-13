@@ -39,7 +39,9 @@
 </script>
 
 <div
-  class="flex gap-1 {orientation === 'horizontal' ? 'flex-wrap flex-row gap-x-4' : 'flex-col'} {className}"
+  class="flex gap-1 {orientation === 'horizontal'
+    ? 'flex-wrap flex-row gap-x-4'
+    : 'flex-col'} {className}"
 >
   {#each options as option (option.value)}
     <Checkbox

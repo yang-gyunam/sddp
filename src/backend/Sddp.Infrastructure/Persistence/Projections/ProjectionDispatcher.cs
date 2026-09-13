@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -97,10 +99,18 @@ public class ProjectionDispatcher : IProjectionDispatcher
                     }
                 }
             }
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                // Reflection wraps synchronous failures, including cancellation. Preserve the
+                // original exception so the outbox can distinguish cancellation from delivery failure.
+                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error dispatching event {EventType} to handler {HandlerType}",
                     eventType.Name, handler.GetType().Name);
+                throw;
             }
         }
     }

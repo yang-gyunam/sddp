@@ -52,14 +52,11 @@ export async function upsertAllocation(
   projectId: string,
   dto: EffortAllocationDto
 ): Promise<EffortAllocation> {
-  return fetchWithAuth<EffortAllocation>(
-    `/projects/${projectId}/effort/allocations`,
-    {
-      method: 'POST',
-      body: dto,
-      projectId,
-    }
-  );
+  return fetchWithAuth<EffortAllocation>(`/projects/${projectId}/effort/allocations`, {
+    method: 'POST',
+    body: dto,
+    projectId,
+  });
 }
 
 /**
@@ -69,30 +66,21 @@ export async function bulkUpsertAllocations(
   projectId: string,
   allocations: EffortAllocationDto[]
 ): Promise<EffortAllocation[]> {
-  return fetchWithAuth<EffortAllocation[]>(
-    `/projects/${projectId}/effort/allocations/bulk`,
-    {
-      method: 'POST',
-      body: { allocations },
-      projectId,
-    }
-  );
+  return fetchWithAuth<EffortAllocation[]>(`/projects/${projectId}/effort/allocations/bulk`, {
+    method: 'POST',
+    body: { allocations },
+    projectId,
+  });
 }
 
 /**
  * Delete effort allocation
  */
-export async function deleteAllocation(
-  projectId: string,
-  allocationId: string
-): Promise<void> {
-  return fetchWithAuth<void>(
-    `/projects/${projectId}/effort/allocations/${allocationId}`,
-    {
-      method: 'DELETE',
-      projectId,
-    }
-  );
+export async function deleteAllocation(projectId: string, allocationId: string): Promise<void> {
+  return fetchWithAuth<void>(`/projects/${projectId}/effort/allocations/${allocationId}`, {
+    method: 'DELETE',
+    projectId,
+  });
 }
 
 // ============================================
@@ -116,27 +104,20 @@ export async function getWorklogs(
     params.append('userIds', userIds.join(','));
   }
 
-  return fetchWithAuth<Worklog[]>(
-    `/projects/${projectId}/effort/worklogs?${params.toString()}`,
-    { projectId }
-  );
+  return fetchWithAuth<Worklog[]>(`/projects/${projectId}/effort/worklogs?${params.toString()}`, {
+    projectId,
+  });
 }
 
 /**
  * Create worklog entry
  */
-export async function createWorklog(
-  projectId: string,
-  dto: WorklogDto
-): Promise<Worklog> {
-  return fetchWithAuth<Worklog>(
-    `/projects/${projectId}/effort/worklogs`,
-    {
-      method: 'POST',
-      body: dto,
-      projectId,
-    }
-  );
+export async function createWorklog(projectId: string, dto: WorklogDto): Promise<Worklog> {
+  return fetchWithAuth<Worklog>(`/projects/${projectId}/effort/worklogs`, {
+    method: 'POST',
+    body: dto,
+    projectId,
+  });
 }
 
 /**
@@ -147,30 +128,21 @@ export async function updateWorklog(
   worklogId: string,
   dto: Partial<WorklogDto>
 ): Promise<Worklog> {
-  return fetchWithAuth<Worklog>(
-    `/projects/${projectId}/effort/worklogs/${worklogId}`,
-    {
-      method: 'PUT',
-      body: dto,
-      projectId,
-    }
-  );
+  return fetchWithAuth<Worklog>(`/projects/${projectId}/effort/worklogs/${worklogId}`, {
+    method: 'PUT',
+    body: dto,
+    projectId,
+  });
 }
 
 /**
  * Delete worklog entry
  */
-export async function deleteWorklog(
-  projectId: string,
-  worklogId: string
-): Promise<void> {
-  return fetchWithAuth<void>(
-    `/projects/${projectId}/effort/worklogs/${worklogId}`,
-    {
-      method: 'DELETE',
-      projectId,
-    }
-  );
+export async function deleteWorklog(projectId: string, worklogId: string): Promise<void> {
+  return fetchWithAuth<void>(`/projects/${projectId}/effort/worklogs/${worklogId}`, {
+    method: 'DELETE',
+    projectId,
+  });
 }
 
 // ============================================
@@ -199,18 +171,12 @@ export async function getWorkingDays(
 /**
  * Set working day configuration
  */
-export async function setWorkingDay(
-  projectId: string,
-  dto: WorkingDayDto
-): Promise<WorkingDay> {
-  return fetchWithAuth<WorkingDay>(
-    `/projects/${projectId}/effort/working-days`,
-    {
-      method: 'POST',
-      body: dto,
-      projectId,
-    }
-  );
+export async function setWorkingDay(projectId: string, dto: WorkingDayDto): Promise<WorkingDay> {
+  return fetchWithAuth<WorkingDay>(`/projects/${projectId}/effort/working-days`, {
+    method: 'POST',
+    body: dto,
+    projectId,
+  });
 }
 
 /**
@@ -220,14 +186,11 @@ export async function bulkSetWorkingDays(
   projectId: string,
   workingDays: WorkingDayDto[]
 ): Promise<WorkingDay[]> {
-  return fetchWithAuth<WorkingDay[]>(
-    `/projects/${projectId}/effort/working-days/bulk`,
-    {
-      method: 'POST',
-      body: { workingDays },
-      projectId,
-    }
-  );
+  return fetchWithAuth<WorkingDay[]>(`/projects/${projectId}/effort/working-days/bulk`, {
+    method: 'POST',
+    body: { workingDays },
+    projectId,
+  });
 }
 
 // ============================================
@@ -419,7 +382,11 @@ export class EffortServiceClass {
     this.projectId = projectId;
   }
 
-  getAllocations(startDate: string, endDate: string, userIds?: string[]): Promise<EffortAllocation[]> {
+  getAllocations(
+    startDate: string,
+    endDate: string,
+    userIds?: string[]
+  ): Promise<EffortAllocation[]> {
     return getAllocations(this.projectId, startDate, endDate, userIds);
   }
 
@@ -471,7 +438,10 @@ export class EffortServiceClass {
     return getMemberDailyEffort(this.projectId, userId, startDate, endDate);
   }
 
-  getMemberOwnership(userId: string, options?: { type?: OwnershipFilter; query?: string; page?: number; pageSize?: number; }): Promise<MemberOwnershipPage> {
+  getMemberOwnership(
+    userId: string,
+    options?: { type?: OwnershipFilter; query?: string; page?: number; pageSize?: number }
+  ): Promise<MemberOwnershipPage> {
     return getMemberOwnership(this.projectId, userId, options);
   }
 

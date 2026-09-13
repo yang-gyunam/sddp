@@ -82,7 +82,7 @@ whisper-warmup:
 
 build:
 	dotnet build src/backend/Sddp.Api/Sddp.Api.csproj --configuration Release
-	cd src/frontend/packages/web && npm run build
+	cd src/frontend && npm run build
 
 test:
 	cd src/frontend/packages/web && npm test

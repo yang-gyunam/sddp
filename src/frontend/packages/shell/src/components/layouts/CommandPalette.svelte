@@ -14,7 +14,8 @@
   }
 
   const DEFAULT_MAX_HEIGHT = 400;
-  let { maxHeight = DEFAULT_MAX_HEIGHT, placeholder = 'Type a command or search...' }: Props = $props();
+  let { maxHeight = DEFAULT_MAX_HEIGHT, placeholder = 'Type a command or search...' }: Props =
+    $props();
 
   let inputElement: HTMLInputElement | undefined = $state(undefined);
   let commandListElement: HTMLDivElement | undefined = $state(undefined);
@@ -196,10 +197,16 @@
 
     function onMove(ev: MouseEvent) {
       if (type === 's' || type === 'se') {
-        currentHeight = Math.max(MIN_HEIGHT, Math.min(startH + (ev.clientY - startY), window.innerHeight - 100));
+        currentHeight = Math.max(
+          MIN_HEIGHT,
+          Math.min(startH + (ev.clientY - startY), window.innerHeight - 100)
+        );
       }
       if (type === 'e' || type === 'se') {
-        currentWidth = Math.max(MIN_WIDTH, Math.min(startW + (ev.clientX - startX) * 2, window.innerWidth - 32));
+        currentWidth = Math.max(
+          MIN_WIDTH,
+          Math.min(startW + (ev.clientX - startX) * 2, window.innerWidth - 32)
+        );
       }
     }
 
@@ -210,7 +217,8 @@
       document.body.style.userSelect = '';
     }
 
-    document.body.style.cursor = type === 's' ? 's-resize' : type === 'e' ? 'e-resize' : 'se-resize';
+    document.body.style.cursor =
+      type === 's' ? 's-resize' : type === 'e' ? 'e-resize' : 'se-resize';
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -241,7 +249,9 @@
       <!-- Search Input -->
       <div class="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div class="relative">
-          <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-tertiary)]">
+          <div
+            class="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-tertiary)]"
+          >
             <Icon name="search" size="sm" />
           </div>
           <Input
@@ -256,10 +266,7 @@
       </div>
 
       <!-- Commands List -->
-      <div
-        class="flex-1 min-h-0 overflow-y-auto"
-        bind:this={commandListElement}
-      >
+      <div class="flex-1 min-h-0 overflow-y-auto" bind:this={commandListElement}>
         {#if filteredCommands.length === 0}
           {#if query.trim()}
             <EmptyState
@@ -280,7 +287,9 @@
           {#each groupedCommands as group, categoryIndex (group.categoryId)}
             <div class="py-2">
               <!-- Category Header -->
-              <div class="px-4 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide flex items-center gap-2">
+              <div
+                class="px-4 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide flex items-center gap-2"
+              >
                 <Icon name={group.categoryIcon} size="sm" />
                 <span>{group.categoryLabel}</span>
               </div>
@@ -289,51 +298,54 @@
               {#each group.commands as command, commandIndex (command.id)}
                 {@const isSelected = isCommandSelected(categoryIndex, commandIndex)}
                 <div data-command-item>
-                <Button
-                  variant="unstyled"
-                  class="w-full px-4 py-3 text-left transition-colors focus:outline-none {isSelected
-                    ? 'bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]'
-                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                  onclick={() => handleCommandClick(getFlatCommandIndex(categoryIndex, commandIndex))}
-                >
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      {#if command.icon}
-                        <Icon
-                          name={command.icon}
-                          size="sm"
-                          class={isSelected ? 'text-[var(--color-text-on-accent)]' : 'text-[var(--color-text-tertiary)]'}
-                        />
-                      {/if}
-                      <div class="min-w-0 flex-1">
-                        <div class="font-medium truncate">
-                          {command.label}
-                        </div>
-                        {#if command.description}
-                          <div
-                            class="text-sm truncate {isSelected
-                              ? 'text-[var(--color-text-on-accent)]/80'
-                              : 'text-[var(--color-text-tertiary)]'}"
-                          >
-                            {command.description}
-                          </div>
+                  <Button
+                    variant="unstyled"
+                    class="w-full px-4 py-3 text-left transition-colors focus:outline-none {isSelected
+                      ? 'bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]'
+                      : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                    onclick={() =>
+                      handleCommandClick(getFlatCommandIndex(categoryIndex, commandIndex))}
+                  >
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        {#if command.icon}
+                          <Icon
+                            name={command.icon}
+                            size="sm"
+                            class={isSelected
+                              ? 'text-[var(--color-text-on-accent)]'
+                              : 'text-[var(--color-text-tertiary)]'}
+                          />
                         {/if}
+                        <div class="min-w-0 flex-1">
+                          <div class="font-medium truncate">
+                            {command.label}
+                          </div>
+                          {#if command.description}
+                            <div
+                              class="text-sm truncate {isSelected
+                                ? 'text-[var(--color-text-on-accent)]/80'
+                                : 'text-[var(--color-text-tertiary)]'}"
+                            >
+                              {command.description}
+                            </div>
+                          {/if}
+                        </div>
                       </div>
-                    </div>
 
-                    {#if command.keybinding}
-                      <div class="ml-3 flex-shrink-0">
-                        <kbd
-                          class="px-2 py-1 text-xs font-mono rounded border {isSelected
-                            ? 'bg-[var(--color-neutral-50)]/20 text-[var(--color-text-on-accent)] border-[var(--color-neutral-50)]/30'
-                            : 'bg-[var(--color-bg-primary)] text-[var(--color-text-tertiary)] border-[var(--color-border)]'}"
-                        >
-                          {command.keybinding}
-                        </kbd>
-                      </div>
-                    {/if}
-                  </div>
-                </Button>
+                      {#if command.keybinding}
+                        <div class="ml-3 flex-shrink-0">
+                          <kbd
+                            class="px-2 py-1 text-xs font-mono rounded border {isSelected
+                              ? 'bg-[var(--color-neutral-50)]/20 text-[var(--color-text-on-accent)] border-[var(--color-neutral-50)]/30'
+                              : 'bg-[var(--color-bg-primary)] text-[var(--color-text-tertiary)] border-[var(--color-border)]'}"
+                          >
+                            {command.keybinding}
+                          </kbd>
+                        </div>
+                      {/if}
+                    </div>
+                  </Button>
                 </div>
               {/each}
             </div>
@@ -342,23 +354,28 @@
       </div>
 
       <!-- Footer -->
-      <div class="flex-shrink-0 px-4 py-3 bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]">
+      <div
+        class="flex-shrink-0 px-4 py-3 bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]"
+      >
         <div class="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
           <div class="flex items-center gap-4">
             <div class="flex items-center gap-1">
-              <kbd class="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-xs"
+              <kbd
+                class="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-xs"
                 >&#8593;&#8595;</kbd
               >
               <span>Navigate</span>
             </div>
             <div class="flex items-center gap-1">
-              <kbd class="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-xs"
+              <kbd
+                class="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-xs"
                 >Enter</kbd
               >
               <span>Execute</span>
             </div>
             <div class="flex items-center gap-1">
-              <kbd class="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-xs"
+              <kbd
+                class="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-xs"
                 >Esc</kbd
               >
               <span>Close</span>

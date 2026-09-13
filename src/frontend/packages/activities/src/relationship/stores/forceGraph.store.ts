@@ -4,16 +4,8 @@
  */
 
 import { createStore, type Store } from '@sddp/shell/core';
-import type {
-  ForceGraphConfig,
-  GraphFilterState,
-  EntityType,
-  RelationType,
-} from '../types';
-import {
-  DEFAULT_FORCE_GRAPH_CONFIG,
-  DEFAULT_GRAPH_FILTERS,
-} from '../types';
+import type { ForceGraphConfig, GraphFilterState, EntityType, RelationType } from '../types';
+import { DEFAULT_FORCE_GRAPH_CONFIG, DEFAULT_GRAPH_FILTERS } from '../types';
 
 // ============================================
 // State

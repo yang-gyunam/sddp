@@ -34,15 +34,17 @@
 
 <div class="p-4 h-full overflow-y-auto">
   <div class="mb-6">
-    <div class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+    <div
+      class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+    >
       DASHBOARDS
     </div>
     <Button
       variant="unstyled"
       class="w-full flex items-center gap-2 px-2 py-2 text-sm text-left transition-colors rounded border
         {currentView === 'my'
-          ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-          : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+        ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+        : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
       onclick={() => selectView('my')}
     >
       <Icon name="layout-dashboard" size="sm" class="flex-shrink-0" />
@@ -54,8 +56,8 @@
         variant="unstyled"
         class="w-full flex items-center gap-2 px-2 py-2 text-sm text-left transition-colors rounded border
           {currentView === 'system'
-            ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-            : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+          ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+          : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
         onclick={() => selectView('system')}
       >
         <Icon name="monitor" size="sm" class="flex-shrink-0" />
@@ -65,7 +67,9 @@
   </div>
 
   <div class="mb-6">
-    <div class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2">
+    <div
+      class="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-2"
+    >
       PROJECTS
     </div>
     <div class="text-sm font-medium text-[var(--color-text-secondary)] my-2">▼ My Projects</div>
@@ -83,8 +87,8 @@
           variant="unstyled"
           class="w-full flex items-center gap-2 pl-6 pr-2 py-2 text-sm text-left transition-colors rounded border
             {currentView === 'project' && selectedProjectId === project.id
-              ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-              : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+            ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+            : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
           onclick={() => selectView('project', project.id)}
         >
           <span class="flex-1">{project.name}</span>

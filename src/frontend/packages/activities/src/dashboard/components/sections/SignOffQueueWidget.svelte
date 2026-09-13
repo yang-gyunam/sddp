@@ -50,11 +50,7 @@
   {:else}
     <div class="item-list">
       {#each items as item (item.signOffId)}
-        <Button
-          variant="unstyled"
-          class="queue-item"
-          onclick={() => handleItemClick(item)}
-        >
+        <Button variant="unstyled" class="queue-item" onclick={() => handleItemClick(item)}>
           <div class="item-main">
             <span class="spec-code">{item.specCode}</span>
             <span class="spec-title">{item.specTitle}</span>
@@ -131,7 +127,9 @@
     border: 1px solid var(--color-border);
     background: var(--color-bg-primary);
     cursor: pointer;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
   }
 
   :global(.queue-item:hover) {

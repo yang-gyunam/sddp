@@ -7,6 +7,7 @@
  */
 
 import { test, expect } from '../helpers/fixtures';
+import { navigateToActivity } from '../helpers/page-object.helpers';
 
 test.describe('Sidebar Resize - Basic Functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -47,7 +48,7 @@ test.describe('Sidebar Resize - Basic Functionality', () => {
 
     // Get initial sidebar width
     const initialBox = await sidebar.boundingBox();
-    test.skip(!initialBox, 'Could not get sidebar bounding box');
+    expect(initialBox, 'expected a sidebar bounding box').not.toBeNull();
     const initialWidth = initialBox!.width;
 
     // Find resize handle
@@ -55,7 +56,7 @@ test.describe('Sidebar Resize - Basic Functionality', () => {
     await expect(resizeHandle).toBeVisible();
 
     const handleBox = await resizeHandle.boundingBox();
-    test.skip(!handleBox, 'Could not get resize handle bounding box');
+    expect(handleBox, 'expected a resize handle bounding box').not.toBeNull();
 
     // Drag handle to the right by 50px
     await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
@@ -90,7 +91,7 @@ test.describe('Sidebar Resize - Basic Functionality', () => {
     await expect(resizeHandle).toBeVisible();
 
     const handleBox = await resizeHandle.boundingBox();
-    test.skip(!handleBox, 'Could not get resize handle bounding box');
+    expect(handleBox, 'expected a resize handle bounding box').not.toBeNull();
 
     // Start dragging
     await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
@@ -134,7 +135,7 @@ test.describe('Sidebar Resize - Constraints', () => {
     await expect(resizeHandle).toBeVisible();
 
     const handleBox = await resizeHandle.boundingBox();
-    test.skip(!handleBox, 'Could not get resize handle bounding box');
+    expect(handleBox, 'expected a resize handle bounding box').not.toBeNull();
 
     // Drag handle far to the left (attempt to make very narrow)
     await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
@@ -159,7 +160,8 @@ test.describe('Sidebar Resize - Constraints', () => {
 
     const handleBox = await resizeHandle.boundingBox();
     const viewportSize = page.viewportSize();
-    test.skip(!handleBox || !viewportSize, 'Could not get bounding box or viewport');
+    expect(handleBox, 'the resize handle must have a box to drag').not.toBeNull();
+    expect(viewportSize, 'the page must report a viewport').not.toBeNull();
 
     // Drag handle far to the right (attempt to make very wide)
     await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
@@ -184,12 +186,28 @@ test.describe('Sidebar Panels Resize', () => {
   });
 
   test('should move panel separator in sync with pointer drag', async ({ page }) => {
+    // Dragging the separator between panels needs two of them, and the default activity has one.
+    // Projects renders a panel per project, so the seeded data makes the precondition real
+    // instead of hoped for.
+    await navigateToActivity(page, 'Projects');
+
     const sidebar = page.locator('aside').first();
     await expect(sidebar).toBeVisible();
 
-    const panelHeaders = sidebar.locator('[role="button"][aria-expanded]');
+    // Native <button>, so match the element rather than an explicit role attribute.
+    const panelHeaders = sidebar.locator('button[aria-expanded]');
     const headerCount = await panelHeaders.count().catch(() => 0);
-    test.skip(headerCount < 2, 'Need at least two collapsible panels');
+    expect(headerCount, 'the sidebar must render more than one collapsible panel')
+      .toBeGreaterThanOrEqual(2);
+
+    // This checks unconstrained movement, not the minimum-height clamp. With many
+    // persisted projects all panels otherwise sit at their 120px minimum.
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    await page.setViewportSize({
+      width: viewport!.width,
+      height: Math.max(viewport!.height, headerCount * 180 + 120),
+    });
 
     for (let i = 0; i < 2; i += 1) {
       const expanded = await panelHeaders.nth(i).getAttribute('aria-expanded');
@@ -202,7 +220,7 @@ test.describe('Sidebar Panels Resize', () => {
     await expect(resizeHandle).toBeVisible();
 
     const handleBoxBefore = await resizeHandle.boundingBox();
-    test.skip(!handleBoxBefore, 'Could not get panel resize handle bounding box before drag');
+    expect(handleBoxBefore, 'expected a panel resize handle bounding box before drag').not.toBeNull();
 
     const startX = handleBoxBefore!.x + handleBoxBefore!.width / 2;
     const startY = handleBoxBefore!.y + handleBoxBefore!.height / 2;
@@ -214,7 +232,7 @@ test.describe('Sidebar Panels Resize', () => {
     await page.mouse.up();
 
     const handleBoxAfter = await resizeHandle.boundingBox();
-    test.skip(!handleBoxAfter, 'Could not get panel resize handle bounding box after drag');
+    expect(handleBoxAfter, 'expected a panel resize handle bounding box after drag').not.toBeNull();
 
     const deltaY = handleBoxAfter!.y - handleBoxBefore!.y;
     expect(Math.abs(deltaY - dragDistance)).toBeLessThanOrEqual(12);
@@ -247,7 +265,7 @@ test.describe('Sidebar Collapse Toggle', () => {
     await expect(sidebar).toBeVisible();
 
     const initialBox = await sidebar.boundingBox();
-    test.skip(!initialBox, 'Could not get sidebar bounding box');
+    expect(initialBox, 'expected a sidebar bounding box').not.toBeNull();
     const initialWidth = initialBox!.width;
 
     const collapseButton = sidebar.locator(

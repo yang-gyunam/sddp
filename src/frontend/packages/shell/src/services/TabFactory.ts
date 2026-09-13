@@ -33,11 +33,7 @@ export class TabFactory {
 
     // If reuseByPath is enabled and tab has a path, try to reuse existing tab
     if (reuseByPath && tabData.path) {
-      const existingTab = tabActions.openByPath(
-        tabData.path,
-        tabData,
-        groupId
-      );
+      const existingTab = tabActions.openByPath(tabData.path, tabData, groupId);
       if (existingTab) {
         // Update URL to match the tab
         if (existingTab.path) {
@@ -49,12 +45,12 @@ export class TabFactory {
 
     // Create new tab
     const newTab = tabActions.createTab(tabData, groupId);
-    
+
     // Update URL to match the new tab
     if (newTab.path) {
       RouterService.replace(newTab.path);
     }
-    
+
     return newTab;
   }
 
@@ -82,23 +78,19 @@ export class TabFactory {
       },
       groupId
     );
-    
+
     // Update URL to match the tab
     if (tab?.path) {
       RouterService.replace(tab.path);
     }
-    
+
     return tab;
   }
 
   /**
    * Create a tab from a URL (external link)
    */
-  static createFromUrl(
-    url: string,
-    title: string,
-    groupId?: string
-  ): Tab | null {
+  static createFromUrl(url: string, title: string, groupId?: string): Tab | null {
     return tabActions.createTab(
       {
         title,
@@ -117,17 +109,14 @@ export class TabFactory {
   /**
    * Create a tab with custom configuration
    */
-  static createCustom(
-    tabData: Omit<Tab, 'id'>,
-    groupId?: string
-  ): Tab {
+  static createCustom(tabData: Omit<Tab, 'id'>, groupId?: string): Tab {
     const tab = tabActions.createTab(tabData, groupId);
-    
+
     // Update URL to match the tab
     if (tab.path) {
       RouterService.replace(tab.path);
     }
-    
+
     return tab;
   }
 

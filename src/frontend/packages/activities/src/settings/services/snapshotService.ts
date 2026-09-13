@@ -8,33 +8,33 @@ import type { ProjectSnapshot, CreateSnapshotParams } from '../types';
 
 class SnapshotService {
   async getProjectSnapshots(tenantId: string, projectId: string): Promise<ProjectSnapshot[]> {
-    const result = await fetchWithAuth<ProjectSnapshot[]>(
-      `/projects/${projectId}/snapshots`,
-      { tenantId },
-    );
+    const result = await fetchWithAuth<ProjectSnapshot[]>(`/projects/${projectId}/snapshots`, {
+      tenantId,
+    });
     return result;
   }
 
   async createProjectSnapshot(
     tenantId: string,
     projectId: string,
-    params: CreateSnapshotParams,
+    params: CreateSnapshotParams
   ): Promise<ProjectSnapshot> {
-    const result = await fetchWithAuth<ProjectSnapshot>(
-      `/projects/${projectId}/snapshots`,
-      { method: 'POST', tenantId, body: params },
-    );
+    const result = await fetchWithAuth<ProjectSnapshot>(`/projects/${projectId}/snapshots`, {
+      method: 'POST',
+      tenantId,
+      body: params,
+    });
     return result;
   }
 
   async restoreProjectSnapshot(
     tenantId: string,
     projectId: string,
-    snapshotId: string,
+    snapshotId: string
   ): Promise<ProjectSnapshot> {
     const result = await fetchWithAuth<ProjectSnapshot>(
       `/projects/${projectId}/snapshots/${snapshotId}/restore`,
-      { method: 'POST', tenantId },
+      { method: 'POST', tenantId }
     );
     return result;
   }
@@ -42,12 +42,12 @@ class SnapshotService {
   async deleteProjectSnapshot(
     tenantId: string,
     projectId: string,
-    snapshotId: string,
+    snapshotId: string
   ): Promise<void> {
-    await fetchWithAuth<void>(
-      `/projects/${projectId}/snapshots/${snapshotId}`,
-      { method: 'DELETE', tenantId },
-    );
+    await fetchWithAuth<void>(`/projects/${projectId}/snapshots/${snapshotId}`, {
+      method: 'DELETE',
+      tenantId,
+    });
   }
 }
 

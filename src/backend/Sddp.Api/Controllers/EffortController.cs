@@ -1,9 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Effort.Commands;
 using Sddp.Application.Features.Effort.Queries;
 
@@ -13,7 +16,7 @@ namespace Sddp.Api.Controllers;
 /// Effort controller
 /// project, log, workday settings
 /// </summary>
-[Route("api/projects/{projectId:guid}/effort")]
+[Route("api/projects/{projectId}/effort")]
 [Authorize]
 public class EffortController : BaseApiController
 {
@@ -32,6 +35,7 @@ public class EffortController : BaseApiController
     /// get
     /// </summary>
     [HttpGet("allocations")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetAllocations(
         Guid projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -64,6 +68,8 @@ public class EffortController : BaseApiController
     /// create/update
     /// </summary>
     [HttpPost("allocations")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
     [Authorize]
     public async Task<IActionResult> UpsertAllocation(
         Guid projectId,
@@ -96,6 +102,8 @@ public class EffortController : BaseApiController
     /// create/update
     /// </summary>
     [HttpPost("allocations/bulk")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
     [Authorize]
     public async Task<IActionResult> BulkUpsertAllocations(
         Guid projectId,
@@ -127,7 +135,9 @@ public class EffortController : BaseApiController
     /// <summary>
     /// delete
     /// </summary>
-    [HttpDelete("allocations/{allocationId:guid}")]
+    [HttpDelete("allocations/{allocationId}")]
+    [ResourceScope<EffortAllocation>("allocationId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
     [Authorize]
     public async Task<IActionResult> DeleteAllocation(
         Guid projectId,
@@ -162,6 +172,7 @@ public class EffortController : BaseApiController
     /// log get
     /// </summary>
     [HttpGet("worklogs")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetWorklogs(
         Guid projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -194,6 +205,8 @@ public class EffortController : BaseApiController
     /// log create
     /// </summary>
     [HttpPost("worklogs")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> CreateWorklog(
         Guid projectId,
@@ -218,7 +231,9 @@ public class EffortController : BaseApiController
     /// <summary>
     /// log update
     /// </summary>
-    [HttpPut("worklogs/{worklogId:guid}")]
+    [HttpPut("worklogs/{worklogId}")]
+    [ResourceScope<Worklog>("worklogId")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateWorklog(
         Guid projectId,
@@ -250,7 +265,9 @@ public class EffortController : BaseApiController
     /// <summary>
     /// log delete
     /// </summary>
-    [HttpDelete("worklogs/{worklogId:guid}")]
+    [HttpDelete("worklogs/{worklogId}")]
+    [ResourceScope<Worklog>("worklogId")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> DeleteWorklog(
         Guid projectId,
@@ -285,6 +302,7 @@ public class EffortController : BaseApiController
     /// workday settings get
     /// </summary>
     [HttpGet("working-days")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetWorkingDays(
         Guid projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -314,6 +332,8 @@ public class EffortController : BaseApiController
     /// workday settings
     /// </summary>
     [HttpPost("working-days")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
     [Authorize]
     public async Task<IActionResult> SetWorkingDay(
         Guid projectId,
@@ -346,6 +366,8 @@ public class EffortController : BaseApiController
     /// workday settings
     /// </summary>
     [HttpPost("working-days/bulk")]
+    [ResourceScope<Project>("projectId")]
+    [RequirePermission(PermissionCodes.ProjectUpdate)]
     [Authorize]
     public async Task<IActionResult> BulkSetWorkingDays(
         Guid projectId,
@@ -382,6 +404,7 @@ public class EffortController : BaseApiController
     /// get
     /// </summary>
     [HttpGet("summary")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetMembersSummary(
         Guid projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -410,7 +433,8 @@ public class EffortController : BaseApiController
     /// <summary>
     /// user get
     /// </summary>
-    [HttpGet("users/{userId:guid}/daily")]
+    [HttpGet("users/{userId}/daily")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetMemberDailyEffort(
         Guid projectId,
         Guid userId,
@@ -441,7 +465,8 @@ public class EffortController : BaseApiController
     /// <summary>
     /// user get
     /// </summary>
-    [HttpGet("users/{userId:guid}/ownership")]
+    [HttpGet("users/{userId}/ownership")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetMemberOwnership(
         Guid projectId,
         Guid userId,
@@ -474,6 +499,7 @@ public class EffortController : BaseApiController
     /// get
     /// </summary>
     [HttpGet("conflicts")]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetConflicts(
         Guid projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

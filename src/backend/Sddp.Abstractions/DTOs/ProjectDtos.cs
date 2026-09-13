@@ -68,3 +68,7 @@ public record ProjectOwnershipDto(
 public record AddProjectMemberDto(
     string UserId,
     string Role);
+
+/// <summary>Current user's capabilities in one tenant/project; server authorization remains authoritative.</summary>
+public sealed record ProjectCapabilitiesDto(
+    string TenantId, string ProjectId, IReadOnlyList<string> Permissions, bool CanWrite);

@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.TaskCategories.Commands;
 using Sddp.Application.Features.TaskCategories.Queries;
@@ -27,6 +29,7 @@ public class TaskCategoriesController : BaseApiController
     /// get
     /// </summary>
     [HttpGet]
+    [ResourceScopeExempt("Personal listing with no resource id in the route; TaskCategory carries no project and the query returns only the categories owned by the caller's own user id.")]
     public async Task<IActionResult> GetCategories(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken = default)
@@ -47,6 +50,8 @@ public class TaskCategoriesController : BaseApiController
     /// create
     /// </summary>
     [HttpPost]
+    [ResourceScopeExempt("Creation endpoint for a personal resource that carries no project; the new category is bound to the caller's own user id, so there is no project scope to assert.")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> CreateCategory(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -72,7 +77,9 @@ public class TaskCategoriesController : BaseApiController
     /// <summary>
     /// update
     /// </summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
+    [ResourceScopeExempt("TaskCategory carries no project, so project scope cannot apply; the handler rejects any category whose UserId is not the caller's, which is the ownership check that stands in for it.")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateCategory(
         Guid id,
@@ -99,7 +106,9 @@ public class TaskCategoriesController : BaseApiController
     /// <summary>
     /// delete (delete)
     /// </summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
+    [ResourceScopeExempt("TaskCategory carries no project, so project scope cannot apply; the handler refuses to delete a category whose UserId is not the caller's, which is the ownership check that stands in for it.")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> DeleteCategory(
         Guid id,
@@ -126,6 +135,8 @@ public class TaskCategoriesController : BaseApiController
     /// change
     /// </summary>
     [HttpPut("reorder")]
+    [ResourceScopeExempt("Reorder takes its ids in the request body, not the route; TaskCategory carries no project and the handler silently skips any category the caller does not own.")]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> ReorderCategories(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

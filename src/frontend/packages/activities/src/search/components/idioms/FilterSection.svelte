@@ -15,7 +15,14 @@
     children?: import('svelte').Snippet;
   }
 
-  let { title, expanded = $bindable(true), options = [], selected = [], onToggle, children }: Props = $props();
+  let {
+    title,
+    expanded = $bindable(true),
+    options = [],
+    selected = [],
+    onToggle,
+    children,
+  }: Props = $props();
 
   function handleToggle(value: string) {
     if (onToggle) {
@@ -118,5 +125,4 @@
     color: var(--text-tertiary);
     font-size: 0.75rem;
   }
-
 </style>

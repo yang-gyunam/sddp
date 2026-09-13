@@ -77,7 +77,11 @@
     if (!term.id) return;
     if (term.id === prevTermId) return;
     prevTermId = term.id;
-    untrack(() => loadFieldAuthors().catch((err) => console.warn('[GlossaryDetail] loadFieldAuthors failed:', err)));
+    untrack(() =>
+      loadFieldAuthors().catch((err) =>
+        console.warn('[GlossaryDetail] loadFieldAuthors failed:', err)
+      )
+    );
   });
 
   // CollapsibleGroup states
@@ -92,9 +96,12 @@
     const items: ReferenceItem[] = [];
     // Source Conversation
     if (term.sourceConversationId && term.sourceConversationName) {
-      const convIcon = term.sourceConversationType === 'Channel' ? 'hash'
-        : term.sourceConversationType === 'Forum' ? 'clipboard-list'
-        : 'message-circle';
+      const convIcon =
+        term.sourceConversationType === 'Channel'
+          ? 'hash'
+          : term.sourceConversationType === 'Forum'
+            ? 'clipboard-list'
+            : 'message-circle';
       const prefix = term.sourceConversationType === 'Channel' ? '#' : '';
       items.push({
         icon: convIcon,
@@ -109,7 +116,8 @@
       items.push({
         icon: 'clipboard-check',
         label: 'Source Requirement',
-        value: term.sourceRequirementTitle || term.sourceRequirementCode || term.sourceRequirementId,
+        value:
+          term.sourceRequirementTitle || term.sourceRequirementCode || term.sourceRequirementId,
         onClick: () => onRequirementSelect?.(term.sourceRequirementId!),
       });
     }
@@ -144,9 +152,16 @@
     items.push({ label: 'Version', value: `v${term.version}` });
     // Row 2: Valid From | Owner
     if (term.validFrom) {
-      items.push({ label: 'Valid From', value: formatDateTime(term.validFrom, { month: 'short' }) });
+      items.push({
+        label: 'Valid From',
+        value: formatDateTime(term.validFrom, { month: 'short' }),
+      });
     }
-    items.push({ label: 'Owner', value: term.owner?.name || 'Unassigned', type: term.owner?.name ? 'person' : 'text' });
+    items.push({
+      label: 'Owner',
+      value: term.owner?.name || 'Unassigned',
+      type: term.owner?.name ? 'person' : 'text',
+    });
     // Row 3: Created By | Created
     if (term.createdBy?.name) {
       items.push({ label: 'Created By', value: term.createdBy.name, type: 'person' });
@@ -165,7 +180,10 @@
     if (term.approvedBy?.name) {
       items.push({ label: 'Approved By', value: term.approvedBy.name, type: 'person' });
       if (term.approvedAt) {
-        items.push({ label: 'Approved', value: formatDateTime(term.approvedAt, { month: 'short' }) });
+        items.push({
+          label: 'Approved',
+          value: formatDateTime(term.approvedAt, { month: 'short' }),
+        });
       }
     }
     if (term.validTo) {
@@ -194,8 +212,16 @@
         {/if}
         {#if canApprove || canDeprecate}
           <Dropdown position="bottom-right">
-            {#snippet trigger()}
-              <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+            {#snippet trigger({ toggle, open })}
+              <IconButton
+                onclick={toggle}
+                ariaHasPopup
+                ariaExpanded={open}
+                icon="more-vertical"
+                variant="ghost"
+                size="sm"
+                title="More actions"
+              />
             {/snippet}
             <div class="py-1 min-w-[160px]">
               {#if canApprove}
@@ -231,11 +257,13 @@
         title="Basic Information"
         variant="plain"
         expanded={basicExpanded}
-        onToggle={() => basicExpanded = !basicExpanded}
+        onToggle={() => (basicExpanded = !basicExpanded)}
       >
         <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
           <DetailField label="Definition" author={getFieldAuthor('Definition')}>
-            <div class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap">
+            <div
+              class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap"
+            >
               <!-- eslint-disable-next-line svelte/no-at-html-tags -->
               {@html renderMarkdown(term.definition)}
             </div>
@@ -247,7 +275,9 @@
 
           {#if term.abbreviation}
             <DetailField label="Abbreviation" author={getFieldAuthor('Abbreviation')}>
-              <span class="px-2 py-1 text-sm font-mono rounded bg-[var(--color-surface-200)] text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]">
+              <span
+                class="px-2 py-1 text-sm font-mono rounded bg-[var(--color-surface-200)] text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]"
+              >
                 {term.abbreviation}
               </span>
             </DetailField>
@@ -256,8 +286,13 @@
           {#if term.synonyms}
             <DetailField label="Synonyms" author={getFieldAuthor('Synonyms')}>
               <div class="flex flex-wrap gap-2">
-                {#each term.synonyms.split(',').map(s => s.trim()).filter(Boolean) as synonym (synonym)}
-                  <span class="px-2 py-1 text-xs bg-[var(--color-surface-200)] text-[var(--color-text-secondary)] rounded">
+                {#each term.synonyms
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean) as synonym (synonym)}
+                  <span
+                    class="px-2 py-1 text-xs bg-[var(--color-surface-200)] text-[var(--color-text-secondary)] rounded"
+                  >
                     {synonym}
                   </span>
                 {/each}
@@ -273,7 +308,7 @@
                     href={term.source}
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-[var(--color-accent-primary)] hover:underline"
+                    class="text-[var(--color-accent-text)] hover:underline"
                   >
                     {term.source}
                   </a>
@@ -289,7 +324,11 @@
               <ul class="space-y-2">
                 {#each term.usageExamples as example, i (i)}
                   <li class="flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
-                    <Icon name="quote" size="sm" class="mt-0.5 text-[var(--color-text-tertiary)] flex-shrink-0" />
+                    <Icon
+                      name="quote"
+                      size="sm"
+                      class="mt-0.5 text-[var(--color-text-tertiary)] flex-shrink-0"
+                    />
                     <span class="italic">{example}</span>
                   </li>
                 {/each}
@@ -306,7 +345,7 @@
           variant="plain"
           badge={referenceItems.length}
           expanded={referencesExpanded}
-          onToggle={() => referencesExpanded = !referencesExpanded}
+          onToggle={() => (referencesExpanded = !referencesExpanded)}
         >
           <div class="pl-5 pt-2 pb-3">
             <ReferencesSection items={referenceItems} title="" />
@@ -321,7 +360,7 @@
           variant="plain"
           badge={usage?.usageCount ?? undefined}
           expanded={usageExpanded}
-          onToggle={() => usageExpanded = !usageExpanded}
+          onToggle={() => (usageExpanded = !usageExpanded)}
         >
           <div class="pl-5 pt-2 pb-3">
             {#if loadingUsage}
@@ -337,7 +376,9 @@
                       <span class="text-sm font-medium text-[var(--color-text-secondary)]">
                         {item.entityTitle}
                       </span>
-                      <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-surface-200)] text-[var(--color-text-secondary)]">
+                      <span
+                        class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-surface-200)] text-[var(--color-text-secondary)]"
+                      >
                         {item.entityType}
                       </span>
                     </div>
@@ -351,9 +392,7 @@
                 Total: {usage.usageCount} references
               </p>
             {:else}
-              <p class="text-sm text-[var(--color-text-muted)]">
-                Not used in any specs yet.
-              </p>
+              <p class="text-sm text-[var(--color-text-muted)]">Not used in any specs yet.</p>
             {/if}
           </div>
         </CollapsibleGroup>
@@ -364,7 +403,7 @@
         title="Metadata"
         variant="plain"
         expanded={metadataExpanded}
-        onToggle={() => metadataExpanded = !metadataExpanded}
+        onToggle={() => (metadataExpanded = !metadataExpanded)}
       >
         <div class="pl-5 pt-2 pb-3">
           <MetadataSection items={metadataItems} />

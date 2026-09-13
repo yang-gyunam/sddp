@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Constants;
+using Sddp.Api.Authorization;
 using Sddp.Application.Features.AuditLogs.Queries;
 
 namespace Sddp.Api.Controllers;
@@ -27,7 +28,8 @@ public class TimelineController : BaseApiController
     /// get
     /// GET /api/timeline/by-resource/{resourceType}/{resourceId}
     /// </summary>
-    [HttpGet("by-resource/{resourceType}/{resourceId:guid}")]
+    [HttpGet("by-resource/{resourceType}/{resourceId}")]
+        [ResourceScopeExempt("Polymorphic audit lookup: {resourceType} decides what {resourceId} names, so no single EntityBase type can be declared; access is gated by the scoped CanReadAuditLogs permission.")]
     [Authorize(Policy = "CanReadAuditLogs")]
     public async Task<IActionResult> GetByResource(
         string resourceType,
@@ -35,7 +37,7 @@ public class TimelineController : BaseApiController
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
     {
-        var tenantError = RequireTenantId(tenantIdHeader, out _);
+        var tenantError = RequireTenantId(tenantIdHeader, out var tenantId);
         if (tenantError is not null)
         {
             return tenantError;
@@ -48,7 +50,11 @@ public class TimelineController : BaseApiController
 
         var resId = GlobalUniqueId.FromGuid(resourceId);
         var entries = await _sender.Send(
-            new GetTimelineByResourceQuery(resourceType, resId),
+            new GetTimelineByResourceQuery(
+                resourceType,
+                resId,
+                tenantId,
+                TryGetProjectId(out var projectId) ? projectId : null),
             cancellationToken);
 
         return Ok(ApiResponse<IReadOnlyList<AuditLogEntry>>.Ok(entries));
@@ -61,6 +67,8 @@ public class TimelineController : BaseApiController
     /// Recent Activity: tenantId + actorId + startDate ()
     /// </summary>
     [HttpGet("by-project")]
+        [ResourceScopeExempt("Listing endpoint with no resource id in the route; GetAuditLogsQueryHandler filters by the requested tenant and the optional header project that ProjectMembershipMiddleware validates.")]
+    [Authorize(Policy = "CanReadAuditLogs")]
     public async Task<IActionResult> GetByProject(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -126,21 +134,27 @@ public class TimelineController : BaseApiController
     /// user get
     /// GET /api/timeline/by-actor/{actorId}
     /// </summary>
-    [HttpGet("by-actor/{actorId:guid}")]
+    [HttpGet("by-actor/{actorId}")]
+        [ResourceScopeExempt("Actor id names a User, which carries no owning project, so there is no project-owned resource in the route; access is gated by the scoped CanReadAuditLogs permission.")]
     [Authorize(Policy = "CanReadAuditLogs")]
     public async Task<IActionResult> GetByActor(
         Guid actorId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
     {
-        var tenantError = RequireTenantId(tenantIdHeader, out _);
+        var tenantError = RequireTenantId(tenantIdHeader, out var tenantId);
         if (tenantError is not null)
         {
             return tenantError;
         }
 
         var actId = GlobalUniqueId.FromGuid(actorId);
-        var entries = await _sender.Send(new GetTimelineByActorQuery(actId), cancellationToken);
+        var entries = await _sender.Send(
+            new GetTimelineByActorQuery(
+                actId,
+                tenantId,
+                TryGetProjectId(out var projectId) ? projectId : null),
+            cancellationToken);
 
         return Ok(ApiResponse<IReadOnlyList<AuditLogEntry>>.Ok(entries));
     }

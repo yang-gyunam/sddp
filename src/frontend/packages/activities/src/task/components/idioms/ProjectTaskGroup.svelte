@@ -32,7 +32,7 @@
   title={group.projectName}
   icon="folder"
   badge={activeCount}
-  badgeClass="text-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10"
+  badgeClass="text-[var(--color-accent-text)] bg-[var(--color-accent-primary)]/10"
   expanded={group.expanded}
   {onToggle}
   class={className}
@@ -44,7 +44,7 @@
         <Icon name="circle" size="xs" />
         To Do: {group.stats.toDoCount}
       </span>
-      <span class="flex items-center gap-1 text-[var(--color-accent-primary)]">
+      <span class="flex items-center gap-1 text-[var(--color-accent-text)]">
         <Icon name="loader" size="xs" />
         In Progress: {group.stats.inProgressCount}
       </span>
@@ -56,11 +56,7 @@
 
     <!-- Task items -->
     {#each group.tasks as task (task.id)}
-      <TaskItem
-        {task}
-        selected={selectedTaskId === task.id}
-        onSelect={onSelectTask}
-      />
+      <TaskItem {task} selected={selectedTaskId === task.id} onSelect={onSelectTask} />
     {/each}
 
     {#if group.tasks.length === 0}

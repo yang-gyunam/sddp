@@ -29,10 +29,21 @@
   }
 </script>
 
-<Button variant="unstyled" class="saved-search-item" onclick={handleSelect} aria-label={search.name}>
+<Button
+  variant="unstyled"
+  class="saved-search-item"
+  onclick={handleSelect}
+  aria-label={search.name}
+>
   <span class="search-icon">⭐</span>
   <span class="search-name">{search.name}</span>
-  <IconButton icon="trash" variant="danger" onclick={handleDelete} title="Delete saved search" size="sm" />
+  <IconButton
+    icon="trash"
+    variant="danger"
+    onclick={handleDelete}
+    title="Delete saved search"
+    size="sm"
+  />
 </Button>
 
 <style>

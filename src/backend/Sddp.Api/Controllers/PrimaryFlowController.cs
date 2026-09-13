@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Features.PrimaryFlow.Queries;
+using Sddp.Api.Authorization;
+using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Controllers;
 
@@ -11,7 +13,7 @@ namespace Sddp.Api.Controllers;
 /// Primary Flow get controller
 /// FK: Conversation → Requirement → Spec → GlossaryTerm / Artifact
 /// </summary>
-[Route("api/projects/{projectId:guid}/primary-flow")]
+[Route("api/projects/{projectId}/primary-flow")]
 [Authorize]
 public class PrimaryFlowController : BaseApiController
 {
@@ -23,6 +25,7 @@ public class PrimaryFlowController : BaseApiController
     }
 
     [HttpGet]
+    [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetPrimaryFlow(
         Guid projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

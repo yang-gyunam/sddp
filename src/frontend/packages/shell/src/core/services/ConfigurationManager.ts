@@ -218,7 +218,8 @@ export class ConfigurationManager {
 
   private loadConfig(): AppConfig {
     return {
-      apiUrl: this.getEnvString('VITE_API_URL', 'http://localhost:5001'),
+      // Empty means same-origin. Docker/nginx proxies /api and /hubs/* to the backend.
+      apiUrl: this.getEnvString('VITE_API_URL', ''),
       apiVersion: this.getEnvString('VITE_API_VERSION', 'v1'),
       enableDebug: this.getEnvBoolean('VITE_ENABLE_DEBUG', false),
       enableAnalytics: this.getEnvBoolean('VITE_ENABLE_ANALYTICS', false),
@@ -227,17 +228,29 @@ export class ConfigurationManager {
       enableArtifactMaintenance: this.getEnvBoolean('VITE_ENABLE_ARTIFACT_MAINTENANCE', false),
       enableProjectIntegrations: this.getEnvBoolean('VITE_ENABLE_PROJECT_INTEGRATIONS', false),
       enableSpecSupplementaryTabs: this.getEnvBoolean('VITE_ENABLE_SPEC_SUPPLEMENTARY_TABS', false),
-      enableSystemConfigAuthentication: this.getEnvBoolean('VITE_ENABLE_SYSTEM_CONFIG_AUTHENTICATION', false),
-      enableSystemConfigPerformance: this.getEnvBoolean('VITE_ENABLE_SYSTEM_CONFIG_PERFORMANCE', false),
+      enableSystemConfigAuthentication: this.getEnvBoolean(
+        'VITE_ENABLE_SYSTEM_CONFIG_AUTHENTICATION',
+        false
+      ),
+      enableSystemConfigPerformance: this.getEnvBoolean(
+        'VITE_ENABLE_SYSTEM_CONFIG_PERFORMANCE',
+        false
+      ),
       enableRunesToastStore: this.getEnvBoolean('VITE_ENABLE_RUNES_TOAST_STORE', false),
       enableRunesPanelStore: this.getEnvBoolean('VITE_ENABLE_RUNES_PANEL_STORE', false),
       enableRunesTabStateStore: this.getEnvBoolean('VITE_ENABLE_RUNES_TAB_STATE_STORE', false),
       enableRunesCommandStore: this.getEnvBoolean('VITE_ENABLE_RUNES_COMMAND_STORE', false),
       enableRunesMenuStore: this.getEnvBoolean('VITE_ENABLE_RUNES_MENU_STORE', false),
       enableRunesSidePanelStore: this.getEnvBoolean('VITE_ENABLE_RUNES_SIDE_PANEL_STORE', false),
-      enableRunesPanelContentStore: this.getEnvBoolean('VITE_ENABLE_RUNES_PANEL_CONTENT_STORE', false),
+      enableRunesPanelContentStore: this.getEnvBoolean(
+        'VITE_ENABLE_RUNES_PANEL_CONTENT_STORE',
+        false
+      ),
       enableRunesTabsStore: this.getEnvBoolean('VITE_ENABLE_RUNES_TABS_STORE', false),
-      enableRunesStoreShadowParity: this.getEnvBoolean('VITE_ENABLE_RUNES_STORE_SHADOW_PARITY', true),
+      enableRunesStoreShadowParity: this.getEnvBoolean(
+        'VITE_ENABLE_RUNES_STORE_SHADOW_PARITY',
+        true
+      ),
       authTokenExpiry: this.getEnvNumber('VITE_AUTH_TOKEN_EXPIRY', 900),
     };
   }

@@ -5,19 +5,21 @@
  * rendered for a given menu item, along with the appropriate props.
  */
 
-import {
+import type { TreeNode } from '@sddp/shell/types';
+import { activityComponents } from './activity-loaders';
+
+const {
   ChannelView,
   ForumView,
-} from '@sddp/activities/conversations';
-import { SpecPanel } from '@sddp/activities/specs';
-import { RequirementPanel } from '@sddp/activities/requirements';
-import { GlossaryPanel } from '@sddp/activities/glossary';
-import { MyDashboardPage, SystemDashboardPage } from '@sddp/activities/dashboard';
-import { MyTasksPage, TaskListDetailPage } from '@sddp/activities/task/components/pages';
-import {
+  SpecPanel,
+  RequirementPanel,
+  GlossaryPanel,
+  MyDashboardPage,
+  SystemDashboardPage,
+  MyTasksPage,
+  TaskListDetailPage,
   ProfileSettingsPage,
   PreferencesSettingsPage,
-  // NotificationsSettingsPage, // Hidden: no backend notification infrastructure yet
   ProjectGeneralSettingsPage,
   ProjectMembersSettingsPage,
   ProjectRolesSettingsPage,
@@ -27,19 +29,17 @@ import {
   SystemConfigSettingsPage,
   SystemAuditLogsPage,
   SystemHealthPage,
-} from '@sddp/activities/settings/components/pages';
-import {
   ProjectDashboardPage,
   ProjectConversationsPage,
   ProjectRequirementsPage,
   ProjectSpecsPage,
   ProjectTasksPage,
   ProjectGlossaryPage,
+  ProjectKnowledgePage,
   ProjectArtifactsPage,
   ProjectEffortPage,
   ProjectTraceabilityPage,
-} from '@sddp/activities/projects/components/pages';
-import type { TreeNode } from '@sddp/shell/types';
+} = activityComponents;
 
 // ============================================
 // Types
@@ -91,7 +91,8 @@ const MENU_PATTERNS = {
   newRequirement: /^new-requirement$/,
   newGlossary: /^new-glossary$/,
   // Project page patterns (e.g., "project-{uuid}-dashboard")
-  projectPage: /^project-(.+)-(dashboard|conversations|requirements|specs|tasks|glossary|artifacts|effort|traceability)$/,
+  projectPage:
+    /^project-(.+)-(dashboard|conversations|requirements|specs|tasks|glossary|knowledge|artifacts|effort|traceability)$/,
   // Dashboard patterns
   dashboardMy: /^dashboard-(overview|my-tasks|recent|notifications)$/,
   // Task activity patterns
@@ -224,6 +225,7 @@ const PROJECT_PAGE_COMPONENTS: Record<string, unknown> = {
   specs: ProjectSpecsPage,
   tasks: ProjectTasksPage,
   glossary: ProjectGlossaryPage,
+  knowledge: ProjectKnowledgePage,
   artifacts: ProjectArtifactsPage,
   effort: ProjectEffortPage,
   traceability: ProjectTraceabilityPage,
@@ -348,7 +350,9 @@ const topicResolver: MenuResolver = (menu, context) => {
 
     const conversationId = (menu.data as { conversationId?: string } | undefined)?.conversationId;
     if (!conversationId) {
-      console.warn(`Forum topic ${topicId} cannot be resolved without conversationId. Open from forum instead.`);
+      console.warn(
+        `Forum topic ${topicId} cannot be resolved without conversationId. Open from forum instead.`
+      );
       return null;
     }
 
@@ -533,7 +537,9 @@ const settingsResolver: MenuResolver = (menu, context) => {
   }
 
   // Project settings: settings-project-{projectId}-{type}
-  const projectMatch = menu.id.match(/^settings-project-(.+)-(general|members|roles|integrations)$/);
+  const projectMatch = menu.id.match(
+    /^settings-project-(.+)-(general|members|roles|integrations)$/
+  );
   if (projectMatch && projectMatch[1] && projectMatch[2]) {
     const projectId = projectMatch[1];
     const pageType = projectMatch[2];

@@ -16,6 +16,7 @@ import type {
   CommandExecutionResult,
 } from '../types/command.types';
 import { tabActions, tabsStore } from './tabs.store';
+import { requestCloseTab, requestCloseTabs } from './tab-close';
 import { toggleSidebar, setActiveActivityItem, openSidebar } from './layout.store';
 import { panel } from './panel.store';
 import { createRunesCommandPaletteStore } from './command.store.runes';
@@ -31,6 +32,7 @@ type TabsStateSnapshot = {
 
 type CommandEffectCall =
   | { target: 'tabs.closeTab'; args: [string, string?] }
+  | { target: 'tabs.closeTabs'; args: [string[], string?] }
   | { target: 'tabs.splitGroup'; args: ['horizontal' | 'vertical', string] }
   | { target: 'layout.toggleSidebar'; args: [] }
   | { target: 'layout.setActiveActivityItem'; args: [string] }
@@ -40,6 +42,7 @@ type CommandEffectCall =
 export interface CommandStoreDependencies {
   getTabsState: () => TabsStateSnapshot;
   closeTab: (tabId: string, groupId?: string) => void;
+  closeTabs: (tabIds: string[], groupId?: string) => void;
   splitGroup: (direction: 'horizontal' | 'vertical', groupId: string) => void;
   toggleSidebar: () => void;
   setActiveActivityItem: (activityId: string) => void;
@@ -108,7 +111,10 @@ const initialState: CommandPaletteState = {
 const defaultDependencies: CommandStoreDependencies = {
   getTabsState: () => tabsStore.get() as TabsStateSnapshot,
   closeTab: (tabId, groupId) => {
-    tabActions.closeTab(tabId, groupId);
+    void requestCloseTab(tabId, groupId);
+  },
+  closeTabs: (tabIds, groupId) => {
+    void requestCloseTabs(tabIds, groupId);
   },
   splitGroup: (direction, groupId) => {
     tabActions.splitGroup(direction, groupId);
@@ -208,13 +214,11 @@ function createDefaultCommands(dependencies: CommandStoreDependencies): Command[
       icon: 'x-circle',
       action: () => {
         const state = dependencies.getTabsState();
-        state.groups.forEach((group) => {
-          group.tabs.forEach((tab) => {
-            if (tab.closable !== false) {
-              dependencies.closeTab(tab.id, group.id);
-            }
-          });
-        });
+        dependencies.closeTabs(
+          state.groups.flatMap((group) =>
+            group.tabs.filter((tab) => tab.closable !== false).map((tab) => tab.id)
+          )
+        );
       },
       when: () => {
         const state = dependencies.getTabsState();
@@ -337,7 +341,8 @@ function filterCommands(query: string, commands: Command[]): Command[] {
   return availableCommands
     .filter((command) => {
       const labelMatch = command.label.toLowerCase().includes(normalizedQuery);
-      const descriptionMatch = command.description?.toLowerCase().includes(normalizedQuery) || false;
+      const descriptionMatch =
+        command.description?.toLowerCase().includes(normalizedQuery) || false;
       const categoryMatch = command.category.toLowerCase().includes(normalizedQuery);
 
       return labelMatch || descriptionMatch || categoryMatch;
@@ -354,8 +359,10 @@ function filterCommands(query: string, commands: Command[]): Command[] {
         return 1;
       }
 
-      const leftCategoryPriority = defaultCategories.find((category) => category.id === left.category)?.priority || 999;
-      const rightCategoryPriority = defaultCategories.find((category) => category.id === right.category)?.priority || 999;
+      const leftCategoryPriority =
+        defaultCategories.find((category) => category.id === left.category)?.priority || 999;
+      const rightCategoryPriority =
+        defaultCategories.find((category) => category.id === right.category)?.priority || 999;
 
       if (leftCategoryPriority !== rightCategoryPriority) {
         return leftCategoryPriority - rightCategoryPriority;
@@ -368,7 +375,9 @@ function filterCommands(query: string, commands: Command[]): Command[] {
 function createWritableCommandPaletteStore(
   dependencies: CommandStoreDependencies
 ): CommandPaletteStoreLike {
-  const { subscribe, update } = writable<CommandPaletteState>(cloneCommandPaletteState(initialState));
+  const { subscribe, update } = writable<CommandPaletteState>(
+    cloneCommandPaletteState(initialState)
+  );
 
   let currentState = cloneCommandPaletteState(initialState);
   let registeredCommands = createDefaultCommands(dependencies);
@@ -509,7 +518,8 @@ function createWritableCommandPaletteStore(
       registeredCommands = registeredCommands.filter((command) => command.id !== commandId);
     },
     getAllCommands: () => [...registeredCommands],
-    getCommandsByCategory: (categoryId) => registeredCommands.filter((command) => command.category === categoryId),
+    getCommandsByCategory: (categoryId) =>
+      registeredCommands.filter((command) => command.category === categoryId),
     getState: () => cloneCommandPaletteState(currentState),
   };
 }
@@ -524,6 +534,12 @@ function createRecordingCommandDependencies(
       effectLog.push({ target: 'tabs.closeTab', args: [tabId, groupId] });
       if (mode === 'active') {
         defaultDependencies.closeTab(tabId, groupId);
+      }
+    },
+    closeTabs: (tabIds, groupId) => {
+      effectLog.push({ target: 'tabs.closeTabs', args: [tabIds, groupId] });
+      if (mode === 'active') {
+        defaultDependencies.closeTabs(tabIds, groupId);
       }
     },
     splitGroup: (direction, groupId) => {
@@ -597,10 +613,16 @@ function createParityAwareCommandPaletteStore(
     const shadowEffects = [...shadowEffectsLog];
 
     if (
-      !areEqual(normalizeCommandPaletteState(primaryState), normalizeCommandPaletteState(shadowState))
-      || !areEqual(normalizeCommandRegistry(primaryRegistry), normalizeCommandRegistry(shadowRegistry))
-      || !areEqual(primaryEffects, shadowEffects)
-      || (primaryResult && shadowResult && !areEqual(primaryResult, shadowResult))
+      !areEqual(
+        normalizeCommandPaletteState(primaryState),
+        normalizeCommandPaletteState(shadowState)
+      ) ||
+      !areEqual(
+        normalizeCommandRegistry(primaryRegistry),
+        normalizeCommandRegistry(shadowRegistry)
+      ) ||
+      !areEqual(primaryEffects, shadowEffects) ||
+      (primaryResult && shadowResult && !areEqual(primaryResult, shadowResult))
     ) {
       reportMismatch({
         action,
@@ -668,7 +690,9 @@ function createParityAwareCommandPaletteStore(
     executeSelected: async () => {
       resetEffectLogs();
       const selectedCommand = primary.getState().filteredCommands[primary.getState().selectedIndex];
-      const shouldShadowExecute = selectedCommand ? builtInCommandIds.has(selectedCommand.id) : false;
+      const shouldShadowExecute = selectedCommand
+        ? builtInCommandIds.has(selectedCommand.id)
+        : false;
       const primaryResult = await primary.executeSelected();
 
       let shadowResult: CommandExecutionResult | undefined;
@@ -719,10 +743,16 @@ function createCommandPaletteStore(): CommandPaletteStoreLike {
   const shadowEffectsLog: CommandEffectCall[] = [];
 
   const writableStore = createWritableCommandPaletteStore(
-    createRecordingCommandDependencies(enableRunesCommandStore ? 'shadow' : 'active', enableRunesCommandStore ? shadowEffectsLog : primaryEffectsLog)
+    createRecordingCommandDependencies(
+      enableRunesCommandStore ? 'shadow' : 'active',
+      enableRunesCommandStore ? shadowEffectsLog : primaryEffectsLog
+    )
   );
   const runesStore = createRunesCommandPaletteStore(
-    createRecordingCommandDependencies(enableRunesCommandStore ? 'active' : 'shadow', enableRunesCommandStore ? primaryEffectsLog : shadowEffectsLog)
+    createRecordingCommandDependencies(
+      enableRunesCommandStore ? 'active' : 'shadow',
+      enableRunesCommandStore ? primaryEffectsLog : shadowEffectsLog
+    )
   );
 
   const primaryStore = enableRunesCommandStore ? runesStore : writableStore;
@@ -732,29 +762,35 @@ function createCommandPaletteStore(): CommandPaletteStoreLike {
     return primaryStore;
   }
 
-  return createParityAwareCommandPaletteStore(primaryStore, shadowStore, primaryEffectsLog, shadowEffectsLog, ({
-    action,
-    primaryState,
-    shadowState,
-    primaryRegistry,
-    shadowRegistry,
-    primaryEffects,
-    shadowEffects,
-    primaryResult,
-    shadowResult,
-  }) => {
-    console.error('[command.store parity mismatch]', {
+  return createParityAwareCommandPaletteStore(
+    primaryStore,
+    shadowStore,
+    primaryEffectsLog,
+    shadowEffectsLog,
+    ({
       action,
-      primaryState: normalizeCommandPaletteState(primaryState),
-      shadowState: normalizeCommandPaletteState(shadowState),
-      primaryRegistry: normalizeCommandRegistry(primaryRegistry),
-      shadowRegistry: normalizeCommandRegistry(shadowRegistry),
+      primaryState,
+      shadowState,
+      primaryRegistry,
+      shadowRegistry,
       primaryEffects,
       shadowEffects,
       primaryResult,
       shadowResult,
-    });
-  });
+    }) => {
+      console.error('[command.store parity mismatch]', {
+        action,
+        primaryState: normalizeCommandPaletteState(primaryState),
+        shadowState: normalizeCommandPaletteState(shadowState),
+        primaryRegistry: normalizeCommandRegistry(primaryRegistry),
+        shadowRegistry: normalizeCommandRegistry(shadowRegistry),
+        primaryEffects,
+        shadowEffects,
+        primaryResult,
+        shadowResult,
+      });
+    }
+  );
 }
 
 const commandPaletteStore = createCommandPaletteStore();

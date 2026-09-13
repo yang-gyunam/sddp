@@ -88,14 +88,23 @@
     <div
       class="flex items-center justify-between h-9 px-3 border-b border-[var(--color-border)] shrink-0"
     >
-      <Typography as="span" variant="caption" color="secondary" class="uppercase tracking-wider font-semibold">
+      <Typography
+        as="span"
+        variant="caption"
+        color="secondary"
+        class="uppercase tracking-wider font-semibold"
+      >
         {title}
       </Typography>
       <div class="flex items-center gap-1">
         {#if headerActions}
           {@render headerActions()}
         {/if}
-        <IconButton icon="layout-sidebar-left" title="Collapse sidebar (Ctrl+B)" onclick={handleToggle} />
+        <IconButton
+          icon="layout-sidebar-left"
+          title="Collapse sidebar (Ctrl+B)"
+          onclick={handleToggle}
+        />
       </div>
     </div>
 
@@ -111,7 +120,7 @@
       orientation="vertical"
       onpointerdown={handlePointerDown}
       onkeydown={handleKeyDown}
-      isResizing={isResizing}
+      {isResizing}
       class="absolute top-0 right-0"
     />
   </div>

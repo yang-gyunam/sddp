@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Tasks.Commands;
 using Sddp.Application.Features.Tasks.Queries;
 
@@ -18,16 +21,19 @@ namespace Sddp.Api.Controllers;
 public class TasksController : BaseApiController
 {
     private readonly ISender _sender;
+    private readonly IScopedAuthorizationService _authorizationService;
 
-    public TasksController(ISender sender)
+    public TasksController(ISender sender, IScopedAuthorizationService authorizationService)
     {
         _sender = sender;
+        _authorizationService = authorizationService;
     }
 
     /// <summary>
     /// Task get (,)
     /// </summary>
     [HttpGet]
+    [ResourceScopeExempt("Listing endpoint: no resource id in the route, so the project comes from the header as before.")]
     public async Task<IActionResult> GetTasks(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -72,7 +78,8 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task get
     /// </summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
     public async Task<IActionResult> GetTaskById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -84,8 +91,14 @@ public class TasksController : BaseApiController
             return tenantError;
         }
 
+        var userError = RequireUserId(out var userId);
+        if (userError is not null)
+        {
+            return userError;
+        }
+
         var taskId = GlobalUniqueId.FromGuid(id);
-        var result = await _sender.Send(new GetTaskByIdQuery(tenantId, taskId), cancellationToken);
+        var result = await _sender.Send(new GetTaskByIdQuery(tenantId, taskId, userId), cancellationToken);
 
         if (result is null)
         {
@@ -99,6 +112,7 @@ public class TasksController : BaseApiController
     /// Task search ()
     /// </summary>
     [HttpGet("search")]
+    [ResourceScopeExempt("Search endpoint: no resource id in the route; results are filtered by the requested scope.")]
     public async Task<IActionResult> SearchTasks(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -122,6 +136,8 @@ public class TasksController : BaseApiController
     /// Task create
     /// </summary>
     [HttpPost]
+    [ResourceScopeExempt("Creation endpoint: the resource does not exist yet, so there is nothing to resolve a project from.")]
+    [RequirePermission(PermissionCodes.TaskCreate)]
     [Authorize]
     public async Task<IActionResult> CreateTask(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -160,7 +176,9 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task (, description, priority, assignee,)
     /// </summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateTask(
         Guid id,
@@ -195,7 +213,9 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task status change
     /// </summary>
-    [HttpPut("{id:guid}/status")]
+    [HttpPut("{id}/status")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateTaskStatus(
         Guid id,
@@ -230,7 +250,9 @@ public class TasksController : BaseApiController
     /// <summary>
     ///
     /// </summary>
-    [HttpPost("{id:guid}/time-logs")]
+    [HttpPost("{id}/time-logs")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> AddTimeLog(
         Guid id,
@@ -265,7 +287,9 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task delete (soft delete)
     /// </summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskDelete)]
     [Authorize]
     public async Task<IActionResult> DeleteTask(
         Guid id,
@@ -292,7 +316,12 @@ public class TasksController : BaseApiController
         }
 
         var taskId = GlobalUniqueId.FromGuid(id);
-        var isAdmin = User.IsInRole(RoleType.Admin.ToString());
+        var isAdmin = await _authorizationService.HasAnyRoleAsync(
+            userId,
+            tenantId,
+            projectId,
+            [RoleType.Admin],
+            cancellationToken);
 
         var result = await _sender.Send(new DeleteTaskCommand(tenantId, taskId, userId, projectId, isAdmin), cancellationToken);
 
@@ -308,6 +337,7 @@ public class TasksController : BaseApiController
     /// Task get
     /// </summary>
     [HttpGet("my-stats")]
+    [ResourceScopeExempt("Personal aggregate keyed by the caller's own user id, with no single resource in the route.")]
     public async Task<IActionResult> GetMyStats(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken = default)
@@ -336,6 +366,7 @@ public class TasksController : BaseApiController
     /// Backlog (project task)
     /// </summary>
     [HttpGet("backlog/summary")]
+    [ResourceScopeExempt("Cross-project personal summary keyed by the caller's own user id.")]
     public async Task<IActionResult> GetBacklogSummary(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken = default)
@@ -360,6 +391,7 @@ public class TasksController : BaseApiController
     /// Backlog project (status/priority,, assignee)
     /// </summary>
     [HttpGet("backlog/stats")]
+    [ResourceScopeExempt("Project-wide aggregate with no resource id in the route; scoped by the requested project.")]
     public async Task<IActionResult> GetBacklogStats(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -396,7 +428,9 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task change (Kanban)
     /// </summary>
-    [HttpPut("{id:guid}/position")]
+    [HttpPut("{id}/position")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateTaskPosition(
         Guid id,
@@ -431,7 +465,9 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task
     /// </summary>
-    [HttpPost("{id:guid}/linked-items")]
+    [HttpPost("{id}/linked-items")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> AddLinkedItem(
         Guid id,
@@ -466,7 +502,9 @@ public class TasksController : BaseApiController
     /// <summary>
     /// Task
     /// </summary>
-    [HttpDelete("{id:guid}/linked-items/{linkedItemId:guid}")]
+    [HttpDelete("{id}/linked-items/{linkedItemId}")]
+    [ResourceScope<TaskItem>("id", OnNullProject = NullProjectPolicy.Personal)]
+    [RequirePermission(PermissionCodes.TaskUpdate)]
     [Authorize]
     public async Task<IActionResult> RemoveLinkedItem(
         Guid id,
@@ -480,10 +518,17 @@ public class TasksController : BaseApiController
             return tenantError;
         }
 
+        var userError = RequireUserId(out var userId);
+        if (userError is not null)
+        {
+            return userError;
+        }
+
         var taskId = GlobalUniqueId.FromGuid(id);
         var linkedId = GlobalUniqueId.FromGuid(linkedItemId);
 
-        var success = await _sender.Send(new RemoveTaskLinkedItemCommand(tenantId, taskId, linkedId), cancellationToken);
+        var success = await _sender.Send(
+            new RemoveTaskLinkedItemCommand(tenantId, taskId, linkedId, userId), cancellationToken);
 
         if (!success)
         {

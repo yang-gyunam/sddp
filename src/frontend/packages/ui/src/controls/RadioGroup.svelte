@@ -39,10 +39,7 @@
   }
 </script>
 
-<div
-  class="radio-group radio-group--{orientation} {className}"
-  role="radiogroup"
->
+<div class="radio-group radio-group--{orientation} {className}" role="radiogroup">
   {#each options as opt (opt.value)}
     <Radio
       name={groupName}

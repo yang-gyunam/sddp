@@ -44,7 +44,7 @@ public class ExceptionHandlingMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, response) = exception switch
+        (HttpStatusCode statusCode, object response) = exception switch
         {
             NotFoundException notFound => (
                 HttpStatusCode.NotFound,
@@ -73,6 +73,20 @@ public class ExceptionHandlingMiddleware
             SpecLockedException locked => (
                 HttpStatusCode.Conflict,
                 ApiResponse<object>.Fail("SPEC_LOCKED", locked.Message)),
+
+            KnowledgePageEditConflictException knowledgeConflict => (
+                HttpStatusCode.Conflict,
+                (object)new
+                {
+                    success = false,
+                    errorCode = knowledgeConflict.ErrorCode,
+                    errorMessage = knowledgeConflict.Message,
+                    details = new
+                    {
+                        expectedRevision = knowledgeConflict.ExpectedRevision,
+                        currentRevision = knowledgeConflict.CurrentRevision
+                    }
+                }),
 
             SddpException { ErrorCode: "NOT_ALLOWED" } notAllowed => (
                 HttpStatusCode.Forbidden,

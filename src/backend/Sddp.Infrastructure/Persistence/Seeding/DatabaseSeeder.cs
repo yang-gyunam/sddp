@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Domain.Entities;
@@ -30,19 +31,24 @@ public class DatabaseSeeder
 
         try
         {
-            // 1. Seed roles
-            await (SeedRolesAsync()).ConfigureAwait(false);
+            // 1. Reconcile roles, permissions, and role-permission mappings
+            var authorizationResult = await AuthorizationSeedSynchronizer
+                .SynchronizeAsync(_context)
+                .ConfigureAwait(false);
+            _logger.LogInformation(
+                "Authorization seed synchronized: {CreatedRoles} roles, {CreatedPermissions} permissions, " +
+                "{CreatedMappings} mappings created, {ReactivatedMappings} reactivated, {DeactivatedMappings} deactivated",
+                authorizationResult.CreatedRoles,
+                authorizationResult.CreatedPermissions,
+                authorizationResult.CreatedMappings,
+                authorizationResult.ReactivatedMappings,
+                authorizationResult.DeactivatedMappings);
 
-            // 2. Seed permissions
-            await (SeedPermissionsAsync()).ConfigureAwait(false);
-
-            // 3. Seed role-permission mappings
-            await (SeedRolePermissionsAsync()).ConfigureAwait(false);
-
-            // 4. Seed the default administrator account
+            // 2. Seed the default administrator account
             await (SeedAdminUserAsync()).ConfigureAwait(false);
 
-            // 5. Seed SDDP domain glossary terms
+
+            // 4. Seed SDDP domain glossary terms
             await (SeedGlossaryTermsAsync()).ConfigureAwait(false);
 
             _logger.LogInformation("Database seeding completed successfully");
@@ -52,129 +58,6 @@ public class DatabaseSeeder
             _logger.LogError(ex, "Error occurred during database seeding");
             throw;
         }
-    }
-
-    /// <summary>
-    /// Seeds the 7 default roles
-    /// </summary>
-    private async Task SeedRolesAsync()
-    {
-        if (await (_context.Roles.AnyAsync()).ConfigureAwait(false))
-        {
-            _logger.LogInformation("Roles already exist, skipping role seeding");
-            return;
-        }
-
-        var roles = Role.CreateDefaultRoles().ToList();
-        await (_context.Roles.AddRangeAsync(roles)).ConfigureAwait(false);
-        await (_context.SaveChangesAsync()).ConfigureAwait(false);
-
-        _logger.LogInformation("Seeded {Count} default roles", roles.Count);
-    }
-
-    /// <summary>
-    /// Seeds the 31 default permissions
-    /// </summary>
-    private async Task SeedPermissionsAsync()
-    {
-        if (await (_context.Permissions.AnyAsync()).ConfigureAwait(false))
-        {
-            _logger.LogInformation("Permissions already exist, skipping permission seeding");
-            return;
-        }
-
-        var permissions = Permission.CreateDefaultPermissions().ToList();
-        await (_context.Permissions.AddRangeAsync(permissions)).ConfigureAwait(false);
-        await (_context.SaveChangesAsync()).ConfigureAwait(false);
-
-        _logger.LogInformation("Seeded {Count} default permissions", permissions.Count);
-    }
-
-    /// <summary>
-    /// Seeds role-permission mappings
-    /// </summary>
-    private async Task SeedRolePermissionsAsync()
-    {
-        if (await (_context.RolePermissions.AnyAsync()).ConfigureAwait(false))
-        {
-            _logger.LogInformation("Role-Permission mappings already exist, skipping");
-            return;
-        }
-
-        var roles = await (_context.Roles.ToListAsync()).ConfigureAwait(false);
-        var permissions = await (_context.Permissions.ToListAsync()).ConfigureAwait(false);
-
-        var rolePermissions = new List<RolePermission>();
-
-        foreach (var role in roles)
-        {
-            var permissionsForRole = GetPermissionsForRole(role.Type, permissions);
-            foreach (var permission in permissionsForRole)
-            {
-                rolePermissions.Add(new RolePermission(role.Id, permission.Id));
-            }
-        }
-
-        await (_context.RolePermissions.AddRangeAsync(rolePermissions)).ConfigureAwait(false);
-        await (_context.SaveChangesAsync()).ConfigureAwait(false);
-
-        _logger.LogInformation("Seeded {Count} role-permission mappings", rolePermissions.Count);
-    }
-
-    /// <summary>
-    /// Maps permissions by role
-    /// </summary>
-    private static IEnumerable<Permission> GetPermissionsForRole(RoleType roleType, List<Permission> allPermissions)
-    {
-        // Define permission mappings per role
-        var permissionCodes = roleType switch
-        {
-            // Admin: all permissions
-            RoleType.Admin => allPermissions.Select(p => p.Code),
-
-            // ProductOwner: all permissions except user:manage and audit:read
-            RoleType.ProductOwner => allPermissions
-                .Where(p => p.Code != "user:manage" && p.Code != "audit:read")
-                .Select(p => p.Code),
-
-            // DomainExpert: full Spec/Conversation/Requirement/Glossary + Project/Task read
-            // SQL: resource_type IN ('spec','conversation','requirement','glossary') OR code IN ('project:read','task:read')
-            RoleType.DomainExpert => allPermissions
-                .Where(p =>
-                    new[] { "spec", "conversation", "requirement", "glossary" }.Contains(p.Resource)
-                    || p.Code is "project:read" or "task:read")
-                .Select(p => p.Code),
-
-            // Developer: full Spec/Conversation/Requirement/Generation/Task + Glossary/Project read (excluding approve/lock)
-            // SQL: resource_type IN ('spec','conversation','requirement','generation','task')
-            //      OR code IN ('glossary:read','project:read')
-            //      AND code NOT IN ('spec:approve','spec:lock')
-            RoleType.Developer => allPermissions
-                .Where(p =>
-                    new[] { "spec", "conversation", "requirement", "generation", "task" }.Contains(p.Resource)
-                    || p.Code is "glossary:read" or "project:read")
-                .Where(p => p.Code is not "spec:approve" and not "spec:lock")
-                .Select(p => p.Code),
-
-            // Reviewer: read + approval permissions + Project/Task read
-            RoleType.Reviewer =>
-            [
-                "spec:read", "spec:approve",
-                "conversation:read", "conversation:post", "conversation:close",
-                "requirement:read",
-                "glossary:read",
-                "project:read", "task:read"
-            ],
-
-            // QATester: primarily read permissions (excluding audit:read)
-            RoleType.QATester => allPermissions
-                .Where(p => p.Action == "read" && p.Code != "audit:read")
-                .Select(p => p.Code),
-
-            _ => []
-        };
-
-        return allPermissions.Where(p => permissionCodes.Contains(p.Code));
     }
 
     /// <summary>

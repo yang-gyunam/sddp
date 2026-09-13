@@ -17,13 +17,7 @@
     class?: string;
   }
 
-  let {
-    label,
-    author = null,
-    required = false,
-    children,
-    class: className = '',
-  }: Props = $props();
+  let { label, author = null, required = false, children, class: className = '' }: Props = $props();
 </script>
 
 <div class={className}>

@@ -95,11 +95,13 @@
   class="tree-item flex items-center h-[24px] cursor-pointer select-none transition-colors
     border rounded
     {selected
-      ? 'border-[var(--color-accent-primary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
-      : 'border-transparent hover:bg-[var(--color-bg-tertiary)]'}
+    ? 'border-[var(--color-accent-primary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
+    : 'border-transparent hover:bg-[var(--color-bg-tertiary)]'}
     {node.disabled ? 'opacity-50 cursor-not-allowed' : ''}
     {dragging ? 'opacity-50' : ''}
-    {dragOver ? 'bg-[var(--color-accent-primary)]/10 border-t border-t-[var(--color-accent-primary)]' : ''}
+    {dragOver
+    ? 'bg-[var(--color-accent-primary)]/10 border-t border-t-[var(--color-accent-primary)]'
+    : ''}
     {className}"
   style="padding-left: {indent}px"
   role="treeitem"

@@ -21,7 +21,7 @@
   // Calculate max value for scaling
   const maxValue = $derived(() => {
     if (!data || data.length === 0) return 10;
-    return Math.max(...data.map(d => d.activeUsers ?? d.value ?? 0)) || 10;
+    return Math.max(...data.map((d) => d.activeUsers ?? d.value ?? 0)) || 10;
   });
 </script>
 

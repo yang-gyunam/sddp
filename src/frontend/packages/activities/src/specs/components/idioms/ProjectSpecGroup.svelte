@@ -36,11 +36,7 @@
 >
   <div class="py-1" role="group" aria-label="{group.projectName} specs">
     {#each group.specs as spec (spec.id)}
-      <SpecItem
-        {spec}
-        selected={selectedSpecId === spec.id}
-        onSelect={onSelectSpec}
-      />
+      <SpecItem {spec} selected={selectedSpecId === spec.id} onSelect={onSelectSpec} />
     {/each}
 
     {#if group.specs.length === 0}

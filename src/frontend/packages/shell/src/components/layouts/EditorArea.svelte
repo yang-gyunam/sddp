@@ -180,7 +180,9 @@
             </span>
 
             {#if tab.dirty}
-              <span class="w-2 h-2 rounded-full bg-[var(--color-text-tertiary)]" title="Unsaved changes"
+              <span
+                class="w-2 h-2 rounded-full bg-[var(--color-text-tertiary)]"
+                title="Unsaved changes"
               ></span>
             {/if}
 
@@ -211,11 +213,7 @@
             onclick={() => handleSplit('vertical')}
             title="Split Down"
           />
-          <IconButton
-            icon="more-horizontal"
-            size="sm"
-            title="More actions"
-          />
+          <IconButton icon="more-horizontal" size="sm" title="More actions" />
         </div>
       {/if}
     </div>
@@ -224,7 +222,9 @@
   <!-- Editor content -->
   <div class="flex-1 overflow-auto">
     {#if tabs.length === 0}
-      <div class="flex flex-col items-center justify-center h-full text-[var(--color-text-tertiary)]">
+      <div
+        class="flex flex-col items-center justify-center h-full text-[var(--color-text-tertiary)]"
+      >
         <Icon name="file" size="xl" class="mb-4 opacity-50" />
         <Typography variant="body2" color="tertiary">
           {emptyMessage}

@@ -125,6 +125,8 @@ public static class ApiErrorCodes
     public static class Artifact
     {
         public const string RegenerateError = "REGENERATE_ERROR";
+
+        public const string TooLarge = "ARTIFACT_TOO_LARGE";
     }
 
     /// <summary>Project domain errors.</summary>

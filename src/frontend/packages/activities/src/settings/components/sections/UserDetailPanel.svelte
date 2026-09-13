@@ -9,12 +9,13 @@
   import { Icon, Input, IconButton, Select } from '@sddp/ui';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import type { SystemUser, CreateUserParams } from '../../types';
-  import { getUserManagementService } from '../../services';
+  import { createUserManagementService } from '../../services';
   import { ALL_ROLES, getRoleLabel } from '../../../shared/types';
 
   type PanelMode = 'view' | 'edit' | 'create';
 
   interface Props {
+    tenantId: string;
     mode: PanelMode;
     user: SystemUser | null;
     onClose: () => void;
@@ -26,9 +27,20 @@
     onDeleted?: (userId: string) => void;
   }
 
-  let { mode, user, onClose, onEdit, onCreated, onSaved, onDeactivated, onActivated, onDeleted }: Props = $props();
+  let {
+    tenantId,
+    mode,
+    user,
+    onClose,
+    onEdit,
+    onCreated,
+    onSaved,
+    onDeactivated,
+    onActivated,
+    onDeleted,
+  }: Props = $props();
 
-  const userService = getUserManagementService();
+  let userService = $derived(createUserManagementService(tenantId));
 
   const roleOptions = ALL_ROLES.map((r) => ({ label: r.label, value: r.value }));
 
@@ -161,7 +173,8 @@
 
   async function handleResetPassword() {
     if (!user) return;
-    if (!confirm(`Reset password for ${user.name}? A temporary password will be generated.`)) return;
+    if (!confirm(`Reset password for ${user.name}? A temporary password will be generated.`))
+      return;
 
     loading = true;
     try {
@@ -177,7 +190,8 @@
 
   async function handleDelete() {
     if (!user || !onDeleted) return;
-    if (!confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`)) return;
+    if (!confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`))
+      return;
 
     loading = true;
     try {
@@ -198,19 +212,43 @@
   {#if mode === 'view' && user}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="user" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="user" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">User Details</span>
       {#snippet actions()}
         {#if !user.isBuiltIn && user.status === 'active'}
-          <IconButton icon="key" variant="warn" onclick={handleResetPassword} disabled={loading} title="Reset password" />
-          <IconButton icon="lock" variant="warn" onclick={handleDeactivate} disabled={loading} title="Deactivate user" />
+          <IconButton
+            icon="key"
+            variant="warn"
+            onclick={handleResetPassword}
+            disabled={loading}
+            title="Reset password"
+          />
+          <IconButton
+            icon="lock"
+            variant="warn"
+            onclick={handleDeactivate}
+            disabled={loading}
+            title="Deactivate user"
+          />
         {/if}
         {#if !user.isBuiltIn && user.status === 'inactive'}
-          <IconButton icon="unlock" variant="success" onclick={handleActivate} disabled={loading} title="Activate user" />
+          <IconButton
+            icon="unlock"
+            variant="success"
+            onclick={handleActivate}
+            disabled={loading}
+            title="Activate user"
+          />
         {/if}
         {#if !user.isBuiltIn && onDeleted}
-          <IconButton icon="trash" variant="danger" onclick={handleDelete} disabled={loading} title="Delete user" />
+          <IconButton
+            icon="trash"
+            variant="danger"
+            onclick={handleDelete}
+            disabled={loading}
+            title="Delete user"
+          />
         {/if}
         {#if onEdit}
           <IconButton icon="edit" onclick={onEdit} title="Edit user" />
@@ -221,22 +259,34 @@
   {:else if mode === 'create'}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="user-plus" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="user-plus" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Create User</span>
       {#snippet actions()}
-        <IconButton icon="check" variant="success" onclick={handleCreate} disabled={loading} title="Create user" />
+        <IconButton
+          icon="check"
+          variant="success"
+          onclick={handleCreate}
+          disabled={loading}
+          title="Create user"
+        />
         <IconButton icon="x" onclick={onClose} title="Cancel" />
       {/snippet}
     </DetailHeader>
   {:else if mode === 'edit'}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="edit" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="edit" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Edit User</span>
       {#snippet actions()}
-        <IconButton icon="check" variant="success" onclick={handleSave} disabled={loading} title="Save changes" />
+        <IconButton
+          icon="check"
+          variant="success"
+          onclick={handleSave}
+          disabled={loading}
+          title="Save changes"
+        />
         <IconButton icon="x" onclick={onClose} title="Cancel" />
       {/snippet}
     </DetailHeader>
@@ -281,7 +331,6 @@
           error={errors.password}
         />
       </div>
-
     {:else if mode === 'edit' && user}
       <!-- Edit Mode -->
       <div class="form-section">
@@ -298,9 +347,13 @@
           disabled={loading}
           autocomplete="off"
         />
-        <Select label="Global Role" bind:value={editForm.globalRole} disabled={loading} options={roleOptions} />
+        <Select
+          label="Global Role"
+          bind:value={editForm.globalRole}
+          disabled={loading}
+          options={roleOptions}
+        />
       </div>
-
     {:else if mode === 'view' && user}
       <!-- View Mode -->
       <div class="user-header">
@@ -355,7 +408,6 @@
           <p class="empty-text">No project memberships</p>
         </div>
       {/if}
-
     {/if}
   </div>
 </div>

@@ -53,8 +53,8 @@
         variant="unstyled"
         class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
           {activeTab === 'outgoing'
-            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
         onclick={() => (activeTab = 'outgoing')}
       >
         Outgoing ({relationships.outgoing.length})
@@ -65,8 +65,8 @@
         variant="unstyled"
         class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
           {activeTab === 'incoming'
-            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
         onclick={() => (activeTab = 'incoming')}
       >
         Incoming ({relationships.incoming.length})
@@ -88,8 +88,8 @@
           <div
             class="p-3 rounded-lg border transition-colors cursor-pointer
               {isValid
-                ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
-                : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 opacity-60'}"
+              ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
+              : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 opacity-60'}"
             role="button"
             tabindex="0"
             aria-label="{relationship.type}: {relationship.fromEntityId} to {relationship.toEntityId}"
@@ -144,7 +144,13 @@
 
               <!-- Actions -->
               {#if isValid && onInvalidate}
-                <IconButton icon="x" variant="danger" size="md" title="Invalidate relationship" onclick={(e) => handleInvalidate(e, relationship.id)} />
+                <IconButton
+                  icon="x"
+                  variant="danger"
+                  size="md"
+                  title="Invalidate relationship"
+                  onclick={(e) => handleInvalidate(e, relationship.id)}
+                />
               {/if}
             </div>
           </div>

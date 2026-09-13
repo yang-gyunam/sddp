@@ -105,7 +105,10 @@
     outOfScope = initialData.outOfScope || '';
     definitions = initialData.definitions || '';
     acceptanceCriteria = initialData.acceptanceCriteria || '';
-    ownerIds = (initialData.owners || '').split(',').map(s => s.trim()).filter(Boolean);
+    ownerIds = (initialData.owners || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     reviewTrigger = initialData.reviewTrigger || '';
     requirementId = initialData.requirementId || '';
     bornFromConversationId = initialData.bornFromConversationId || '';
@@ -123,9 +126,7 @@
   const owners = $derived(ownerIds.join(', '));
 
   // Available members excluding already selected owners
-  const availableMembers = $derived(
-    memberCandidates.filter((m) => !ownerIds.includes(m.value))
-  );
+  const availableMembers = $derived(memberCandidates.filter((m) => !ownerIds.includes(m.value)));
 
   function addOwner(userId: string): void {
     if (!userId || ownerIds.includes(userId)) return;
@@ -143,11 +144,18 @@
 
   const isValid = $derived(
     mode === 'create'
-      ? code.trim() !== '' && title.trim() !== '' && decision.trim() !== '' && context.trim() !== '' && acceptanceCriteria.trim() !== ''
+      ? code.trim() !== '' &&
+          title.trim() !== '' &&
+          decision.trim() !== '' &&
+          context.trim() !== '' &&
+          acceptanceCriteria.trim() !== ''
       : title.trim() !== ''
   );
 
-  function extractGlossaryQuery(text: string, cursor: number): { start: number; end: number; query: string } | null {
+  function extractGlossaryQuery(
+    text: string,
+    cursor: number
+  ): { start: number; end: number; query: string } | null {
     const uptoCursor = text.slice(0, cursor);
     const atIndex = uptoCursor.lastIndexOf('@');
     if (atIndex === -1) return null;
@@ -345,13 +353,21 @@
   }
 </script>
 
-<form id={formId} novalidate onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="flex flex-col gap-4 {className}">
+<form
+  id={formId}
+  novalidate
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSubmit();
+  }}
+  class="flex flex-col gap-4 {className}"
+>
   <!-- Basic Information -->
   <CollapsibleGroup
     title="Basic Information"
     variant="plain"
     expanded={basicExpanded}
-    onToggle={() => basicExpanded = !basicExpanded}
+    onToggle={() => (basicExpanded = !basicExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       {#if mode === 'create'}
@@ -370,12 +386,7 @@
         </div>
       {/if}
 
-      <Input
-        label="Title"
-        required
-        bind:value={title}
-        placeholder="Enter spec title..."
-      />
+      <Input label="Title" required bind:value={title} placeholder="Enter spec title..." />
 
       <Textarea
         label="Description"
@@ -400,7 +411,7 @@
     title="Scope & Context"
     variant="plain"
     expanded={scopeExpanded}
-    onToggle={() => scopeExpanded = !scopeExpanded}
+    onToggle={() => (scopeExpanded = !scopeExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <Textarea
@@ -430,7 +441,7 @@
     title="Criteria & Definitions"
     variant="plain"
     expanded={criteriaExpanded}
-    onToggle={() => criteriaExpanded = !criteriaExpanded}
+    onToggle={() => (criteriaExpanded = !criteriaExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <!-- Definitions (custom: glossary autocomplete with element ref) -->
@@ -457,7 +468,9 @@
               onmousedown={(event) => event.preventDefault()}
             >
               {#if glossarySuggestionsLoading}
-                <div class="bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded-lg shadow-lg p-3">
+                <div
+                  class="bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded-lg shadow-lg p-3"
+                >
                   <div class="flex-1 flex items-center justify-center">
                     <Spinner size="lg" />
                   </div>
@@ -490,7 +503,7 @@
     title="Governance"
     variant="plain"
     expanded={governanceExpanded}
-    onToggle={() => governanceExpanded = !governanceExpanded}
+    onToggle={() => (governanceExpanded = !governanceExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <div>
@@ -505,7 +518,9 @@
         {#if ownerIds.length > 0}
           <div class="flex flex-wrap gap-1.5 mt-2">
             {#each ownerIds as userId (userId)}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--color-surface-200)] text-sm text-[var(--color-text-primary)]">
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--color-surface-200)] text-sm text-[var(--color-text-primary)]"
+              >
                 <Icon name="user" size="xs" class="text-[var(--color-text-muted)]" />
                 {getOwnerLabel(userId)}
                 <Button
@@ -531,32 +546,31 @@
   </CollapsibleGroup>
 
   <!-- References -->
-    <CollapsibleGroup
-      title="References"
-      variant="plain"
-      expanded={referencesExpanded}
-      onToggle={() => referencesExpanded = !referencesExpanded}
-    >
-      <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
-        <Combobox
-          label="Source Conversation"
-          options={conversationCandidates}
-          bind:value={bornFromConversationId}
-          placeholder="Search by name..."
-          hint="The conversation that led to this spec"
-          onsearch={onSearchConversation}
-          loading={conversationSearchLoading}
-        />
-        <Combobox
-          label="Source Requirement"
-          options={requirementCandidates}
-          bind:value={requirementId}
-          placeholder="Search by code or title..."
-          hint="Link a requirement that this spec fulfills"
-          onsearch={onSearchRequirement}
-          loading={requirementSearchLoading}
-        />
-      </div>
-    </CollapsibleGroup>
-
+  <CollapsibleGroup
+    title="References"
+    variant="plain"
+    expanded={referencesExpanded}
+    onToggle={() => (referencesExpanded = !referencesExpanded)}
+  >
+    <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
+      <Combobox
+        label="Source Conversation"
+        options={conversationCandidates}
+        bind:value={bornFromConversationId}
+        placeholder="Search by name..."
+        hint="The conversation that led to this spec"
+        onsearch={onSearchConversation}
+        loading={conversationSearchLoading}
+      />
+      <Combobox
+        label="Source Requirement"
+        options={requirementCandidates}
+        bind:value={requirementId}
+        placeholder="Search by code or title..."
+        hint="Link a requirement that this spec fulfills"
+        onsearch={onSearchRequirement}
+        loading={requirementSearchLoading}
+      />
+    </div>
+  </CollapsibleGroup>
 </form>

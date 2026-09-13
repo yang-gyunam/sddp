@@ -4,12 +4,7 @@
  */
 
 import { createStore, type Store } from '@sddp/shell/core';
-import type {
-  AiState,
-  AiContextItem,
-  AiMessage,
-  AiAnalysisRequest,
-} from '../types';
+import type { AiState, AiContextItem, AiMessage, AiAnalysisRequest } from '../types';
 import { INITIAL_AI_STATE, sortContextItems } from '../types';
 
 // Create the store
@@ -124,15 +119,10 @@ export function addMessage(message: AiMessage): void {
 /**
  * Update message
  */
-export function updateMessage(
-  messageId: string,
-  updates: Partial<AiMessage>
-): void {
+export function updateMessage(messageId: string, updates: Partial<AiMessage>): void {
   aiStore.update((state) => ({
     ...state,
-    messages: state.messages.map((msg) =>
-      msg.id === messageId ? { ...msg, ...updates } : msg
-    ),
+    messages: state.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
   }));
 }
 
@@ -296,9 +286,9 @@ export function getActiveRequests(): AiAnalysisRequest[] {
  * Get pending requests count
  */
 export function getPendingRequestsCount(): number {
-  return aiStore.get().activeRequests.filter(
-    (req) => req.status === 'pending' || req.status === 'processing'
-  ).length;
+  return aiStore
+    .get()
+    .activeRequests.filter((req) => req.status === 'pending' || req.status === 'processing').length;
 }
 
 /**
@@ -322,9 +312,7 @@ export function getActiveTab(): AiState['activeTab'] {
 /**
  * Subscribe to AI state changes
  */
-export function subscribeAi(
-  listener: (state: AiState, prevState: AiState) => void
-): () => void {
+export function subscribeAi(listener: (state: AiState, prevState: AiState) => void): () => void {
   return aiStore.subscribe(listener);
 }
 

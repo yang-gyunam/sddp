@@ -40,7 +40,10 @@
       let cardGrid: Element | null = null;
       for (const cg of mainEl!.querySelectorAll('.card-grid')) {
         const r = cg.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) { cardGrid = cg; break; }
+        if (r.width > 0 && r.height > 0) {
+          cardGrid = cg;
+          break;
+        }
       }
 
       hasCardGrid = !!cardGrid;
@@ -78,9 +81,7 @@
   });
 
   let visibleCols = $derived(
-    overlayRect.width < BREAKPOINT_SM ? 1 :
-    overlayRect.width < BREAKPOINT_MD ? 2 :
-    cols
+    overlayRect.width < BREAKPOINT_SM ? 1 : overlayRect.width < BREAKPOINT_MD ? 2 : cols
   );
 
   let gapPx = $derived(gapPxMap[gap] ?? gapPxMap.md);
@@ -88,12 +89,17 @@
   let columnArray = $derived(Array.from({ length: visibleCols }, (_, i) => i));
 
   let breakpointLabel = $derived(
-    overlayRect.width < BREAKPOINT_SM ? `XS (<${BREAKPOINT_SM}px)` :
-    overlayRect.width < BREAKPOINT_MD ? `SM (${BREAKPOINT_SM}px+)` :
-    overlayRect.width < 1024 ? `MD (${BREAKPOINT_MD}px+)` :
-    overlayRect.width < 1280 ? `LG (1024px+)` :
-    overlayRect.width < 1536 ? `XL (1280px+)` :
-    '2XL (1536px+)'
+    overlayRect.width < BREAKPOINT_SM
+      ? `XS (<${BREAKPOINT_SM}px)`
+      : overlayRect.width < BREAKPOINT_MD
+        ? `SM (${BREAKPOINT_SM}px+)`
+        : overlayRect.width < 1024
+          ? `MD (${BREAKPOINT_MD}px+)`
+          : overlayRect.width < 1280
+            ? `LG (1024px+)`
+            : overlayRect.width < 1536
+              ? `XL (1280px+)`
+              : '2XL (1536px+)'
   );
 </script>
 
@@ -143,7 +149,9 @@
   >
     <span class="px-2 py-0.5 rounded bg-black/50">
       {#if hasCardGrid}
-        {visibleCols} col{visibleCols > 1 ? 's' : ''} | {gapPx}px gap | {Math.round(overlayRect.width)}px content
+        {visibleCols} col{visibleCols > 1 ? 's' : ''} | {gapPx}px gap | {Math.round(
+          overlayRect.width
+        )}px content
       {:else}
         No CardGrid | {Math.round(overlayRect.width)}px content
       {/if}

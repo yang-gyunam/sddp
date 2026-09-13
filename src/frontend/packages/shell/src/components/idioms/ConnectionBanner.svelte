@@ -27,7 +27,9 @@
 
 {#if visible}
   <div
-    class="flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium z-50 {variantStyles[variant] ?? variantStyles.warning}"
+    class="flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium z-50 {variantStyles[
+      variant
+    ] ?? variantStyles.warning}"
     transition:slide={{ duration: 200 }}
     role="status"
     aria-live="polite"

@@ -24,9 +24,11 @@ public sealed class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior
             $"Transaction {typeof(TRequest).Name}");
 
         var isCommand = request is ICommand<TResponse>;
+        var ownsPersistenceBoundary = request is INonTransactionalCommand;
         activity?.SetTag("transaction.is_command", isCommand);
+        activity?.SetTag("transaction.owns_persistence_boundary", ownsPersistenceBoundary);
 
-        if (!isCommand)
+        if (!isCommand || ownsPersistenceBoundary)
         {
             return await (next()).ConfigureAwait(false);
         }

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
+using Sddp.Api.Authorization;
 using Sddp.Application.Features.AuditLogs.Queries;
 
 namespace Sddp.Api.Controllers;
@@ -28,7 +30,9 @@ public class AuditLogsController : BaseApiController
     /// GET /api/audit-logs
     /// </summary>
     [HttpGet]
+        [ResourceScopeExempt("Listing endpoint with no resource id in the route; gated by the AuditRead permission evaluated in the caller's scope.")]
     public async Task<IActionResult> GetAuditLogs(
+        [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader = null,
         [FromQuery] string? userId = null,
         [FromQuery] string? action = null,
         [FromQuery] string? resourceType = null,
@@ -38,6 +42,12 @@ public class AuditLogsController : BaseApiController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        var tenantError = RequireTenantId(tenantIdHeader, out var tenantId);
+        if (tenantError is not null)
+        {
+            return tenantError;
+        }
+
         GlobalUniqueId? actorId = null;
         if (!string.IsNullOrWhiteSpace(userId))
         {
@@ -70,8 +80,8 @@ public class AuditLogsController : BaseApiController
 
         var result = await _sender.Send(
             new GetAuditLogsQuery(
-                TenantId: null,
-                ProjectId: null,
+                TenantId: tenantId,
+                ProjectId: TryGetProjectId(out var projectId) ? projectId : null,
                 actorId,
                 action,
                 resourceType,
@@ -89,6 +99,7 @@ public class AuditLogsController : BaseApiController
     /// GET /api/audit-logs/{id}
     /// </summary>
     [HttpGet("{id}")]
+        [ResourceScope<AuditLog>("id", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetAuditLogById(
         string id,
         CancellationToken cancellationToken)

@@ -51,7 +51,9 @@
   {#if showDescription}
     <div>
       <h3 class="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Description</h3>
-      <div class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap">
+      <div
+        class="prose prose-sm dark:prose-invert max-w-none text-[var(--color-text-primary)] whitespace-pre-wrap"
+      >
         {description || 'No description provided.'}
       </div>
     </div>

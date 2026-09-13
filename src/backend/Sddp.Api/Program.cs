@@ -13,6 +13,7 @@ using Sddp.Api.HealthChecks;
 using Sddp.Api.Hubs;
 using Sddp.Api.Middleware;
 using Sddp.Api.Serialization;
+using Sddp.Api.Security;
 using Sddp.Api.Services;
 using Sddp.Application.Behaviors;
 using Sddp.Application.Requests;
@@ -20,6 +21,7 @@ using Sddp.Application.Services;
 using Sddp.Infrastructure.Persistence.Contexts;
 using Sddp.Infrastructure.Persistence.Seeding;
 using Sddp.Infrastructure.Services;
+using Microsoft.AspNetCore.SignalR;
 
 // Bootstrap Serilog logger.
 Log.Logger = new LoggerConfiguration()
@@ -43,8 +45,7 @@ try
                 .Enrich.WithProperty("MachineName", Environment.MachineName)
                 .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
                 .Destructure.ByTransforming<LoginRequest>(r => new { r.Username, Password = "***" })
-                .Destructure.ByTransforming<ChangePasswordRequest>(_ => new { CurrentPassword = "***", NewPassword = "***" })
-                .Destructure.ByTransforming<RefreshTokenRequest>(_ => new { RefreshToken = "***" });
+                .Destructure.ByTransforming<ChangePasswordRequest>(_ => new { CurrentPassword = "***", NewPassword = "***" });
 
             var otlpEndpoint = context.Configuration["OpenTelemetry:Endpoint"];
             if (!string.IsNullOrWhiteSpace(otlpEndpoint))
@@ -70,6 +71,10 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<IRequestContextProvider, HttpRequestContextProvider>();
     builder.Services.AddInfrastructure(builder.Configuration);
+
+    ProductionSecretGuard.EnsureSafe(builder.Environment, builder.Configuration);
+
+    builder.Services.AddActiveUserProtection(builder.Environment);
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddAuthorizationPolicies();
     builder.Services.AddCorsPolicy(builder.Configuration);
@@ -82,6 +87,7 @@ try
 
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+    builder.Services.AddAuthenticationSecurity(builder.Configuration);
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<IVersionDiffService, VersionDiffService>();
     builder.Services.AddScoped<IAuditLogService, AuditLogService>();
@@ -91,10 +97,16 @@ try
     builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ICommand<>).Assembly));
     builder.Services.AddValidatorsFromAssembly(typeof(ICommand<>).Assembly);
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+    // Ahead of TransactionBehavior on purpose: its work runs after the commit. Constrained
+    // to IProducesArtifactDescriptor, so DI skips it for every other request.
+    builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ArtifactDescriptorBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
 
-    builder.Services.AddSignalR()
+    builder.Services.AddSignalR(options =>
+        {
+            options.AddFilter<ActiveUserHubFilter>();
+        })
         .AddJsonProtocol(options =>
         {
             options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
@@ -155,6 +167,8 @@ try
         }
     }
 
+    await DevelopmentCredentialGuard.EnsureSafeAsync(app);
+
     app.UseRequestLogging();
     app.UseExceptionHandling();
 
@@ -176,12 +190,7 @@ try
         app.MapScalarApiReference();
     }
 
-    app.UseHttpsRedirection();
-    app.UseCors("DefaultPolicy");
-    app.UseAuthentication();
-    app.UseTenantContext();
-    app.UseProjectMembership();
-    app.UseAuthorization();
+    app.UseSddpSecurityPipeline();
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
@@ -232,6 +241,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

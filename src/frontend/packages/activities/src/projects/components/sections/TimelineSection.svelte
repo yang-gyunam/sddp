@@ -56,9 +56,9 @@
   const periodLabels: Record<TimelineFilter['period'], string> = {
     'minutes-10': 'Last 10 minutes',
     'hour-1': 'Last hour',
-    'today': 'Today',
-    'week': 'This week',
-    'all': 'All time',
+    today: 'Today',
+    week: 'This week',
+    all: 'All time',
   };
 
   const periodOptions: Array<{ value: TimelineFilter['period']; label: string }> = [
@@ -79,13 +79,7 @@
 </script>
 
 <div class="relative">
-  <CollapsiblePanel
-    title="TIMELINE"
-    {expanded}
-    {actions}
-    onToggle={onToggle}
-    class={className}
-  >
+  <CollapsiblePanel title="TIMELINE" {expanded} {actions} {onToggle} class={className}>
     <div class="timeline-content px-1">
       <!-- Current filter badge -->
       <div class="flex items-center gap-1 px-2 py-1 mb-1 text-xs text-[var(--color-text-tertiary)]">
@@ -136,8 +130,8 @@
           variant="unstyled"
           class="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors
             {filter.period === option.value
-              ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-              : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
+            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+            : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}"
           onclick={() => handlePeriodSelect(option.value)}
           role="menuitem"
         >

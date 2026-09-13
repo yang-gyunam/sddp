@@ -27,7 +27,7 @@
       <div class="flex items-center gap-2 mt-0.5">
         <span class="text-xs text-[var(--color-text-tertiary)] font-mono">{version.code}</span>
         <span class="text-xs text-[var(--color-text-muted)]">·</span>
-        <span class="text-xs font-mono text-[var(--color-accent-primary)]">v{version.version}</span>
+        <span class="text-xs font-mono text-[var(--color-accent-text)]">v{version.version}</span>
       </div>
     </div>
   </div>

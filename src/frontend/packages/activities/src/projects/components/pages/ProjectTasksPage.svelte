@@ -14,7 +14,12 @@
     setTabState,
     toast,
   } from '@sddp/shell';
-  import { KanbanBoard, TaskMetaPanel, TaskFormPanel, TimeLogPanel } from '../../../task/components/sections';
+  import {
+    KanbanBoard,
+    TaskMetaPanel,
+    TaskFormPanel,
+    TimeLogPanel,
+  } from '../../../task/components/sections';
   import type { TaskFormData } from '../../../task/components/sections/TaskFormPanel.svelte';
   import type { TimeLogFormData } from '../../../task/components/sections/TimeLogPanel.svelte';
   import type { ProjectDetail } from '../../types';
@@ -122,7 +127,8 @@
     if (saved) {
       selectedTaskId = saved.selectedTaskId ?? null;
       panelMode = saved.panelMode ?? 'view';
-      createTaskStatus = saved.createTaskStatus === 'Backlog' ? 'ToDo' : (saved.createTaskStatus ?? 'ToDo');
+      createTaskStatus =
+        saved.createTaskStatus === 'Backlog' ? 'ToDo' : (saved.createTaskStatus ?? 'ToDo');
       searchQuery = saved.searchQuery ?? '';
       assigneeFilter = saved.assigneeFilter ?? 'all';
       priorityFilter = saved.priorityFilter ?? 'all';
@@ -158,7 +164,7 @@
 
   const assigneeOptions = $derived([
     { value: 'all', label: 'All Assignees' },
-    ...assignees.map(a => ({ value: a.id, label: a.name })),
+    ...assignees.map((a) => ({ value: a.id, label: a.name })),
   ]);
 
   const priorityOptions = [
@@ -175,20 +181,21 @@
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(t =>
-        t.title.toLowerCase().includes(query) ||
-        (t.assignee?.name ?? '').toLowerCase().includes(query)
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query) ||
+          (t.assignee?.name ?? '').toLowerCase().includes(query)
       );
     }
 
     // Assignee filter
     if (assigneeFilter !== 'all') {
-      result = result.filter(t => t.assignee?.id === assigneeFilter);
+      result = result.filter((t) => t.assignee?.id === assigneeFilter);
     }
 
     // Priority filter
     if (priorityFilter !== 'all') {
-      result = result.filter(t => t.priority === priorityFilter);
+      result = result.filter((t) => t.priority === priorityFilter);
     }
 
     return result;
@@ -270,20 +277,20 @@
 
   async function handleStatusChange(taskId: string, newStatus: TaskStatus, targetIndex?: number) {
     // Find the task being moved
-    const taskToMove = kanbanTasks.find(t => t.id === taskId);
+    const taskToMove = kanbanTasks.find((t) => t.id === taskId);
     if (!taskToMove) return;
 
     const oldStatus = taskToMove.status;
     void oldStatus;
 
     // Optimistic update for kanban with position handling
-    kanbanTasks = kanbanTasks.filter(t => t.id !== taskId);
+    kanbanTasks = kanbanTasks.filter((t) => t.id !== taskId);
     const updatedTask = { ...taskToMove, status: newStatus };
 
     if (targetIndex !== undefined) {
       // Get tasks in target column (after removing the moved task)
-      const targetColumnTasks = kanbanTasks.filter(t => t.status === newStatus);
-      const otherTasks = kanbanTasks.filter(t => t.status !== newStatus);
+      const targetColumnTasks = kanbanTasks.filter((t) => t.status === newStatus);
+      const otherTasks = kanbanTasks.filter((t) => t.status !== newStatus);
 
       // Insert at specific position
       targetColumnTasks.splice(targetIndex, 0, updatedTask);
@@ -437,9 +444,7 @@
       <div class="flex flex-col items-center justify-center h-full gap-4">
         <Icon name="alert-circle" size="lg" class="text-red-500" />
         <p class="text-[var(--color-text-secondary)]">{error}</p>
-        <Button variant="secondary" size="sm" onclick={handleRefresh}>
-          Retry
-        </Button>
+        <Button variant="secondary" size="sm" onclick={handleRefresh}>Retry</Button>
       </div>
     {:else}
       <ContentDetailLayout
@@ -458,7 +463,11 @@
               <!-- Column 1: Search (aligned with To Do) -->
               <div class="flex-1 min-w-[240px]">
                 <div class="relative">
-                  <Icon name="search" size="sm" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                  <Icon
+                    name="search"
+                    size="sm"
+                    class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                  />
                   <Input
                     type="text"
                     placeholder="Search tasks..."
@@ -493,7 +502,12 @@
               <!-- Column 3: Clear + Count (aligned with Done) -->
               <div class="flex-1 min-w-[240px] flex items-center justify-end gap-2">
                 {#if hasActiveFilters}
-                  <Button variant="ghost" size="sm" onclick={clearFilters} class="!text-xs !px-2 !py-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onclick={clearFilters}
+                    class="!text-xs !px-2 !py-1"
+                  >
                     <Icon name="x" size="xs" />
                     Clear
                   </Button>
@@ -557,7 +571,10 @@
               onEdit={handleEdit}
               onLogTime={handleLogTime}
               onDelete={handleDeleteTask}
-              onClose={() => { selectedTaskId = null; currentTask = null; }}
+              onClose={() => {
+                selectedTaskId = null;
+                currentTask = null;
+              }}
             />
           {/if}
         {/snippet}

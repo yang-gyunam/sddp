@@ -407,9 +407,7 @@ export function getGlossaryState(): GlossaryState {
 /**
  * Subscribe to store changes
  */
-export function subscribeToGlossary(
-  callback: (state: GlossaryState) => void
-): () => void {
+export function subscribeToGlossary(callback: (state: GlossaryState) => void): () => void {
   return glossaryStore.subscribe(callback);
 }
 

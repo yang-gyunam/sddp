@@ -130,10 +130,20 @@
   {#if selectedPreset === 'custom'}
     <div class="custom-range">
       <div class="date-input">
-        <DatePicker label="From" bind:value={customFrom} onValueChange={() => handleCustomDateChange()} size="sm" />
+        <DatePicker
+          label="From"
+          bind:value={customFrom}
+          onValueChange={() => handleCustomDateChange()}
+          size="sm"
+        />
       </div>
       <div class="date-input">
-        <DatePicker label="To" bind:value={customTo} onValueChange={() => handleCustomDateChange()} size="sm" />
+        <DatePicker
+          label="To"
+          bind:value={customTo}
+          onValueChange={() => handleCustomDateChange()}
+          size="sm"
+        />
       </div>
     </div>
   {/if}
@@ -176,5 +186,4 @@
   .date-input:last-child {
     margin-bottom: 0;
   }
-
 </style>

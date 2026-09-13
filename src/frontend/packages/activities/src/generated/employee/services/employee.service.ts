@@ -146,5 +146,6 @@ export function resetEmployeeService(): void {
 export const getAllEmployees = (params?: QueryParams) => getEmployeeService().getAll(params);
 export const getEmployeeById = (id: string) => getEmployeeService().getById(id);
 export const createEmployee = (dto: CreateEmployeeDto) => getEmployeeService().create(dto);
-export const updateEmployee = (id: string, dto: UpdateEmployeeDto) => getEmployeeService().update(id, dto);
+export const updateEmployee = (id: string, dto: UpdateEmployeeDto) =>
+  getEmployeeService().update(id, dto);
 export const deleteEmployee = (id: string) => getEmployeeService().delete(id);

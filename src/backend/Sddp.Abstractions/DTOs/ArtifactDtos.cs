@@ -41,19 +41,13 @@ public record ArtifactTrackingSummaryDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-public record ArtifactRegenerateResult(
-    string ArtifactId,
-    string SpecId,
-    string ArtifactPath,
-    string NewContentHash,
-    string PreviousContentHash,
-    DateTimeOffset RegeneratedAt);
 
 public record ArtifactVerifyResult(
     bool IsValid,
     string StoredHash,
     string CurrentHash,
-    string ArtifactPath);
+    string ArtifactPath,
+    bool FileExists = true);
 
 // --- Brownfield: Artifact-to-Spec Mapping ---
 
@@ -81,3 +75,35 @@ public record UpdateMappingSourceRequest(
     string? Notes);
 
 public record ArtifactSearchResultDto(string Id, string ArtifactPath, string ArtifactType, string EntityName);
+
+public record ArtifactDescriptorDto(
+    string ArtifactId,
+    int SchemaVersion,
+    string Yaml);
+
+public record ArtifactContentDto(
+    string ArtifactId,
+    string Path,
+    string? Content,
+    string? ContentHash,
+    long SizeBytes,
+    bool IsBinary,
+    string Status,
+    string Language,
+    bool TooLarge = false,
+    long MaxBytes = 0);
+
+public record ArtifactStatusCounts(int Valid, int Modified, int Missing, int Unverified);
+
+/// <summary>
+/// A page of artifacts plus the project-wide counts.
+///
+/// Derives from PagedResult so the response keeps the same shape it always had -- items,
+/// totalCount, pageNumber and the rest stay where callers expect them, with statusCounts added
+/// alongside. TotalCount reflects the filtered set, because that is what paging is over;
+/// StatusCounts reflects the whole project, because that is what the dashboard is asking.
+/// </summary>
+public sealed class ProjectArtifactsPage : PagedResult<ArtifactTrackingSummaryDto>
+{
+    public ArtifactStatusCounts StatusCounts { get; init; } = new(0, 0, 0, 0);
+}

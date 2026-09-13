@@ -5,7 +5,12 @@
 -->
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import type { ProjectTreeNode, ProjectPageType, TimelineEvent as TimelineEventType, ProjectDetail } from '../types';
+  import type {
+    ProjectTreeNode,
+    ProjectPageType,
+    TimelineEvent as TimelineEventType,
+    ProjectDetail,
+  } from '../types';
   import {
     getFilteredProjects,
     getExpandedProjects,
@@ -32,6 +37,7 @@
     ProjectSpecsPage,
     ProjectTasksPage,
     ProjectGlossaryPage,
+    ProjectKnowledgePage,
     ProjectArtifactsPage,
     ProjectEffortPage,
     ProjectTraceabilityPage,
@@ -80,7 +86,10 @@
   let prevProjectId = $state<string | null>(null);
   $effect(() => {
     const pid = selectedProjectId;
-    if (!pid) { prevProjectId = null; return; }
+    if (!pid) {
+      prevProjectId = null;
+      return;
+    }
     if (pid === prevProjectId) return;
     const authState = getAuthState();
     const tenantId = authState.user?.tenantId;
@@ -95,16 +104,18 @@
     const authState = getAuthState();
     const tenantId = authState.user?.tenantId;
     if (tenantId) {
-      fetchProjects(tenantId).then((data) => {
-        setProjects(data);
-        // project detail
-        const pid = getSelectedNodePath()?.split('/').filter(Boolean)[0];
-        if (pid) {
-          loadProjectDetail(pid, tenantId);
-        }
-      }).catch((err) => {
-        console.error('Failed to load projects:', err);
-      });
+      fetchProjects(tenantId)
+        .then((data) => {
+          setProjects(data);
+          // project detail
+          const pid = getSelectedNodePath()?.split('/').filter(Boolean)[0];
+          if (pid) {
+            loadProjectDetail(pid, tenantId);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load projects:', err);
+        });
     }
 
     // Update local state
@@ -204,9 +215,7 @@
   <div class="flex-1 min-w-0 bg-[var(--color-bg-primary)] overflow-auto">
     {#if selectedProjectId && selectedPageType}
       {#if selectedPageType === 'dashboard'}
-        <ProjectDashboardPage
-          projectId={selectedProjectId}
-        />
+        <ProjectDashboardPage projectId={selectedProjectId} />
       {:else if selectedPageType === 'conversations'}
         <ProjectConversationsPage
           projectId={selectedProjectId}
@@ -218,30 +227,17 @@
           project={currentProject ?? undefined}
         />
       {:else if selectedPageType === 'specs'}
-        <ProjectSpecsPage
-          projectId={selectedProjectId}
-          project={currentProject ?? undefined}
-        />
+        <ProjectSpecsPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'glossary'}
-        <ProjectGlossaryPage
-          projectId={selectedProjectId}
-          project={currentProject ?? undefined}
-        />
+        <ProjectGlossaryPage projectId={selectedProjectId} project={currentProject ?? undefined} />
+      {:else if selectedPageType === 'knowledge'}
+        <ProjectKnowledgePage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'artifacts'}
-        <ProjectArtifactsPage
-          projectId={selectedProjectId}
-          project={currentProject ?? undefined}
-        />
+        <ProjectArtifactsPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'tasks'}
-        <ProjectTasksPage
-          projectId={selectedProjectId}
-          project={currentProject ?? undefined}
-        />
+        <ProjectTasksPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'effort'}
-        <ProjectEffortPage
-          projectId={selectedProjectId}
-          project={currentProject ?? undefined}
-        />
+        <ProjectEffortPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'traceability'}
         <ProjectTraceabilityPage
           projectId={selectedProjectId}

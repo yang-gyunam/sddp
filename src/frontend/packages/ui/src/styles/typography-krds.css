@@ -9,8 +9,9 @@
   /* =================================================================
      Font Family - Pretendard GOV
      ================================================================= */
-  --font-sans: 'Pretendard GOV', 'Pretendard', 'Noto Sans KR', system-ui,
-    -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans:
+    'Pretendard GOV', 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont,
+    sans-serif;
 
   /* =================================================================
      Font Weights - KRDS uses only Regular(400) and Bold(700)

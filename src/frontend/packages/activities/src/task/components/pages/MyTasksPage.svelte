@@ -21,19 +21,7 @@
 
   import type { TaskFormData } from '../sections/TaskFormPanel.svelte';
   import type { TimeLogFormData } from '../sections/TimeLogPanel.svelte';
-  import {
-    subscribeTask,
-    setSelectedTask,
-    setTaskSearchQuery,
-    setTaskFilterType,
-    setTaskViewMode,
-    selectBacklogProject,
-    setBacklogSummary,
-    setBacklogStats,
-    setBacklogLoading,
-    setMyTasksStats,
-    setTaskProjectGroups,
-  } from '../../stores';
+  import { createTaskStoreScope } from '../../stores';
   import {
     getTaskById,
     getTasks,
@@ -42,7 +30,6 @@
     deleteTask,
     updateTaskStatus,
     addTimeLog,
-
     getBacklogSummary,
     getBacklogStats,
     getMyTaskStats,
@@ -75,7 +62,27 @@
     class?: string;
   }
 
-  let { tenantId: propTenantId = '', projectId: propProjectId = '', tabId = '', hideSidebar = false, class: className = '' }: Props = $props();
+  let {
+    tenantId: propTenantId = '',
+    projectId: propProjectId = '',
+    tabId = '',
+    hideSidebar = false,
+    class: className = '',
+  }: Props = $props();
+
+  const storeScope = createTaskStoreScope();
+  const {
+    setSelectedTask,
+    setTaskSearchQuery,
+    setTaskFilterType,
+    setTaskViewMode,
+    selectBacklogProject,
+    setBacklogSummary,
+    setBacklogStats,
+    setBacklogLoading,
+    setMyTasksStats,
+    setTaskProjectGroups,
+  } = storeScope;
 
   // Auth state
   let authState = $state(getAuthState());
@@ -132,8 +139,9 @@
     let result = kanbanTasks;
     if (localSearch.trim()) {
       const q = localSearch.toLowerCase();
-      result = result.filter((t) =>
-        t.title.toLowerCase().includes(q) || (t.assignee?.name ?? '').toLowerCase().includes(q)
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) || (t.assignee?.name ?? '').toLowerCase().includes(q)
       );
     }
     if (priorityFilter !== 'all') {
@@ -156,7 +164,6 @@
   // Panel mode state
   let panelMode = $state<PanelMode>('view');
   let createTaskStatus = $state<TaskStatus>('ToDo');
-
 
   // Tab State Persistence
   interface TasksTabState {
@@ -201,7 +208,7 @@
 
   // Subscribe to store
   $effect(() => {
-    const unsubscribe = subscribeTask((state) => {
+    const unsubscribe = storeScope.subscribe((state) => {
       selectedTaskId = state.selectedTaskId;
       searchQuery = state.searchQuery;
       filterType = state.filterType;
@@ -268,21 +275,23 @@
         groupedTasks[pid].push(mapToTaskSummary(dto, ''));
       }
 
-      const groups: import('../../types').ProjectTaskGroup[] = Object.entries(groupedTasks).map(([projId, tasks]) => ({
-        projectId: projId,
-        projectName: tasks[0]?.projectName ?? projId,
-        expanded: true,
-        stats: {
+      const groups: import('../../types').ProjectTaskGroup[] = Object.entries(groupedTasks).map(
+        ([projId, tasks]) => ({
           projectId: projId,
           projectName: tasks[0]?.projectName ?? projId,
-          toDoCount: tasks.filter((t) => t.status === 'ToDo').length,
-          inProgressCount: tasks.filter((t) => t.status === 'InProgress').length,
-          doneCount: tasks.filter((t) => t.status === 'Done').length,
-          totalCount: tasks.length,
-          activeCount: tasks.filter((t) => t.status !== 'Done').length,
-        },
-        tasks,
-      }));
+          expanded: true,
+          stats: {
+            projectId: projId,
+            projectName: tasks[0]?.projectName ?? projId,
+            toDoCount: tasks.filter((t) => t.status === 'ToDo').length,
+            inProgressCount: tasks.filter((t) => t.status === 'InProgress').length,
+            doneCount: tasks.filter((t) => t.status === 'Done').length,
+            totalCount: tasks.length,
+            activeCount: tasks.filter((t) => t.status !== 'Done').length,
+          },
+          tasks,
+        })
+      );
 
       setTaskProjectGroups(groups);
     } catch (err) {
@@ -446,7 +455,6 @@
     }
   }
 
-
   async function handleSaveTask(data: TaskFormData) {
     if (!tenantId) return;
 
@@ -553,7 +561,11 @@
             <div class="flex gap-2">
               <div class="flex-1 min-w-[240px]">
                 <div class="relative">
-                  <Icon name="search" size="sm" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+                  <Icon
+                    name="search"
+                    size="sm"
+                    class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                  />
                   <Input
                     type="text"
                     placeholder="Search tasks..."
@@ -576,7 +588,12 @@
               </div>
               <div class="flex-1 min-w-[240px] flex items-center justify-end gap-2">
                 {#if hasActiveFilters}
-                  <Button variant="ghost" size="sm" onclick={clearFilters} class="!text-xs !px-2 !py-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onclick={clearFilters}
+                    class="!text-xs !px-2 !py-1"
+                  >
                     <Icon name="x" size="xs" />
                     Clear
                   </Button>
@@ -609,7 +626,8 @@
         {#if panelMode === 'create'}
           <TaskFormPanel
             mode="create"
-            projectId={propProjectId || (viewMode === 'backlog' ? (selectedProjectId ?? '') : (currentTask?.projectId || ''))}
+            projectId={propProjectId ||
+              (viewMode === 'backlog' ? (selectedProjectId ?? '') : currentTask?.projectId || '')}
             projectName=""
             defaultStatus={createTaskStatus}
             allowBacklogStatus={viewMode === 'backlog'}

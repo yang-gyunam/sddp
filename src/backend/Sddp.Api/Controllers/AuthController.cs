@@ -1,11 +1,16 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Exceptions;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Api.Security;
 using Sddp.Application.Features.Auth.Commands;
 
 namespace Sddp.Api.Controllers;
@@ -18,33 +23,60 @@ public class AuthController : BaseApiController
 {
     private readonly ISender _sender;
     private readonly ILogger<AuthController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(ISender sender, ILogger<AuthController> logger)
+    public AuthController(
+        ISender sender,
+        ILogger<AuthController> logger,
+        IConfiguration configuration)
     {
         _sender = sender;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [HttpPost("login")]
+    [ResourceScopeExempt("Anonymous login endpoint: no session, tenant or project exists yet, and the login rate limiter is what bounds abuse.")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthenticationSecurity.LoginPolicyName)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var response = await _sender.Send(new LoginCommand(request), cancellationToken);
+        LoginResponse response;
+        try
+        {
+            response = await _sender.Send(new LoginCommand(request), cancellationToken);
+        }
+        catch (TenantSelectionRequiredException selection)
+        {
+            return Conflict(new ApiResponse<object>
+            {
+                Success = false, ErrorCode = selection.ErrorCode, ErrorMessage = selection.Message,
+                Data = new { selection.TenantIds }
+            });
+        }
+        SetRefreshSessionCookies(response.RefreshToken);
         SetHubAccessTokenCookie(response.AccessToken, response.ExpiresIn);
         return Ok(ApiResponse<LoginResponse>.Ok(response));
     }
 
     [HttpPost("refresh")]
+    [ResourceScopeExempt("Anonymous refresh keyed by the caller's own refresh cookie and a matching CSRF header; no project-owned resource is addressed.")]
     [AllowAnonymous]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest? request, CancellationToken cancellationToken)
+    public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
     {
-        var refreshToken = ResolveRefreshToken(request);
+        if (!HasValidCsrfToken())
+        {
+            return CsrfValidationFailed();
+        }
+
+        var refreshToken = ResolveRefreshToken();
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
             throw new UnauthorizedException("Refresh token is required");
         }
 
         var response = await _sender.Send(new RefreshTokenCommand(refreshToken), cancellationToken);
+        SetRefreshSessionCookies(response.RefreshToken);
         SetHubAccessTokenCookie(response.AccessToken, response.ExpiresIn);
         return Ok(ApiResponse<TokenResponse>.Ok(response));
     }
@@ -54,6 +86,9 @@ public class AuthController : BaseApiController
     /// POST /api/auth/change-password
     /// </summary>
     [HttpPost("change-password")]
+    [ResourceScopeExempt("Keyed by the caller's own NameIdentifier claim, so a user can only ever change their own password; no project takes part.")]
+    [Authorize]
+    [MutationAuthorizationExempt("An authenticated user may change only their own password.")]
     [Authorize]
     public async Task<IActionResult> ChangePassword(
         [FromBody] ChangePasswordRequest request,
@@ -70,25 +105,95 @@ public class AuthController : BaseApiController
     }
 
     [HttpPost("logout")]
-    [Authorize]
-    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest? request, CancellationToken cancellationToken)
+    [ResourceScopeExempt("Anonymous logout keyed by the caller's own refresh cookie and a matching CSRF header; no project-owned resource is addressed.")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!HasValidCsrfToken())
+        {
+            return CsrfValidationFailed();
+        }
 
-        var refreshToken = ResolveRefreshToken(request);
+        var refreshToken = ResolveRefreshToken();
         await _sender.Send(new LogoutCommand(refreshToken), cancellationToken);
+        ClearRefreshSessionCookies();
         ClearHubAccessTokenCookie();
 
-        _logger.LogInformation("User logged out: {UserId}", userId);
+        _logger.LogInformation("Refresh-token session logged out");
 
         return NoContent();
     }
 
-    private string? ResolveRefreshToken(RefreshTokenRequest? request)
+    private string? ResolveRefreshToken()
     {
-        return string.IsNullOrWhiteSpace(request?.RefreshToken)
-            ? null
-            : request.RefreshToken;
+        var refreshToken = Request.Cookies[AuthCookieNames.RefreshToken];
+        return string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken;
+    }
+
+    private bool HasValidCsrfToken()
+    {
+        var cookieToken = Request.Cookies[AuthCookieNames.CsrfToken];
+        var headerToken = Request.Headers[AuthCookieNames.CsrfHeader].ToString();
+        if (string.IsNullOrWhiteSpace(cookieToken)
+            || string.IsNullOrWhiteSpace(headerToken)
+            || cookieToken.Length != headerToken.Length)
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(cookieToken),
+            Encoding.UTF8.GetBytes(headerToken));
+    }
+
+    private ObjectResult CsrfValidationFailed()
+    {
+        return Problem(
+            statusCode: StatusCodes.Status403Forbidden,
+            title: "CSRF validation failed",
+            detail: "A matching CSRF cookie and X-CSRF-Token header are required.");
+    }
+
+    private void SetRefreshSessionCookies(string refreshToken)
+    {
+        var maxAge = TimeSpan.FromDays(Math.Max(
+            1,
+            _configuration.GetValue("Jwt:RefreshTokenExpirationDays", 7)));
+        var csrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+        Response.Cookies.Append(
+            AuthCookieNames.RefreshToken,
+            refreshToken,
+            CreateRefreshCookieOptions(httpOnly: true, maxAge: maxAge));
+        Response.Cookies.Append(
+            AuthCookieNames.CsrfToken,
+            csrfToken,
+            CreateRefreshCookieOptions(httpOnly: false, maxAge: maxAge));
+    }
+
+    private void ClearRefreshSessionCookies()
+    {
+        Response.Cookies.Delete(
+            AuthCookieNames.RefreshToken,
+            CreateRefreshCookieOptions(httpOnly: true));
+        Response.Cookies.Delete(
+            AuthCookieNames.CsrfToken,
+            CreateRefreshCookieOptions(httpOnly: false));
+    }
+
+    private static CookieOptions CreateRefreshCookieOptions(
+        bool httpOnly,
+        TimeSpan? maxAge = null)
+    {
+        return new CookieOptions
+        {
+            HttpOnly = httpOnly,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/",
+            MaxAge = maxAge,
+            IsEssential = true
+        };
     }
 
     private void SetHubAccessTokenCookie(string accessToken, int expiresInSeconds)

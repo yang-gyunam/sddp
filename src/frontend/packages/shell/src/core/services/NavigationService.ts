@@ -6,6 +6,7 @@
  */
 
 import { tabActions, globalActiveTab, allTabs } from '../../stores/tabs.store';
+import { requestCloseTab } from '../../stores/tab-close';
 import { get } from 'svelte/store';
 import type { Tab } from '../../types';
 
@@ -104,7 +105,12 @@ class NavigationServiceImpl {
   /**
    * Navigate to a Spec
    */
-  navigateToSpec(specId: string, title?: string, component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToSpec(
+    specId: string,
+    title?: string,
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     return this.navigateTo({
       path: `/spec/${specId}`,
       title: title ?? `Spec ${specId.slice(0, 8)}`,
@@ -117,7 +123,12 @@ class NavigationServiceImpl {
   /**
    * Navigate to a Conversation
    */
-  navigateToConversation(conversationId: string, title?: string, component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToConversation(
+    conversationId: string,
+    title?: string,
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     return this.navigateTo({
       path: `/conversation/${conversationId}`,
       title: title ?? `Conversation ${conversationId.slice(0, 8)}`,
@@ -130,7 +141,13 @@ class NavigationServiceImpl {
   /**
    * Navigate to a Channel
    */
-  navigateToChannel(channelId: string, channelName: string, channelType: 'Channel' | 'Forum', component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToChannel(
+    channelId: string,
+    channelName: string,
+    channelType: 'Channel' | 'Forum',
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     const isChat = channelType === 'Channel';
     return this.navigateTo({
       path: isChat ? `/channel/${channelId}` : `/forum/${channelId}`,
@@ -144,7 +161,12 @@ class NavigationServiceImpl {
   /**
    * Navigate to a Requirement
    */
-  navigateToRequirement(requirementId: string, title?: string, component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToRequirement(
+    requirementId: string,
+    title?: string,
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     return this.navigateTo({
       path: `/requirement/${requirementId}`,
       title: title ?? `Requirement ${requirementId.slice(0, 8)}`,
@@ -157,7 +179,12 @@ class NavigationServiceImpl {
   /**
    * Navigate to a Glossary Term
    */
-  navigateToGlossary(termId: string, term?: string, component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToGlossary(
+    termId: string,
+    term?: string,
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     return this.navigateTo({
       path: `/glossary/${termId}`,
       title: term ?? `Term ${termId.slice(0, 8)}`,
@@ -170,7 +197,12 @@ class NavigationServiceImpl {
   /**
    * Navigate to an Artifact
    */
-  navigateToArtifact(artifactId: string, title?: string, component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToArtifact(
+    artifactId: string,
+    title?: string,
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     return this.navigateTo({
       path: `/artifact/${artifactId}`,
       title: title ?? `Artifact ${artifactId.slice(0, 8)}`,
@@ -183,7 +215,12 @@ class NavigationServiceImpl {
   /**
    * Navigate to Direct Message
    */
-  navigateToDM(userId: string, userName: string, component?: SvelteComponent, props?: Record<string, unknown>): Tab | null {
+  navigateToDM(
+    userId: string,
+    userName: string,
+    component?: SvelteComponent,
+    props?: Record<string, unknown>
+  ): Tab | null {
     return this.navigateTo({
       path: `/dm/${userId}`,
       title: `@${userName}`,
@@ -238,11 +275,10 @@ class NavigationServiceImpl {
   /**
    * Close current tab and navigate to previous
    */
-  closeAndNavigateBack(): void {
+  async closeAndNavigateBack(): Promise<void> {
     const currentTab = get(globalActiveTab);
-    if (currentTab) {
-      tabActions.closeTab(currentTab.id);
-    }
+    // A cancelled close leaves the tab in place, so navigating away from it would be a lie.
+    if (currentTab && !(await requestCloseTab(currentTab.id))) return;
     this.navigateBack();
   }
 
@@ -444,9 +480,11 @@ export const navigationService = new NavigationServiceImpl();
 
 export const navigateTo = navigationService.navigateTo.bind(navigationService);
 export const navigateToSpec = navigationService.navigateToSpec.bind(navigationService);
-export const navigateToConversation = navigationService.navigateToConversation.bind(navigationService);
+export const navigateToConversation =
+  navigationService.navigateToConversation.bind(navigationService);
 export const navigateToChannel = navigationService.navigateToChannel.bind(navigationService);
-export const navigateToRequirement = navigationService.navigateToRequirement.bind(navigationService);
+export const navigateToRequirement =
+  navigationService.navigateToRequirement.bind(navigationService);
 export const navigateToGlossary = navigationService.navigateToGlossary.bind(navigationService);
 export const navigateToArtifact = navigationService.navigateToArtifact.bind(navigationService);
 export const navigateToDM = navigationService.navigateToDM.bind(navigationService);

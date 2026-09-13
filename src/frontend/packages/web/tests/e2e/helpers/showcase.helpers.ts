@@ -47,17 +47,7 @@ type ShowcaseProjectContext = ShowcaseAuthContext & {
 
 // ========== Constants ==========
 
-export const DEVFLOW_ACTORS: Actor[] = [
-  { key: 'alex', name: 'Alex Kim', username: 'alex.kim', password: 'Test@123!', role: 'PRODUCT_OWNER' },
-  { key: 'jordan', name: 'Jordan Lee', username: 'jordan.lee', password: 'Test@123!', role: 'DOMAIN_EXPERT' },
-  { key: 'taylor', name: 'Taylor Park', username: 'taylor.park', password: 'Test@123!', role: 'DEVELOPER' },
-  { key: 'morgan', name: 'Morgan Choi', username: 'morgan.choi', password: 'Test@123!', role: 'DEVELOPER' },
-  { key: 'casey', name: 'Casey Seo', username: 'casey.seo', password: 'Test@123!', role: 'REVIEWER' },
-  { key: 'riley', name: 'Riley Han', username: 'riley.han', password: 'Test@123!', role: 'QA_TESTER' },
-];
-
 const SHOWCASE_PROJECT_PREFERENCES = [
-  'DevFlow MVP 1.0',
   'OnBrick Payment System',
   'E2E Test Project',
 ] as const;
@@ -71,6 +61,39 @@ export function parseEnvInt(name: string, fallback: number): number {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function parseEnvFlag(name: string): boolean | undefined {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (!value) {
+    return undefined;
+  }
+  if (['1', 'true', 'yes', 'on'].includes(value)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(value)) {
+    return false;
+  }
+  return undefined;
+}
+
+export function shouldLaunchShowcaseHeaded(): boolean {
+  const explicitHeadless = parseEnvFlag('SHOWCASE_HEADLESS');
+  if (explicitHeadless !== undefined) {
+    return !explicitHeadless;
+  }
+
+  const explicitShowcaseHeaded = parseEnvFlag('SHOWCASE_HEADED');
+  if (explicitShowcaseHeaded !== undefined) {
+    return explicitShowcaseHeaded;
+  }
+
+  const explicitHeaded = parseEnvFlag('HEADED');
+  if (explicitHeaded !== undefined) {
+    return explicitHeaded;
+  }
+
+  return parseEnvFlag('CI') !== true;
 }
 
 function escapeRegex(input: string): string {
@@ -218,13 +241,18 @@ export class DemoController {
  * Start an actor session in an independent browser window.
  */
 export async function launchActorSession(actor: Actor, slot: WindowSlot): Promise<ActorSession> {
-  console.log(`[LAUNCH] ${actor.key} (${actor.role}) — browser starting...`);
+  const headed = shouldLaunchShowcaseHeaded();
+  console.log(`[LAUNCH] ${actor.key} (${actor.role}) — ${headed ? 'headed' : 'headless'} browser starting...`);
   const browser = await chromium.launch({
-    headless: false,
+    headless: !headed,
     args: [
-      `--window-size=${slot.width},${slot.height}`,
-      `--window-position=${slot.x},${slot.y}`,
       '--disable-infobars',
+      ...(headed
+        ? [
+            `--window-size=${slot.width},${slot.height}`,
+            `--window-position=${slot.x},${slot.y}`,
+          ]
+        : []),
     ],
   });
 
@@ -233,8 +261,10 @@ export async function launchActorSession(actor: Actor, slot: WindowSlot): Promis
     baseURL: process.env.E2E_WEB_BASE_URL ?? 'http://localhost:3500',
   });
   const page = await context.newPage();
-  await page.bringToFront();
-  console.log(`[LAUNCH] ${actor.key} — browser ready at (${slot.x},${slot.y})`);
+  if (headed) {
+    await page.bringToFront();
+  }
+  console.log(`[LAUNCH] ${actor.key} — browser ready${headed ? ` at (${slot.x},${slot.y})` : ''}`);
 
   return {
     actor,

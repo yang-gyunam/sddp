@@ -1,12 +1,5 @@
 export type FieldType =
-  | 'String'
-  | 'Int'
-  | 'Long'
-  | 'Decimal'
-  | 'Boolean'
-  | 'DateTime'
-  | 'Guid'
-  | 'Json';
+  'String' | 'Int' | 'Long' | 'Decimal' | 'Boolean' | 'DateTime' | 'Guid' | 'Json';
 
 export interface EntityField {
   id: string;

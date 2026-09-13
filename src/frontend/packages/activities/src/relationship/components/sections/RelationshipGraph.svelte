@@ -1,12 +1,15 @@
 <!-- Section: RelationshipGraph -->
 <script lang="ts">
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-  import type { RelationshipGraphData, GraphNode, GraphEdge, EntityType, RelationType, GraphLayoutMode } from '../../types';
-  import {
-    DEFAULT_GRAPH_FILTERS,
-    ENTITY_TYPE_STYLES,
-    RELATION_TYPE_STYLES,
+  import type {
+    RelationshipGraphData,
+    GraphNode,
+    GraphEdge,
+    EntityType,
+    RelationType,
+    GraphLayoutMode,
   } from '../../types';
+  import { DEFAULT_GRAPH_FILTERS, ENTITY_TYPE_STYLES, RELATION_TYPE_STYLES } from '../../types';
   import ForceGraph from './ForceGraph.svelte';
   import StaticGraph from './StaticGraph.svelte';
   import { Icon, Button, Checkbox } from '@sddp/ui';
@@ -97,9 +100,12 @@
     return {
       ...data,
       nodes: [...baseNodes, ...clusterNodes],
-      edges: [...data.edges.filter((edge) =>
-        baseNodes.some((node) => node.id === edge.sourceId || node.id === edge.targetId)
-      ), ...clusterEdges],
+      edges: [
+        ...data.edges.filter((edge) =>
+          baseNodes.some((node) => node.id === edge.sourceId || node.id === edge.targetId)
+        ),
+        ...clusterEdges,
+      ],
     };
   }
 
@@ -109,8 +115,8 @@
     const allowedEntityTypes = new Set(entityFilters);
     const allowedRelationTypes = new Set(relationFilters);
 
-    const nodes = clustered.nodes.filter((node) =>
-      node.id === clustered.rootEntityId || allowedEntityTypes.has(node.entityType)
+    const nodes = clustered.nodes.filter(
+      (node) => node.id === clustered.rootEntityId || allowedEntityTypes.has(node.entityType)
     );
     const nodeIds = new Set(nodes.map((node) => node.id));
     const edges = clustered.edges.filter(
@@ -139,8 +145,8 @@
               variant="unstyled"
               class="px-2 py-1 rounded border text-[var(--color-text-secondary)]
                 {layoutMode === mode
-                  ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
-                  : 'border-[var(--color-border-secondary)]'}"
+                ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
+                : 'border-[var(--color-border-secondary)]'}"
               onclick={() => (layoutMode = mode as GraphLayoutMode)}
             >
               {mode}
@@ -161,8 +167,8 @@
             variant="unstyled"
             class="px-2 py-1 rounded border text-[var(--color-text-secondary)] flex items-center gap-1
               {entityFilters.has(type)
-                ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
-                : 'border-[var(--color-border-secondary)] opacity-60'}"
+              ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
+              : 'border-[var(--color-border-secondary)] opacity-60'}"
             onclick={() => toggleEntity(type)}
           >
             <Icon name={style.icon} size="xs" />
@@ -179,8 +185,8 @@
             variant="unstyled"
             class="px-2 py-1 rounded border text-[var(--color-text-secondary)] flex items-center gap-1
               {relationFilters.has(type)
-                ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
-                : 'border-[var(--color-border-secondary)] opacity-60'}"
+              ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
+              : 'border-[var(--color-border-secondary)] opacity-60'}"
             onclick={() => toggleRelation(type)}
           >
             <Icon name={style.icon} size="xs" />

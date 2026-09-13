@@ -44,9 +44,7 @@
   ];
 
   // Total count
-  const totalCount = $derived(
-    projectGroups.reduce((sum, g) => sum + g.specs.length, 0)
-  );
+  const totalCount = $derived(projectGroups.reduce((sum, g) => sum + g.specs.length, 0));
 
   function handleSearchInput(e: Event) {
     const target = e.target as HTMLInputElement;
@@ -104,8 +102,8 @@
           class="filter-btn flex items-center gap-1 px-2 py-1 text-xs rounded
                  transition-colors
                  {filterType === option.value
-                   ? 'bg-[var(--color-accent-primary)] text-white'
-                   : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]/80'}"
+            ? 'bg-[var(--color-accent-primary)] text-white'
+            : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]/80'}"
           onclick={() => onFilterChange?.(option.value)}
         >
           <Icon name={option.icon} size="xs" />
@@ -116,11 +114,16 @@
   </div>
 
   <!-- List Header -->
-  <div class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+  <div
+    class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
+  >
     <span class="w-4"></span>
     <span class="w-16 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Code</span>
-    <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Title</span>
-    <span class="w-8 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-right">Status</span>
+    <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Title</span
+    >
+    <span class="w-8 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-right"
+      >Status</span
+    >
   </div>
 
   <!-- Project Groups -->

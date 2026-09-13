@@ -69,12 +69,12 @@
   }
 
   .audit-icon.login {
-    background: var(--color-info)/15;
+    background: var(--color-info) / 15;
     color: var(--color-info);
   }
 
   .audit-icon.logout {
-    background: var(--color-neutral-500)/15;
+    background: var(--color-neutral-500) / 15;
     color: var(--color-neutral-500);
   }
 

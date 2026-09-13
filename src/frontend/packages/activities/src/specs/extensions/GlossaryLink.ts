@@ -70,7 +70,7 @@ export const GlossaryLink = Mark.create({
       mergeAttributes(HTMLAttributes, {
         'data-glossary-term': 'true',
         class:
-          'glossary-link text-[var(--color-accent-primary)] underline decoration-dotted decoration-1 underline-offset-2 cursor-help hover:decoration-solid',
+          'glossary-link text-[var(--color-accent-text)] underline decoration-dotted decoration-1 underline-offset-2 cursor-help hover:decoration-solid',
         title: HTMLAttributes['data-term'] || 'Glossary term',
       }),
       0,

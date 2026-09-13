@@ -1,6 +1,10 @@
 // Settings Services
 export { default as SettingsService } from './SettingsService';
-export { getSettingsService, resetSettingsService, SettingsService as SettingsServiceClass } from './SettingsService';
+export {
+  getSettingsService,
+  resetSettingsService,
+  SettingsService as SettingsServiceClass,
+} from './SettingsService';
 
 // User Management Services
 export {
@@ -8,6 +12,7 @@ export {
   getSystemUserById,
   createSystemUser,
   UserManagementService,
+  createUserManagementService,
   getUserManagementService,
   resetUserManagementService,
 } from './UserManagementService';
@@ -18,6 +23,7 @@ export {
   getRoles,
   getRoleById,
   RoleService,
+  createRoleService,
   getRoleService,
   resetRoleService,
 } from './RoleService';
@@ -28,6 +34,7 @@ export {
   getAuditLogs,
   getAuditLogById,
   AuditLogService,
+  createAuditLogService,
   getAuditLogService,
   resetAuditLogService,
 } from './AuditLogService';
@@ -35,6 +42,7 @@ export type { GetAuditLogsParams, PagedAuditLogs } from './AuditLogService';
 
 // System Config Services
 export {
+  createSystemConfigService,
   getSystemConfigService,
   resetSystemConfigService,
   type SystemConfigService,

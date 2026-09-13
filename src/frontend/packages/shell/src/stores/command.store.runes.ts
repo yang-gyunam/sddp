@@ -44,13 +44,11 @@ function createDefaultCommands(dependencies: CommandStoreDependencies): Command[
       icon: 'x-circle',
       action: () => {
         const state = dependencies.getTabsState();
-        state.groups.forEach((group) => {
-          group.tabs.forEach((tab) => {
-            if (tab.closable !== false) {
-              dependencies.closeTab(tab.id, group.id);
-            }
-          });
-        });
+        dependencies.closeTabs(
+          state.groups.flatMap((group) =>
+            group.tabs.filter((tab) => tab.closable !== false).map((tab) => tab.id)
+          )
+        );
       },
       when: () => {
         const state = dependencies.getTabsState();
@@ -178,7 +176,8 @@ function filterCommands(query: string, commands: Command[]): Command[] {
   return availableCommands
     .filter((command) => {
       const labelMatch = command.label.toLowerCase().includes(normalizedQuery);
-      const descriptionMatch = command.description?.toLowerCase().includes(normalizedQuery) || false;
+      const descriptionMatch =
+        command.description?.toLowerCase().includes(normalizedQuery) || false;
       const categoryMatch = command.category.toLowerCase().includes(normalizedQuery);
       return labelMatch || descriptionMatch || categoryMatch;
     })
@@ -365,7 +364,8 @@ export function createRunesCommandPaletteStore(
       registeredCommands = registeredCommands.filter((command) => command.id !== commandId);
     },
     getAllCommands: () => [...registeredCommands],
-    getCommandsByCategory: (categoryId) => registeredCommands.filter((command) => command.category === categoryId),
+    getCommandsByCategory: (categoryId) =>
+      registeredCommands.filter((command) => command.category === categoryId),
     getState: () => snapshot(),
   };
 }

@@ -7,7 +7,10 @@
   import { untrack } from 'svelte';
   import { SearchField, Spinner } from '@sddp/ui';
   import { Modal, Avatar, EmptyState, UserListItem, toast } from '@sddp/shell';
-  import { getConversationService, type InvitableUser } from '../../services/ConversationService';
+  import {
+    createConversationService,
+    type InvitableUser,
+  } from '../../services/ConversationService';
 
   interface Props {
     open: boolean;
@@ -18,14 +21,8 @@
     onSendInvitation: (userId: string, displayName: string) => Promise<void>;
   }
 
-  let {
-    open,
-    tenantId,
-    conversationId,
-    conversationName,
-    onClose,
-    onSendInvitation,
-  }: Props = $props();
+  let { open, tenantId, conversationId, conversationName, onClose, onSendInvitation }: Props =
+    $props();
 
   let searchQuery = $state('');
   let users = $state<InvitableUser[]>([]);
@@ -35,8 +32,7 @@
   async function loadUsers(search?: string): Promise<void> {
     loading = true;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, '');
+      const service = createConversationService(tenantId);
       users = await service.getInvitableUsers(conversationId, search);
     } catch {
       users = [];
@@ -73,12 +69,7 @@
   }
 </script>
 
-<Modal
-  {open}
-  title="Invite to {conversationName}"
-  size="md"
-  onClose={onClose}
->
+<Modal {open} title="Invite to {conversationName}" size="md" {onClose}>
   <SearchField
     bind:value={searchQuery}
     placeholder="Search users by name or email..."

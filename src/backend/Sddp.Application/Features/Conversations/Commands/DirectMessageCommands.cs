@@ -2,6 +2,7 @@ using MediatR;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Exceptions;
+using Sddp.Abstractions.Events;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Requests;
@@ -598,12 +599,12 @@ public sealed record ConcludeDirectMessageCommand(
 public sealed class ConcludeDirectMessageCommandHandler : IRequestHandler<ConcludeDirectMessageCommand, ConversationSummaryDto?>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConversationHubService _hubService;
+    private readonly IOutboxEnqueuer _outbox;
 
-    public ConcludeDirectMessageCommandHandler(IUnitOfWork unitOfWork, IConversationHubService hubService)
+    public ConcludeDirectMessageCommandHandler(IUnitOfWork unitOfWork, IOutboxEnqueuer outbox)
     {
         _unitOfWork = unitOfWork;
-        _hubService = hubService;
+        _outbox = outbox;
     }
 
     public async Task<ConversationSummaryDto?> Handle(ConcludeDirectMessageCommand request, CancellationToken cancellationToken)
@@ -641,8 +642,17 @@ public sealed class ConcludeDirectMessageCommandHandler : IRequestHandler<Conclu
         var memberUserIds = allMembersList.Select(m => m.UserId.ToString()).ToList();
         var conversationIdStr = request.ConversationId.ToString();
 
-        await (_hubService.BroadcastConversationClosedAsync(conversationIdStr, request.DecisionSpecId?.ToString(), requesterName)).ConfigureAwait(false);
-        await (_hubService.NotifyDMConcludedAsync(memberUserIds, conversationIdStr, requesterName)).ConfigureAwait(false);
+        await (_outbox.EnqueueAsync(
+            new ConversationClosedEvent(
+                conversationIdStr, request.DecisionSpecId?.ToString(), requesterName),
+            "direct_message",
+            request.ConversationId,
+            cancellationToken)).ConfigureAwait(false);
+        await (_outbox.EnqueueAsync(
+            new DirectMessageConcludedEvent(memberUserIds, conversationIdStr, requesterName),
+            "direct_message",
+            request.ConversationId,
+            cancellationToken)).ConfigureAwait(false);
 
         request.AuditLog = new AuditLogRequest(
             ActorId: request.RequestUserId,

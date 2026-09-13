@@ -2,9 +2,7 @@ import type { Subscriber, Unsubscriber } from 'svelte/store';
 import type { TabStateMap, TabStateStoreLike } from './tab-state.store';
 
 function cloneTabStateMap(map: TabStateMap): TabStateMap {
-  return Object.fromEntries(
-    Object.entries(map).map(([tabId, state]) => [tabId, { ...state }])
-  );
+  return Object.fromEntries(Object.entries(map).map(([tabId, state]) => [tabId, { ...state }]));
 }
 
 export function createRunesTabStateStore(initialState: TabStateMap): TabStateStoreLike {

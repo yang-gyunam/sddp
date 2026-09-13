@@ -30,6 +30,12 @@ export interface Activity {
   component?: unknown;
 }
 
+export interface LazyComponentReference {
+  readonly kind: 'sddp-lazy-component';
+  readonly id: string;
+  load: () => Promise<unknown>;
+}
+
 // Tab system types
 export interface Tab {
   id: string;

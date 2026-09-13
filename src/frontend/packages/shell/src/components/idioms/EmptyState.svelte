@@ -23,29 +23,19 @@
     class?: string;
   }
 
-  let {
-    icon,
-    heading,
-    subtext,
-    action,
-    iconSize = 'xl',
-    class: className = '',
-  }: Props = $props();
+  let { icon, heading, subtext, action, iconSize = 'xl', class: className = '' }: Props = $props();
 </script>
 
-<div class="flex flex-col items-center justify-center h-full p-8 text-center text-[var(--color-text-tertiary)] {className}">
+<div
+  class="flex flex-col items-center justify-center h-full p-8 text-center text-[var(--color-text-tertiary)] {className}"
+>
   <Icon name={icon} size={iconSize} class="mb-4 opacity-50" />
   <p class="text-sm text-[var(--color-text-secondary)]">{heading}</p>
   {#if subtext}
     <p class="text-xs mt-2 text-[var(--color-text-muted)]">{subtext}</p>
   {/if}
   {#if action}
-    <Button
-      variant="primary"
-      size="sm"
-      onclick={action.onclick}
-      class="mt-4"
-    >
+    <Button variant="primary" size="sm" onclick={action.onclick} class="mt-4">
       {action.label}
     </Button>
   {/if}

@@ -2,11 +2,21 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { Icon, IconButton, Button, Spinner, ResizeHandle } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, EmptyState, Dropdown, getTabState, setTabState } from '@sddp/shell';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    EmptyState,
+    Dropdown,
+    getTabState,
+    setTabState,
+  } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail } from '../../types';
   import type { EntityType } from '../../../relationship/types';
-  import { ENTITY_TYPE_STYLES } from '../../../relationship/types';
+  import { ENTITY_TYPE_STYLES, CROSS_LINK_STYLE } from '../../../relationship/types';
+  import { CROSS_LINK_FOCUS } from '../../../relationship/graph';
+  import type { TraceabilityFocus } from '../../../relationship/graph';
   import { getTraceabilityMap } from '../../../relationship/services/TraceabilityService';
   import { TangledTreeGraph } from '../../../relationship/components/sections';
   import type { TraceabilityMapData, DetailPanelEntity } from '../../../relationship/types';
@@ -33,6 +43,7 @@
   let showCrossLinks = $state(true);
   let showLabels = $state(true);
   let orientation = $state<'horizontal' | 'vertical'>('horizontal');
+  let focusedEntityType = $state<TraceabilityFocus | null>(null);
 
   // Detail panel state
   let openedEntities = $state<DetailPanelEntity[]>([]);
@@ -53,6 +64,7 @@
     showLabels: boolean;
     orientation: 'horizontal' | 'vertical';
     detailPanelHeight: number;
+    focusedEntityType: TraceabilityFocus | null;
   }
 
   const tabStateKey = $derived(tabId || `traceability-${projectId}`);
@@ -68,6 +80,7 @@
       showLabels = saved.showLabels ?? true;
       orientation = saved.orientation ?? 'horizontal';
       detailPanelHeight = saved.detailPanelHeight ?? 300;
+      focusedEntityType = saved.focusedEntityType ?? null;
     }
     restoredKey = tabStateKey;
     isRestored = true;
@@ -81,6 +94,7 @@
       showLabels,
       orientation,
       detailPanelHeight,
+      focusedEntityType,
     });
   });
 
@@ -144,6 +158,21 @@
     loadData();
   }
 
+  function toggleEntityTypeFocus(focus: TraceabilityFocus) {
+    focusedEntityType = focusedEntityType === focus ? null : focus;
+  }
+
+  /**
+   * Everything the graph toolbar can change, back to defaults. Opened detail tabs are
+   * deliberately left alone — they are the user's reading list, not a view setting.
+   */
+  function resetGraphView() {
+    focusedEntityType = null;
+    showCrossLinks = true;
+    showLabels = true;
+    orientation = 'horizontal';
+  }
+
   function handleResizeStart(e: PointerEvent) {
     e.preventDefault();
     isResizing = true;
@@ -154,7 +183,10 @@
       if (resizeRafId !== null) cancelAnimationFrame(resizeRafId);
       resizeRafId = requestAnimationFrame(() => {
         const delta = startY - moveEvent.clientY;
-        detailPanelHeight = Math.min(MAX_DETAIL_HEIGHT, Math.max(MIN_DETAIL_HEIGHT, startHeight + delta));
+        detailPanelHeight = Math.min(
+          MAX_DETAIL_HEIGHT,
+          Math.max(MIN_DETAIL_HEIGHT, startHeight + delta)
+        );
         resizeRafId = null;
       });
     }
@@ -186,22 +218,41 @@
           onclick={handleRefresh}
         />
         <Dropdown position="bottom-right">
-          {#snippet trigger()}
-            <IconButton icon="more-vertical" size="sm" variant="ghost" title="Options" />
+          {#snippet trigger({ toggle, open })}
+            <IconButton
+              onclick={toggle}
+              ariaHasPopup
+              ariaExpanded={open}
+              icon="more-vertical"
+              size="sm"
+              variant="ghost"
+              title="Options"
+            />
           {/snippet}
           <div class="py-1 min-w-[180px]">
             <Button
               variant="unstyled"
               class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
-              onclick={() => { orientation = orientation === 'horizontal' ? 'vertical' : 'horizontal'; }}
+              onclick={() => {
+                orientation = orientation === 'horizontal' ? 'vertical' : 'horizontal';
+              }}
             >
-              <Icon name={orientation === 'horizontal' ? 'flip-horizontal-2' : 'flip-vertical-2'} size="xs" />
-              <span>{orientation === 'horizontal' ? 'Switch to vertical' : 'Switch to horizontal'}</span>
+              <Icon
+                name={orientation === 'horizontal' ? 'flip-horizontal-2' : 'flip-vertical-2'}
+                size="xs"
+              />
+              <span
+                >{orientation === 'horizontal'
+                  ? 'Switch to vertical'
+                  : 'Switch to horizontal'}</span
+              >
             </Button>
             <Button
               variant="unstyled"
               class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
-              onclick={() => { showLabels = !showLabels; }}
+              onclick={() => {
+                showLabels = !showLabels;
+              }}
             >
               <Icon name={showLabels ? 'tag-x' : 'tag'} size="xs" />
               <span>{showLabels ? 'Hide labels' : 'Show labels'}</span>
@@ -209,7 +260,9 @@
             <Button
               variant="unstyled"
               class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
-              onclick={() => { showCrossLinks = !showCrossLinks; }}
+              onclick={() => {
+                showCrossLinks = !showCrossLinks;
+              }}
             >
               <Icon name={showCrossLinks ? 'link-2-off' : 'link'} size="xs" />
               <span>{showCrossLinks ? 'Hide cross-links' : 'Show cross-links'}</span>
@@ -231,7 +284,7 @@
         <p class="text-sm text-[var(--color-text-secondary)]">{error}</p>
         <Button
           variant="unstyled"
-          class="text-xs text-[var(--color-accent-primary)] hover:underline"
+          class="text-xs text-[var(--color-accent-text)] hover:underline"
           onclick={handleRefresh}
         >
           Retry
@@ -240,38 +293,111 @@
     {:else if data && data.nodes.length === 0}
       <div class="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
         <Icon name="network" size="xl" class="text-[var(--color-text-tertiary)] opacity-30" />
-        <p class="text-sm text-[var(--color-text-tertiary)]">
-          No entities found in this project
-        </p>
+        <p class="text-sm text-[var(--color-text-tertiary)]">No entities found in this project</p>
       </div>
     {:else if data}
       <!-- Stats bar (full width) -->
-      <div class="flex-shrink-0 flex items-center justify-end gap-4 px-4 min-h-12 border-b border-[var(--color-border-primary)] text-xs text-[var(--color-text-tertiary)]">
-        <span>{data.stats.conversationCount} conversations</span>
-        <span>{data.stats.requirementCount} requirements</span>
-        <span>{data.stats.specCount} specs</span>
-        <span>{data.stats.taskCount} tasks</span>
-        <span>{data.stats.artifactCount} artifacts</span>
+      <div
+        class="flex-shrink-0 flex items-center justify-end gap-4 px-4 min-h-12 border-b border-[var(--color-border-primary)] text-xs text-[var(--color-text-tertiary)]"
+      >
+        <Button
+          variant="unstyled"
+          aria-label={focusedEntityType === 'Conversation'
+            ? 'Clear conversations focus'
+            : 'Focus conversations'}
+          aria-pressed={focusedEntityType === 'Conversation'}
+          title="Focus conversation nodes"
+          class="rounded px-2 py-1 transition-colors {focusedEntityType === 'Conversation'
+            ? `${ENTITY_TYPE_STYLES.Conversation.bgColor} ${ENTITY_TYPE_STYLES.Conversation.color}`
+            : 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)]'}"
+          onclick={() => toggleEntityTypeFocus('Conversation')}
+        >
+          {data.stats.conversationCount} conversations
+        </Button>
+        <Button
+          variant="unstyled"
+          aria-label={focusedEntityType === 'Requirement'
+            ? 'Clear requirements focus'
+            : 'Focus requirements'}
+          aria-pressed={focusedEntityType === 'Requirement'}
+          title="Focus requirement nodes"
+          class="rounded px-2 py-1 transition-colors {focusedEntityType === 'Requirement'
+            ? `${ENTITY_TYPE_STYLES.Requirement.bgColor} ${ENTITY_TYPE_STYLES.Requirement.color}`
+            : 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)]'}"
+          onclick={() => toggleEntityTypeFocus('Requirement')}
+        >
+          {data.stats.requirementCount} requirements
+        </Button>
+        <Button
+          variant="unstyled"
+          aria-label={focusedEntityType === 'Spec' ? 'Clear specs focus' : 'Focus specs'}
+          aria-pressed={focusedEntityType === 'Spec'}
+          title="Focus spec nodes"
+          class="rounded px-2 py-1 transition-colors {focusedEntityType === 'Spec'
+            ? `${ENTITY_TYPE_STYLES.Spec.bgColor} ${ENTITY_TYPE_STYLES.Spec.color}`
+            : 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)]'}"
+          onclick={() => toggleEntityTypeFocus('Spec')}
+        >
+          {data.stats.specCount} specs
+        </Button>
+        <Button
+          variant="unstyled"
+          aria-label={focusedEntityType === 'Task' ? 'Clear tasks focus' : 'Focus tasks'}
+          aria-pressed={focusedEntityType === 'Task'}
+          title="Focus task nodes"
+          class="rounded px-2 py-1 transition-colors {focusedEntityType === 'Task'
+            ? `${ENTITY_TYPE_STYLES.Task.bgColor} ${ENTITY_TYPE_STYLES.Task.color}`
+            : 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)]'}"
+          onclick={() => toggleEntityTypeFocus('Task')}
+        >
+          {data.stats.taskCount} tasks
+        </Button>
+        <Button
+          variant="unstyled"
+          aria-label={focusedEntityType === 'Artifact'
+            ? 'Clear artifacts focus'
+            : 'Focus artifacts'}
+          aria-pressed={focusedEntityType === 'Artifact'}
+          title="Focus artifact nodes"
+          class="rounded px-2 py-1 transition-colors {focusedEntityType === 'Artifact'
+            ? `${ENTITY_TYPE_STYLES.Artifact.bgColor} ${ENTITY_TYPE_STYLES.Artifact.color}`
+            : 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)]'}"
+          onclick={() => toggleEntityTypeFocus('Artifact')}
+        >
+          {data.stats.artifactCount} artifacts
+        </Button>
         {#if data.stats.crossLinkCount > 0}
-          <span>{data.stats.crossLinkCount} cross-links</span>
+          <Button
+            variant="unstyled"
+            aria-label={focusedEntityType === CROSS_LINK_FOCUS
+              ? 'Clear cross-links focus'
+              : 'Focus cross-links'}
+            aria-pressed={focusedEntityType === CROSS_LINK_FOCUS}
+            title="Focus nodes joined by cross-links"
+            class="rounded px-2 py-1 transition-colors {focusedEntityType === CROSS_LINK_FOCUS
+              ? `${CROSS_LINK_STYLE.bgColor} ${CROSS_LINK_STYLE.color}`
+              : 'hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)]'}"
+            onclick={() => toggleEntityTypeFocus(CROSS_LINK_FOCUS)}
+          >
+            {data.stats.crossLinkCount} cross-links
+          </Button>
         {/if}
       </div>
 
       <!-- Split layout: Graph (top) + Detail Panel (bottom) -->
       <div class="flex flex-col flex-1 min-h-0">
         <!-- Top: Graph panel (flexible) -->
-        <div
-          class="flex-1 min-w-0 min-h-0 relative"
-          class:graph-resizing={isResizing}
-        >
+        <div class="flex-1 min-w-0 min-h-0 relative" class:graph-resizing={isResizing}>
           <TangledTreeGraph
             nodes={data.nodes}
             crossLinks={data.crossLinks}
             {orientation}
             {showCrossLinks}
             {showLabels}
+            {focusedEntityType}
             selectedNodeId={activeEntityId || null}
             onNodeClick={handleNodeClick}
+            onResetView={resetGraphView}
           />
         </div>
 
@@ -293,7 +419,9 @@
         >
           {#if showDetailPanel}
             <!-- Custom closable tab bar -->
-            <div class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] flex-shrink-0">
+            <div
+              class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] flex-shrink-0"
+            >
               <div class="flex-1 min-w-0 flex items-center overflow-x-auto px-1">
                 {#each openedEntities as entity (entity.id)}
                   {@const entityStyle = ENTITY_TYPE_STYLES[entity.entityType]}
@@ -302,8 +430,8 @@
                     onclick={() => handleTabChange(entity.id)}
                     class="group flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-b-2 flex-shrink-0
                            {activeEntityId === entity.id
-                             ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
-                             : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
+                      ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
+                      : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
                   >
                     {#if entityStyle}
                       <Icon name={entityStyle.icon} size="xs" class={entityStyle.color} />

@@ -70,8 +70,8 @@
                 <div
                   class="absolute left-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
                     {isCurrent
-                      ? 'bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]'
-                      : 'bg-[var(--color-surface-50)] border-[var(--color-border-secondary)] group-hover:border-[var(--color-accent-primary)]'}"
+                    ? 'bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]'
+                    : 'bg-[var(--color-surface-50)] border-[var(--color-border-secondary)] group-hover:border-[var(--color-accent-primary)]'}"
                 >
                   {#if isCurrent}
                     <Icon name="check" size="xs" class="text-white" />
@@ -86,8 +86,8 @@
                 <div
                   class="p-3 rounded-lg border transition-colors
                     {isCurrent
-                      ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] dark:bg-[var(--color-accent-primary)]'
-                      : 'border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] hover:bg-[var(--color-surface-200)]'}"
+                    ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] dark:bg-[var(--color-accent-primary)]'
+                    : 'border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] hover:bg-[var(--color-surface-200)]'}"
                 >
                   <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
@@ -95,7 +95,9 @@
                         {formatVersion(version.version)}
                       </span>
                       {#if isLatest}
-                        <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)] text-[var(--color-accent-primary)] dark:bg-[var(--color-accent-primary)] dark:text-[var(--color-accent-primary)]">
+                        <span
+                          class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)] text-[var(--color-accent-text)] dark:bg-[var(--color-accent-primary)] dark:text-[var(--color-accent-text)]"
+                        >
                           Latest
                         </span>
                       {/if}

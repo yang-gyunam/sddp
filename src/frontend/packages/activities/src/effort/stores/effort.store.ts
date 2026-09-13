@@ -18,29 +18,43 @@ import type {
   WorklogDto,
 } from '../types';
 
+export interface MemberOwnershipOptions {
+  type?: OwnershipFilter;
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 // ============================================
 // Initial State
 // ============================================
 
-const initialState: EffortState = {
-  projectId: '',
-  selectedMemberId: null,
-  dateRange: getWeekBoundaries(),
-  viewMode: 'week',
-  members: [],
-  ownership: null,
-  ownershipLoading: false,
-  ownershipError: null,
-  memberDailyEffort: null,
-  weekData: null,
-  conflicts: [],
-  workingDays: [],
-  isLoading: false,
-  error: null,
-};
+function createInitialState(): EffortState {
+  return {
+    projectId: '',
+    selectedMemberId: null,
+    dateRange: getWeekBoundaries(),
+    viewMode: 'week',
+    members: [],
+    ownership: null,
+    ownershipLoading: false,
+    ownershipError: null,
+    memberDailyEffort: null,
+    weekData: null,
+    conflicts: [],
+    workingDays: [],
+    isLoading: false,
+    error: null,
+  };
+}
 
-// Create the store
-const effortStore: Store<EffortState> = createStore<EffortState>(initialState);
+/** Create an isolated store for a single Effort editor tab. */
+export function createEffortStoreInstance(): Store<EffortState> {
+  return createStore<EffortState>(createInitialState());
+}
+
+// Backward-compatible application store. Editor tabs use createEffortStoreScope().
+const effortStore: Store<EffortState> = createEffortStoreInstance();
 
 // ============================================
 // Getters (Selectors)
@@ -49,37 +63,45 @@ const effortStore: Store<EffortState> = createStore<EffortState>(initialState);
 /**
  * Get current state
  */
-export function getEffortState(): EffortState {
-  return effortStore.get();
+export function getEffortState(target: Store<EffortState> = effortStore): EffortState {
+  return target.get();
 }
 
 /**
  * Get selected member
  */
-export function getSelectedMember(): MemberEffortSummary | undefined {
-  const state = effortStore.get();
+export function getSelectedMember(
+  target: Store<EffortState> = effortStore
+): MemberEffortSummary | undefined {
+  const state = target.get();
   return state.members.find((m) => m.userId === state.selectedMemberId);
 }
 
 /**
  * Check if there are conflicts
  */
-export function hasConflicts(): boolean {
-  return effortStore.get().conflicts.length > 0;
+export function hasConflicts(target: Store<EffortState> = effortStore): boolean {
+  return target.get().conflicts.length > 0;
 }
 
 /**
  * Get working day info for a specific date
  */
-export function getWorkingDayInfo(date: string): WorkingDay | undefined {
-  return effortStore.get().workingDays.find((wd) => wd.date === date);
+export function getWorkingDayInfo(
+  date: string,
+  target: Store<EffortState> = effortStore
+): WorkingDay | undefined {
+  return target.get().workingDays.find((wd) => wd.date === date);
 }
 
 /**
  * Check if a date has any conflicts for the current project
  */
-export function getDateConflicts(date: string): AllocationConflict[] {
-  return effortStore.get().conflicts.filter((c) => c.date === date);
+export function getDateConflicts(
+  date: string,
+  target: Store<EffortState> = effortStore
+): AllocationConflict[] {
+  return target.get().conflicts.filter((c) => c.date === date);
 }
 
 // ============================================
@@ -148,8 +170,8 @@ export const effortState = {
 /**
  * Set loading state
  */
-function setEffortLoading(loading: boolean): void {
-  effortStore.update((state) => ({
+function setEffortLoading(loading: boolean, target: Store<EffortState> = effortStore): void {
+  target.update((state) => ({
     ...state,
     isLoading: loading,
   }));
@@ -158,8 +180,8 @@ function setEffortLoading(loading: boolean): void {
 /**
  * Set error
  */
-function setEffortError(error: string | null): void {
-  effortStore.update((state) => ({
+function setEffortError(error: string | null, target: Store<EffortState> = effortStore): void {
+  target.update((state) => ({
     ...state,
     error,
     isLoading: false,
@@ -169,8 +191,11 @@ function setEffortError(error: string | null): void {
 /**
  * Set members
  */
-export function setMembers(members: MemberEffortSummary[]): void {
-  effortStore.update((state) => ({
+export function setMembers(
+  members: MemberEffortSummary[],
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     members,
   }));
@@ -179,8 +204,11 @@ export function setMembers(members: MemberEffortSummary[]): void {
 /**
  * Set ownership data
  */
-export function setOwnership(ownership: MemberOwnershipPage | null): void {
-  effortStore.update((state) => ({
+export function setOwnership(
+  ownership: MemberOwnershipPage | null,
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     ownership,
   }));
@@ -189,8 +217,8 @@ export function setOwnership(ownership: MemberOwnershipPage | null): void {
 /**
  * Set ownership loading state
  */
-function setOwnershipLoading(loading: boolean): void {
-  effortStore.update((state) => ({
+function setOwnershipLoading(loading: boolean, target: Store<EffortState> = effortStore): void {
+  target.update((state) => ({
     ...state,
     ownershipLoading: loading,
   }));
@@ -199,8 +227,8 @@ function setOwnershipLoading(loading: boolean): void {
 /**
  * Set ownership error
  */
-function setOwnershipError(error: string | null): void {
-  effortStore.update((state) => ({
+function setOwnershipError(error: string | null, target: Store<EffortState> = effortStore): void {
+  target.update((state) => ({
     ...state,
     ownershipError: error,
   }));
@@ -209,8 +237,11 @@ function setOwnershipError(error: string | null): void {
 /**
  * Set member daily effort data
  */
-export function setMemberDailyEffort(dailyEffort: EffortState['memberDailyEffort']): void {
-  effortStore.update((state) => ({
+export function setMemberDailyEffort(
+  dailyEffort: EffortState['memberDailyEffort'],
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     memberDailyEffort: dailyEffort,
   }));
@@ -219,8 +250,11 @@ export function setMemberDailyEffort(dailyEffort: EffortState['memberDailyEffort
 /**
  * Set week data
  */
-export function setWeekData(weekData: WeekData | null): void {
-  effortStore.update((state) => ({
+export function setWeekData(
+  weekData: WeekData | null,
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     weekData,
   }));
@@ -229,8 +263,11 @@ export function setWeekData(weekData: WeekData | null): void {
 /**
  * Set conflicts
  */
-export function setConflicts(conflicts: AllocationConflict[]): void {
-  effortStore.update((state) => ({
+export function setConflicts(
+  conflicts: AllocationConflict[],
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     conflicts,
   }));
@@ -239,8 +276,11 @@ export function setConflicts(conflicts: AllocationConflict[]): void {
 /**
  * Set working days
  */
-export function setWorkingDays(workingDays: WorkingDay[]): void {
-  effortStore.update((state) => ({
+export function setWorkingDays(
+  workingDays: WorkingDay[],
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     workingDays,
   }));
@@ -249,8 +289,11 @@ export function setWorkingDays(workingDays: WorkingDay[]): void {
 /**
  * Set selected member ID
  */
-export function setSelectedMemberId(userId: string | null): void {
-  effortStore.update((state) => ({
+export function setSelectedMemberId(
+  userId: string | null,
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     selectedMemberId: userId,
   }));
@@ -259,8 +302,12 @@ export function setSelectedMemberId(userId: string | null): void {
 /**
  * Set date range
  */
-export function setDateRangeInternal(start: string, end: string): void {
-  effortStore.update((state) => ({
+export function setDateRangeInternal(
+  start: string,
+  end: string,
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     dateRange: { start, end },
   }));
@@ -269,8 +316,11 @@ export function setDateRangeInternal(start: string, end: string): void {
 /**
  * Set view mode
  */
-export function setViewModeInternal(viewMode: EffortState['viewMode']): void {
-  effortStore.update((state) => ({
+export function setViewModeInternal(
+  viewMode: EffortState['viewMode'],
+  target: Store<EffortState> = effortStore
+): void {
+  target.update((state) => ({
     ...state,
     viewMode,
   }));
@@ -279,8 +329,8 @@ export function setViewModeInternal(viewMode: EffortState['viewMode']): void {
 /**
  * Set project ID
  */
-export function setProjectId(projectId: string): void {
-  effortStore.update((state) => ({
+export function setProjectId(projectId: string, target: Store<EffortState> = effortStore): void {
+  target.update((state) => ({
     ...state,
     projectId,
   }));
@@ -293,22 +343,25 @@ export function setProjectId(projectId: string): void {
 /**
  * Initialize the effort store for a project
  */
-export async function initEffort(projectId: string): Promise<void> {
-  setProjectId(projectId);
-  setEffortError(null);
+export async function initEffort(
+  projectId: string,
+  target: Store<EffortState> = effortStore
+): Promise<void> {
+  setProjectId(projectId, target);
+  setEffortError(null, target);
 
-  await loadEffortData();
+  await loadEffortData(target);
 }
 
 /**
  * Load all effort data for the current date range
  */
-export async function loadEffortData(): Promise<void> {
-  const state = effortStore.get();
+export async function loadEffortData(target: Store<EffortState> = effortStore): Promise<void> {
+  const state = target.get();
   if (!state.projectId) return;
 
-  setEffortLoading(true);
-  setEffortError(null);
+  setEffortLoading(true, target);
+  setEffortError(null, target);
 
   try {
     const { start, end } = state.dateRange;
@@ -320,25 +373,29 @@ export async function loadEffortData(): Promise<void> {
       EffortService.getWorkingDays(state.projectId, start, end),
     ]);
 
-    if (membersResult.status === 'fulfilled') setMembers(membersResult.value);
-    if (conflictsResult.status === 'fulfilled') setConflicts(conflictsResult.value);
-    if (workingDaysResult.status === 'fulfilled') setWorkingDays(workingDaysResult.value);
+    if (membersResult.status === 'fulfilled') setMembers(membersResult.value, target);
+    if (conflictsResult.status === 'fulfilled') setConflicts(conflictsResult.value, target);
+    if (workingDaysResult.status === 'fulfilled') setWorkingDays(workingDaysResult.value, target);
 
     // If all failed, propagate error
-    if (membersResult.status === 'rejected' && conflictsResult.status === 'rejected' && workingDaysResult.status === 'rejected') {
+    if (
+      membersResult.status === 'rejected' &&
+      conflictsResult.status === 'rejected' &&
+      workingDaysResult.status === 'rejected'
+    ) {
       throw membersResult.reason;
     }
 
     // Load selected member's daily data if one is selected
-    const currentState = effortStore.get();
+    const currentState = target.get();
     if (currentState.selectedMemberId) {
-      await loadMemberDailyEffort(currentState.selectedMemberId);
+      await loadMemberDailyEffort(currentState.selectedMemberId, target);
     }
   } catch (error) {
-    setEffortError(error instanceof Error ? error.message : 'Failed to load effort data');
+    setEffortError(error instanceof Error ? error.message : 'Failed to load effort data', target);
     console.error('Failed to load effort data:', error);
   } finally {
-    setEffortLoading(false);
+    setEffortLoading(false, target);
   }
 }
 
@@ -365,8 +422,11 @@ function buildWeekData(dailyEffort: DailyEffort[], start: string, end: string): 
 /**
  * Load daily effort data for a specific member
  */
-export async function loadMemberDailyEffort(userId: string): Promise<void> {
-  const state = effortStore.get();
+export async function loadMemberDailyEffort(
+  userId: string,
+  target: Store<EffortState> = effortStore
+): Promise<void> {
+  const state = target.get();
   if (!state.projectId) return;
 
   try {
@@ -378,12 +438,12 @@ export async function loadMemberDailyEffort(userId: string): Promise<void> {
       end
     );
 
-    setMemberDailyEffort(dailyEffort);
+    setMemberDailyEffort(dailyEffort, target);
 
     if (state.viewMode === 'week') {
-      setWeekData(buildWeekData(dailyEffort, start, end));
+      setWeekData(buildWeekData(dailyEffort, start, end), target);
     } else {
-      setWeekData(null);
+      setWeekData(null, target);
     }
   } catch (error) {
     console.error('Failed to load member daily effort:', error);
@@ -395,49 +455,49 @@ export async function loadMemberDailyEffort(userId: string): Promise<void> {
  */
 export async function loadMemberOwnership(
   userId: string,
-  options?: {
-    type?: OwnershipFilter;
-    query?: string;
-    page?: number;
-    pageSize?: number;
-  }
+  options?: MemberOwnershipOptions,
+  target: Store<EffortState> = effortStore
 ): Promise<void> {
-  const state = effortStore.get();
+  const state = target.get();
   if (!state.projectId) return;
 
-  setOwnershipLoading(true);
-  setOwnershipError(null);
+  setOwnershipLoading(true, target);
+  setOwnershipError(null, target);
 
   try {
     const ownership = await EffortService.getMemberOwnership(state.projectId, userId, options);
-    setOwnership(ownership);
+    setOwnership(ownership, target);
   } catch (error) {
-    setOwnership(null);
+    setOwnership(null, target);
     setOwnershipError(
-      error instanceof Error ? error.message : 'Failed to load owned deliverables'
+      error instanceof Error ? error.message : 'Failed to load owned deliverables',
+      target
     );
     console.error('Failed to load member ownership:', error);
   } finally {
-    setOwnershipLoading(false);
+    setOwnershipLoading(false, target);
   }
 }
 
 /**
  * Select a member to view/edit their effort
  */
-export async function selectMember(userId: string | null): Promise<void> {
-  setSelectedMemberId(userId);
+export async function selectMember(
+  userId: string | null,
+  target: Store<EffortState> = effortStore
+): Promise<void> {
+  setSelectedMemberId(userId, target);
 
   if (userId) {
     await Promise.allSettled([
-      loadMemberDailyEffort(userId),
-      loadMemberOwnership(userId, { type: 'all', query: '', page: 1, pageSize: 8 }),
+      loadMemberDailyEffort(userId, target),
+      loadMemberOwnership(userId, { type: 'all', query: '', page: 1, pageSize: 8 }, target),
     ]);
   } else {
-    setMemberDailyEffort(null);
-    setWeekData(null);
-    setOwnership(null);
-    setOwnershipError(null);
+    setMemberDailyEffort(null, target);
+    setWeekData(null, target);
+    setOwnership(null, target);
+    setOwnershipError(null, target);
   }
 }
 
@@ -446,97 +506,100 @@ export async function selectMember(userId: string | null): Promise<void> {
  */
 export async function setViewMode(
   viewMode: EffortState['viewMode'],
-  anchorDate?: string
+  anchorDate?: string,
+  target: Store<EffortState> = effortStore
 ): Promise<void> {
-  const state = effortStore.get();
+  const state = target.get();
   if (state.viewMode === viewMode && !anchorDate) return;
 
   const anchor = anchorDate ? parseDate(anchorDate) : parseDate(state.dateRange.start);
-  const range = viewMode === 'week'
-    ? getWeekBoundaries(anchor)
-    : getMonthBoundaries(anchor);
+  const range = viewMode === 'week' ? getWeekBoundaries(anchor) : getMonthBoundaries(anchor);
 
-  setViewModeInternal(viewMode);
-  setDateRangeInternal(range.start, range.end);
-  await loadEffortData();
+  setViewModeInternal(viewMode, target);
+  setDateRangeInternal(range.start, range.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Navigate to previous week
  */
-export async function previousWeek(): Promise<void> {
-  const state = effortStore.get();
+export async function previousWeek(target: Store<EffortState> = effortStore): Promise<void> {
+  const state = target.get();
   const currentStart = parseDate(state.dateRange.start);
   currentStart.setDate(currentStart.getDate() - 7);
 
   const newRange = getWeekBoundaries(currentStart);
-  setDateRangeInternal(newRange.start, newRange.end);
-  await loadEffortData();
+  setDateRangeInternal(newRange.start, newRange.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Navigate to next week
  */
-export async function nextWeek(): Promise<void> {
-  const state = effortStore.get();
+export async function nextWeek(target: Store<EffortState> = effortStore): Promise<void> {
+  const state = target.get();
   const currentStart = parseDate(state.dateRange.start);
   currentStart.setDate(currentStart.getDate() + 7);
 
   const newRange = getWeekBoundaries(currentStart);
-  setDateRangeInternal(newRange.start, newRange.end);
-  await loadEffortData();
+  setDateRangeInternal(newRange.start, newRange.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Navigate to current week
  */
-export async function goToToday(): Promise<void> {
+export async function goToToday(target: Store<EffortState> = effortStore): Promise<void> {
   const newRange = getWeekBoundaries();
-  setDateRangeInternal(newRange.start, newRange.end);
-  await loadEffortData();
+  setDateRangeInternal(newRange.start, newRange.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Navigate to previous month
  */
-export async function previousMonth(): Promise<void> {
-  const state = effortStore.get();
+export async function previousMonth(target: Store<EffortState> = effortStore): Promise<void> {
+  const state = target.get();
   const currentStart = parseDate(state.dateRange.start);
   currentStart.setMonth(currentStart.getMonth() - 1);
 
   const newRange = getMonthBoundaries(currentStart);
-  setDateRangeInternal(newRange.start, newRange.end);
-  await loadEffortData();
+  setDateRangeInternal(newRange.start, newRange.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Navigate to next month
  */
-export async function nextMonth(): Promise<void> {
-  const state = effortStore.get();
+export async function nextMonth(target: Store<EffortState> = effortStore): Promise<void> {
+  const state = target.get();
   const currentStart = parseDate(state.dateRange.start);
   currentStart.setMonth(currentStart.getMonth() + 1);
 
   const newRange = getMonthBoundaries(currentStart);
-  setDateRangeInternal(newRange.start, newRange.end);
-  await loadEffortData();
+  setDateRangeInternal(newRange.start, newRange.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Navigate to current month
  */
-export async function goToCurrentMonth(): Promise<void> {
+export async function goToCurrentMonth(target: Store<EffortState> = effortStore): Promise<void> {
   const newRange = getMonthBoundaries();
-  setDateRangeInternal(newRange.start, newRange.end);
-  await loadEffortData();
+  setDateRangeInternal(newRange.start, newRange.end, target);
+  await loadEffortData(target);
 }
 
 /**
  * Set date range manually
  */
-export async function setDateRange(start: string, end: string): Promise<void> {
-  setDateRangeInternal(start, end);
-  await loadEffortData();
+export async function setDateRange(
+  start: string,
+  end: string,
+  target: Store<EffortState> = effortStore
+): Promise<void> {
+  setDateRangeInternal(start, end, target);
+  await loadEffortData(target);
 }
 
 /**
@@ -545,9 +608,10 @@ export async function setDateRange(start: string, end: string): Promise<void> {
 export async function updateAllocation(
   userId: string,
   date: string,
-  allocatedHours: number
+  allocatedHours: number,
+  target: Store<EffortState> = effortStore
 ): Promise<void> {
-  const state = effortStore.get();
+  const state = target.get();
   if (!state.projectId) return;
 
   try {
@@ -561,9 +625,9 @@ export async function updateAllocation(
     await EffortService.upsertAllocation(state.projectId, dto);
 
     // Reload data to reflect changes
-    await loadEffortData();
+    await loadEffortData(target);
   } catch (error) {
-    setEffortError(error instanceof Error ? error.message : 'Failed to update allocation');
+    setEffortError(error instanceof Error ? error.message : 'Failed to update allocation', target);
     throw error;
   }
 }
@@ -575,9 +639,10 @@ export async function logWork(
   userId: string,
   date: string,
   spentHours: number,
-  note?: string
+  note?: string,
+  target: Store<EffortState> = effortStore
 ): Promise<void> {
-  const state = effortStore.get();
+  const state = target.get();
   if (!state.projectId) return;
 
   try {
@@ -592,9 +657,9 @@ export async function logWork(
     await EffortService.createWorklog(state.projectId, dto);
 
     // Reload data to reflect changes
-    await loadEffortData();
+    await loadEffortData(target);
   } catch (error) {
-    setEffortError(error instanceof Error ? error.message : 'Failed to log work');
+    setEffortError(error instanceof Error ? error.message : 'Failed to log work', target);
     throw error;
   }
 }
@@ -605,9 +670,10 @@ export async function logWork(
 export async function setWorkingDayType(
   date: string,
   type: WorkingDay['type'],
-  note?: string
+  note?: string,
+  target: Store<EffortState> = effortStore
 ): Promise<void> {
-  const state = effortStore.get();
+  const state = target.get();
   if (!state.projectId) return;
 
   try {
@@ -619,9 +685,9 @@ export async function setWorkingDayType(
     });
 
     // Reload data
-    await loadEffortData();
+    await loadEffortData(target);
   } catch (error) {
-    setEffortError(error instanceof Error ? error.message : 'Failed to set working day');
+    setEffortError(error instanceof Error ? error.message : 'Failed to set working day', target);
     throw error;
   }
 }
@@ -629,15 +695,15 @@ export async function setWorkingDayType(
 /**
  * Clear error
  */
-export function clearError(): void {
-  setEffortError(null);
+export function clearError(target: Store<EffortState> = effortStore): void {
+  setEffortError(null, target);
 }
 
 /**
  * Reset store to initial state
  */
-export function resetEffortStore(): void {
-  effortStore.reset();
+export function resetEffortStore(target: Store<EffortState> = effortStore): void {
+  target.reset();
 }
 
 // ============================================
@@ -648,10 +714,65 @@ export function resetEffortStore(): void {
  * Subscribe to effort state changes
  */
 export function subscribeEffort(
-  listener: (state: EffortState, prevState: EffortState) => void
+  listener: (state: EffortState, prevState: EffortState) => void,
+  target: Store<EffortState> = effortStore
 ): () => void {
-  return effortStore.subscribe(listener);
+  return target.subscribe(listener);
 }
+
+/**
+ * Actions bound to one store instance. Each Split Editor tab creates its own scope.
+ */
+export function createEffortStoreScope() {
+  const store = createEffortStoreInstance();
+
+  return {
+    getState: () => getEffortState(store),
+    getSelectedMember: () => getSelectedMember(store),
+    hasConflicts: () => hasConflicts(store),
+    getWorkingDayInfo: (date: string) => getWorkingDayInfo(date, store),
+    getDateConflicts: (date: string) => getDateConflicts(date, store),
+    subscribe: (listener: (state: EffortState, prevState: EffortState) => void) =>
+      subscribeEffort(listener, store),
+    reset: () => resetEffortStore(store),
+    setMembers: (members: MemberEffortSummary[]) => setMembers(members, store),
+    setOwnership: (ownership: MemberOwnershipPage | null) => setOwnership(ownership, store),
+    setMemberDailyEffort: (dailyEffort: EffortState['memberDailyEffort']) =>
+      setMemberDailyEffort(dailyEffort, store),
+    setWeekData: (weekData: WeekData | null) => setWeekData(weekData, store),
+    setConflicts: (conflicts: AllocationConflict[]) => setConflicts(conflicts, store),
+    setWorkingDays: (workingDays: WorkingDay[]) => setWorkingDays(workingDays, store),
+    setSelectedMemberId: (userId: string | null) => setSelectedMemberId(userId, store),
+    setDateRangeInternal: (start: string, end: string) => setDateRangeInternal(start, end, store),
+    setViewModeInternal: (viewMode: EffortState['viewMode']) =>
+      setViewModeInternal(viewMode, store),
+    setProjectId: (projectId: string) => setProjectId(projectId, store),
+    initEffort: (projectId: string) => initEffort(projectId, store),
+    loadEffortData: () => loadEffortData(store),
+    loadMemberDailyEffort: (userId: string) => loadMemberDailyEffort(userId, store),
+    loadMemberOwnership: (userId: string, options?: MemberOwnershipOptions) =>
+      loadMemberOwnership(userId, options, store),
+    selectMember: (userId: string | null) => selectMember(userId, store),
+    setViewMode: (viewMode: EffortState['viewMode'], anchorDate?: string) =>
+      setViewMode(viewMode, anchorDate, store),
+    previousWeek: () => previousWeek(store),
+    nextWeek: () => nextWeek(store),
+    goToToday: () => goToToday(store),
+    previousMonth: () => previousMonth(store),
+    nextMonth: () => nextMonth(store),
+    goToCurrentMonth: () => goToCurrentMonth(store),
+    setDateRange: (start: string, end: string) => setDateRange(start, end, store),
+    updateAllocation: (userId: string, date: string, allocatedHours: number) =>
+      updateAllocation(userId, date, allocatedHours, store),
+    logWork: (userId: string, date: string, spentHours: number, note?: string) =>
+      logWork(userId, date, spentHours, note, store),
+    setWorkingDayType: (date: string, type: WorkingDay['type'], note?: string) =>
+      setWorkingDayType(date, type, note, store),
+    clearError: () => clearError(store),
+  };
+}
+
+export type EffortStoreScope = ReturnType<typeof createEffortStoreScope>;
 
 // ============================================
 // Helper Functions

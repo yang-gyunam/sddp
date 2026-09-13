@@ -187,10 +187,7 @@ export class PathMatcher {
    * Example: matchPath('/project/:id/specs', '/project/123/specs')
    * Returns: { id: '123' }
    */
-  static matchPath(
-    pattern: string,
-    path: string
-  ): Record<string, string> | null {
+  static matchPath(pattern: string, path: string): Record<string, string> | null {
     const patternParts = pattern.split('/').filter(Boolean);
     const pathParts = path.split('/').filter(Boolean);
 
@@ -224,10 +221,7 @@ export class PathMatcher {
    * Example: buildPath('/project/:id/specs', { id: '123' })
    * Returns: '/project/123/specs'
    */
-  static buildPath(
-    pattern: string,
-    params: Record<string, string>
-  ): string {
+  static buildPath(pattern: string, params: Record<string, string>): string {
     let path = pattern;
     for (const [key, value] of Object.entries(params)) {
       path = path.replace(`:${key}`, value);

@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Dashboard.Queries;
 using Sddp.Application.Features.Notifications;
 
@@ -29,6 +31,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/my
     /// </summary>
     [HttpGet("my")]
+        [ResourceScopeExempt("Personal aggregate keyed by the caller's own user id; no resource id in the route.")]
     public async Task<IActionResult> GetMyDashboard(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
@@ -54,6 +57,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/system
     /// </summary>
     [HttpGet("system")]
+        [ResourceScopeExempt("Tenant-wide aggregate with no resource id in the route; bounded by the tenant context.")]
     public async Task<IActionResult> GetSystemDashboard(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
@@ -75,6 +79,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/my/overview
     /// </summary>
     [HttpGet("my/overview")]
+        [ResourceScopeExempt("Personal overview keyed by the caller's own user id; no resource id in the route.")]
     public async Task<IActionResult> GetMyOverview(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
@@ -103,6 +108,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/my/tasks
     /// </summary>
     [HttpGet("my/tasks")]
+        [ResourceScopeExempt("Personal task aggregate with no resource id in the route; bounded by the caller.")]
     public async Task<IActionResult> GetMyTasks()
     {
         // Task entity not implemented yet - return an empty list
@@ -115,6 +121,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/my/activities?page=1&pageSize=20
     /// </summary>
     [HttpGet("my/activities")]
+        [ResourceScopeExempt("Personal activity feed keyed by the caller's own user id; no resource id in the route.")]
     public async Task<IActionResult> GetMyActivities(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -135,6 +142,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/my/notifications?page=1&pageSize=20
     /// </summary>
     [HttpGet("my/notifications")]
+        [ResourceScopeExempt("Listing bounded by tenant and the caller's own recipient id, with no resource id in the route.")]
     public async Task<IActionResult> GetMyNotifications(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromQuery] int page = 1,
@@ -163,6 +171,9 @@ public class DashboardController : BaseApiController
     /// PATCH /api/dashboard/my/notifications/{id}/read
     /// </summary>
     [HttpPatch("my/notifications/{id}/read")]
+        [ResourceScopeExempt("Notification carries no owning project; the handler accepts the id only when tenant and recipient both match the caller.")]
+    [MutationAuthorizationExempt("A user may update only their own notification read state.")]
+    [Authorize]
     public async Task<IActionResult> MarkNotificationRead(
         [FromRoute] string id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -201,6 +212,9 @@ public class DashboardController : BaseApiController
     /// PATCH /api/dashboard/my/notifications/read-all
     /// </summary>
     [HttpPatch("my/notifications/read-all")]
+        [ResourceScopeExempt("Bulk update restricted to the caller's own notifications; no resource id appears in the route.")]
+    [MutationAuthorizationExempt("A user may update only their own notification read state.")]
+    [Authorize]
     public async Task<IActionResult> MarkAllNotificationsRead(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken = default)
@@ -228,6 +242,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/my/widgets
     /// </summary>
     [HttpGet("my/widgets")]
+        [ResourceScopeExempt("Personal widget batch keyed by the caller's own user id; no resource id in the route.")]
     public async Task<IActionResult> GetMyDashboardWidgets(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
@@ -258,6 +273,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/projects/{projectId}
     /// </summary>
     [HttpGet("projects/{projectId}")]
+        [ResourceScope<Project>("projectId")]
     public async Task<IActionResult> GetProjectDashboard(
         [FromRoute] string projectId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -294,6 +310,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/system/stats
     /// </summary>
     [HttpGet("system/stats")]
+        [ResourceScopeExempt("Tenant-wide statistics with no resource id in the route; bounded by the tenant context.")]
     public async Task<IActionResult> GetSystemStats(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         CancellationToken cancellationToken)
@@ -317,6 +334,7 @@ public class DashboardController : BaseApiController
     /// </summary>
     [Authorize(Policy = "CanReadAuditLogs")]
     [HttpGet("system/audit-logs")]
+        [ResourceScopeExempt("Listing endpoint with no resource id in the route; gated by the AuditRead permission evaluated in the caller's scope.")]
     public async Task<IActionResult> GetSystemAuditLogs(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
@@ -331,6 +349,7 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/system/health
     /// </summary>
     [HttpGet("system/health")]
+        [ResourceScopeExempt("System health probe that reads no tenant or project owned data whatsoever.")]
     public async Task<IActionResult> GetSystemHealth()
     {
         // - status

@@ -163,10 +163,7 @@ export async function searchTasks(
 /**
  * Get task detail by ID
  */
-export async function getTaskById(
-  tenantId: string,
-  taskId: string
-): Promise<TaskItemDetailDto> {
+export async function getTaskById(tenantId: string, taskId: string): Promise<TaskItemDetailDto> {
   return fetchWithAuth<TaskItemDetailDto>(`/tasks/${taskId}`, {
     tenantId,
   });
@@ -221,9 +218,7 @@ export async function addTimeLog(
 /**
  * Get my task statistics
  */
-export async function getMyTaskStats(
-  tenantId: string
-): Promise<MyTaskStatsDto> {
+export async function getMyTaskStats(tenantId: string): Promise<MyTaskStatsDto> {
   return fetchWithAuth<MyTaskStatsDto>('/tasks/my-stats', {
     tenantId,
   });
@@ -236,9 +231,7 @@ export async function getMyTaskStats(
 /**
  * Get backlog summary (sidebar project list with task counts)
  */
-export async function getBacklogSummary(
-  tenantId: string
-): Promise<BacklogSummary> {
+export async function getBacklogSummary(tenantId: string): Promise<BacklogSummary> {
   return fetchWithAuth<BacklogSummary>('/tasks/backlog/summary', {
     tenantId,
   });
@@ -247,10 +240,7 @@ export async function getBacklogSummary(
 /**
  * Get backlog stats for a specific project
  */
-export async function getBacklogStats(
-  tenantId: string,
-  projectId: string
-): Promise<BacklogStats> {
+export async function getBacklogStats(tenantId: string, projectId: string): Promise<BacklogStats> {
   return fetchWithAuth<BacklogStats>('/tasks/backlog/stats', {
     tenantId,
     projectId,
@@ -517,12 +507,23 @@ export class TaskServiceClass {
   private tenantId: string = '';
   private projectId?: string;
 
+  constructor(tenantId: string = '', projectId?: string) {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId?: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId;
   }
 
-  getTasks(options?: { page?: number; pageSize?: number; status?: TaskStatus; priority?: TaskPriority; myTasksOnly?: boolean; }): Promise<TaskItemPageDto> {
+  getTasks(options?: {
+    page?: number;
+    pageSize?: number;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+    myTasksOnly?: boolean;
+  }): Promise<TaskItemPageDto> {
     return getTasks(this.tenantId, { ...options, projectId: this.projectId });
   }
 
@@ -573,6 +574,11 @@ export class TaskServiceClass {
   getBacklogStats(projectId: string): Promise<BacklogStats> {
     return getBacklogStats(this.tenantId, projectId);
   }
+}
+
+/** Create a context-bound service for a single tab or request flow. */
+export function createTaskService(tenantId: string, projectId?: string): TaskServiceClass {
+  return new TaskServiceClass(tenantId, projectId);
 }
 
 // Singleton instance

@@ -60,7 +60,10 @@ export function isRecordingSupported(): boolean {
  * Returns a teardown function, or null when Web Audio is unavailable (level metering
  * is a progressive enhancement — recording itself works without it).
  */
-function createLevelMeter(stream: MediaStream, onLevel: (level: number) => void): (() => void) | null {
+function createLevelMeter(
+  stream: MediaStream,
+  onLevel: (level: number) => void
+): (() => void) | null {
   const AudioContextCtor =
     typeof AudioContext !== 'undefined'
       ? AudioContext
@@ -100,7 +103,9 @@ function createLevelMeter(stream: MediaStream, onLevel: (level: number) => void)
  * Request microphone access and start recording.
  * Rejects with the getUserMedia error (e.g. NotAllowedError) when access is denied.
  */
-export async function startAudioRecorder(options: AudioRecorderOptions): Promise<AudioRecorderHandle> {
+export async function startAudioRecorder(
+  options: AudioRecorderOptions
+): Promise<AudioRecorderHandle> {
   const mimeType = pickSupportedMimeType();
   if (!mimeType) {
     throw new Error('Audio recording is not supported in this browser');

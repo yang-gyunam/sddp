@@ -3,7 +3,7 @@
  * Mediates between Conversation stores and ConversationService
  */
 
-import { getConversationService, type ConversationSummaryDto } from './services';
+import { createConversationService, type ConversationSummaryDto } from './services';
 import {
   setProjectGroups,
   setDirectMessages,
@@ -22,16 +22,12 @@ import type {
  * Load conversation sidebar data from API
  * Falls back to dummy data if API is unavailable
  */
-export async function loadConversationsSidebar(
-  tenantId: string,
-  projectId: string
-): Promise<void> {
+export async function loadConversationsSidebar(tenantId: string, projectId: string): Promise<void> {
   setLoading(true);
   setError(null);
 
   try {
-    const service = getConversationService();
-    service.setContext(tenantId, projectId);
+    const service = createConversationService(tenantId, projectId);
 
     // Fetch channels from API
     const channels = await service.getChannelList();
@@ -78,7 +74,10 @@ export async function loadConversationsSidebar(
 /**
  * Convert API ConversationSummaryDto to UI ConversationSummary
  */
-function convertToUiConversationSummary(dto: ConversationSummaryDto, isStarred: boolean = false): UiConversationSummary {
+function convertToUiConversationSummary(
+  dto: ConversationSummaryDto,
+  isStarred: boolean = false
+): UiConversationSummary {
   const typeMap: Record<ConversationSummaryDto['conversationType'], 'public' | 'private' | 'dm'> = {
     Channel: dto.visibility === 'Private' ? 'private' : 'public',
     DirectMessage: 'dm',
@@ -104,15 +103,12 @@ function convertToUiConversationSummary(dto: ConversationSummaryDto, isStarred: 
  * Load global (tenant-wide) conversation sidebar data from API
  * For Conversations Activity (no project association)
  */
-export async function loadGlobalConversationsSidebar(
-  tenantId: string
-): Promise<void> {
+export async function loadGlobalConversationsSidebar(tenantId: string): Promise<void> {
   setLoading(true);
   setError(null);
 
   try {
-    const service = getConversationService();
-    service.setContext(tenantId, '');
+    const service = createConversationService(tenantId, '');
 
     // Fetch global conversations + DM list from API
     // Starred endpoint may not exist yet; fetch separately to avoid breaking sidebar
@@ -157,7 +153,9 @@ export async function loadGlobalConversationsSidebar(
       unreadCount: dm.unreadCount,
     }));
 
-    const starredConversations = starredDtos.map((dto) => convertToUiConversationSummary(dto, true));
+    const starredConversations = starredDtos.map((dto) =>
+      convertToUiConversationSummary(dto, true)
+    );
 
     setFlatConversations({ channels, privateChannels, topics });
     setDirectMessages(directMessages);

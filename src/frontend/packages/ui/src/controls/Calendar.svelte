@@ -143,7 +143,9 @@
     height: 1.75rem;
     border-radius: var(--radius-md, 6px);
     color: var(--color-text-secondary);
-    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out;
   }
 
   :global(.calendar-nav-btn:hover) {
@@ -195,7 +197,9 @@
     font-size: var(--text-sm);
     border-radius: var(--radius-md, 6px);
     color: var(--color-text-primary);
-    transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out;
     cursor: pointer;
   }
 

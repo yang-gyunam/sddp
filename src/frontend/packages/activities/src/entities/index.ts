@@ -24,4 +24,4 @@ export {
   EntityMetadataService,
 } from './services/EntityMetadataService';
 
-export { getEntityMetadataService } from './services';
+export { createEntityMetadataService, getEntityMetadataService } from './services';

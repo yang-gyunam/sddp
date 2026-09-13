@@ -15,6 +15,8 @@
     showHeader?: boolean;
     variant?: 'card' | 'embedded';
     onCellClick?: (date: string) => void;
+    onUpdateAllocation?: (userId: string, date: string, allocatedHours: number) => Promise<void>;
+    onLogWork?: (userId: string, date: string, spentHours: number, note?: string) => Promise<void>;
     class?: string;
   }
 
@@ -26,6 +28,8 @@
     showHeader = true,
     variant = 'card',
     onCellClick,
+    onUpdateAllocation = updateAllocation,
+    onLogWork = logWork,
     class: className = '',
   }: Props = $props();
 
@@ -75,9 +79,9 @@
 
     try {
       if (editingCell.type === 'allocated') {
-        await updateAllocation(userId, editingCell.date, hours);
+        await onUpdateAllocation(userId, editingCell.date, hours);
       } else {
-        await logWork(userId, editingCell.date, hours);
+        await onLogWork(userId, editingCell.date, hours);
       }
     } catch (err) {
       console.error('Failed to save:', err);
@@ -224,9 +228,21 @@
 
 <style>
   .timesheet {
-    --timesheet-today-header-bg: color-mix(in srgb, var(--color-accent-primary) 12%, var(--color-bg-secondary));
-    --timesheet-today-cell-bg: color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-bg-primary));
-    --timesheet-today-border: color-mix(in srgb, var(--color-accent-primary) 35%, var(--color-border));
+    --timesheet-today-header-bg: color-mix(
+      in srgb,
+      var(--color-accent-primary) 12%,
+      var(--color-bg-secondary)
+    );
+    --timesheet-today-cell-bg: color-mix(
+      in srgb,
+      var(--color-accent-primary) 8%,
+      var(--color-bg-primary)
+    );
+    --timesheet-today-border: color-mix(
+      in srgb,
+      var(--color-accent-primary) 35%,
+      var(--color-border)
+    );
     background-color: var(--color-bg-primary);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg, 8px);

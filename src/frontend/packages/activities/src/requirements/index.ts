@@ -23,7 +23,11 @@ export * from './stores';
 export * from './components/sections';
 
 // Idioms (explicit: only non-colliding Badge components used cross-domain)
-export { RequirementLevelBadge, RequirementStatusBadge, RequirementCard } from './components/idioms';
+export {
+  RequirementLevelBadge,
+  RequirementStatusBadge,
+  RequirementCard,
+} from './components/idioms';
 
 // Activity ID
 export const REQUIREMENTS_ACTIVITY_ID = 'requirements';

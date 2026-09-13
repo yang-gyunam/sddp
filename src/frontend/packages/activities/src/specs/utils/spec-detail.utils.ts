@@ -33,11 +33,11 @@ export function showSignOffSection(spec: SpecDetail): boolean {
 export function canSignOff(
   spec: SpecDetail,
   currentUserId: string | null,
-  signOffSummary: SignOffSummary | null,
+  signOffSummary: SignOffSummary | null
 ): boolean {
   const currentUserSignOff =
     currentUserId && signOffSummary
-      ? signOffSummary.signOffs.find((s) => s.stakeholder.id === currentUserId) ?? null
+      ? (signOffSummary.signOffs.find((s) => s.stakeholder.id === currentUserId) ?? null)
       : null;
   return (
     spec.status === 'InReview' &&
@@ -49,10 +49,7 @@ export function canSignOff(
 /**
  * Whether all sign-offs are complete (no pending reviewers).
  */
-export function signOffComplete(
-  spec: SpecDetail,
-  signOffSummary: SignOffSummary | null,
-): boolean {
+export function signOffComplete(spec: SpecDetail, signOffSummary: SignOffSummary | null): boolean {
   return (
     (!!signOffSummary && signOffSummary.pendingCount === 0) ||
     spec.status === 'Approved' ||
@@ -69,13 +66,17 @@ export type StepResult = { label: string; status: StepStatus };
 export function workflowSteps(
   spec: SpecDetail,
   _signOffComplete: boolean,
-  hasGeneratedArtifacts: boolean,
+  hasGeneratedArtifacts: boolean
 ): StepResult[] {
   const steps = [
     { label: 'Conversation', complete: !!spec.bornFromConversationId, optional: true },
     { label: 'Requirement', complete: !!spec.requirementId, optional: true },
     { label: 'Spec Draft', complete: spec.status !== 'Draft', optional: false },
-    { label: 'Review', complete: spec.status === 'Approved' || spec.status === 'Locked', optional: false },
+    {
+      label: 'Review',
+      complete: spec.status === 'Approved' || spec.status === 'Locked',
+      optional: false,
+    },
     { label: 'Sign-off', complete: _signOffComplete, optional: false },
     { label: 'Lock', complete: spec.status === 'Locked', optional: false },
     { label: 'Generate', complete: hasGeneratedArtifacts, optional: true },
@@ -89,8 +90,11 @@ export function workflowSteps(
     label: step.label,
     status:
       index < currentIndex
-        ? (step.complete ? 'complete' as const : 'upcoming' as const)
-      : index === currentIndex ? 'current' as const
-      : 'upcoming' as const,
+        ? step.complete
+          ? ('complete' as const)
+          : ('upcoming' as const)
+        : index === currentIndex
+          ? ('current' as const)
+          : ('upcoming' as const),
   }));
 }

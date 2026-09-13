@@ -20,9 +20,7 @@
 
   // Format: "John created Spec SPEC-AUTH-001"
   const entityLabel = $derived(event.entityName || event.entityTitle || event.entityType);
-  const eventText = $derived(
-    `${event.actorName} ${eventStyle.label.toLowerCase()} ${entityLabel}`
-  );
+  const eventText = $derived(`${event.actorName} ${eventStyle.label.toLowerCase()} ${entityLabel}`);
 
   // Smart time format:, 10, 1, 14:21
   const formattedTime = $derived(formatDateByPreference(event.timestamp));
@@ -30,8 +28,6 @@
   function handleClick() {
     onClick?.(event);
   }
-
-
 </script>
 
 <Button
@@ -50,7 +46,10 @@
   <Icon name={eventStyle.icon} size="xs" class="{eventStyle.color} flex-shrink-0" />
 
   <!-- Event text (truncated, full text in tooltip) -->
-  <span class="flex-1 min-w-0 text-xs text-[var(--color-text-secondary)] truncate" title={eventText}>
+  <span
+    class="flex-1 min-w-0 text-xs text-[var(--color-text-secondary)] truncate"
+    title={eventText}
+  >
     {eventText}
   </span>
 

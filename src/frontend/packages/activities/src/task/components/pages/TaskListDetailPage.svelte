@@ -376,13 +376,7 @@
         title="Refresh tasks"
         onclick={handleRefresh}
       />
-      <IconButton
-        icon="plus"
-        size="sm"
-        variant="ghost"
-        title="New Task"
-        onclick={handleNewTask}
-      />
+      <IconButton icon="plus" size="sm" variant="ghost" title="New Task" onclick={handleNewTask} />
     {/snippet}
   </PageHeader>
 
@@ -395,9 +389,15 @@
       {#snippet sidebar()}
         <div class="flex flex-col h-full">
           <!-- Search -->
-          <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+          <div
+            class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+          >
             <div class="relative flex-1">
-              <Icon name="search" size="sm" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+              <Icon
+                name="search"
+                size="sm"
+                class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+              />
               <Input
                 type="text"
                 placeholder="Search tasks..."
@@ -413,7 +413,11 @@
           <div class="flex-1 overflow-y-auto" onscroll={handleTaskListScroll}>
             {#if filteredTasks.length === 0 && !loading}
               <div class="flex flex-col items-center justify-center py-8 text-center px-4">
-                <Icon name="inbox" size="lg" class="text-[var(--color-text-tertiary)] mb-2 opacity-50" />
+                <Icon
+                  name="inbox"
+                  size="lg"
+                  class="text-[var(--color-text-tertiary)] mb-2 opacity-50"
+                />
                 <span class="text-sm text-[var(--color-text-tertiary)]">
                   {searchQuery.trim() ? 'No matching tasks' : 'No tasks yet'}
                 </span>
@@ -483,11 +487,18 @@
           onEdit={handleEdit}
           onLogTime={handleLogTime}
           onDelete={handleDeleteTask}
-          onClose={() => { selectedTaskId = null; currentTask = null; }}
+          onClose={() => {
+            selectedTaskId = null;
+            currentTask = null;
+          }}
         />
       {:else}
         <div class="flex flex-col items-center justify-center h-full text-center px-8">
-          <Icon name="check-square" size="xl" class="text-[var(--color-text-tertiary)] mb-3 opacity-30" />
+          <Icon
+            name="check-square"
+            size="xl"
+            class="text-[var(--color-text-tertiary)] mb-3 opacity-30"
+          />
           <p class="text-sm text-[var(--color-text-tertiary)]">
             Select a task from the list to view details
           </p>

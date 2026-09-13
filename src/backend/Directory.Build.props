@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1903;NU1904</WarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Version>0.3.0</Version>
+  </PropertyGroup>
+</Project>

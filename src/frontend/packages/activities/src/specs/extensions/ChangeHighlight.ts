@@ -52,25 +52,19 @@ export const ChangeHighlight = Mark.create({
         default: null,
         parseHTML: (element) => element.getAttribute('data-author-id'),
         renderHTML: (attributes) =>
-          attributes.authorId
-            ? { 'data-author-id': attributes.authorId }
-            : {},
+          attributes.authorId ? { 'data-author-id': attributes.authorId } : {},
       },
       authorName: {
         default: null,
         parseHTML: (element) => element.getAttribute('data-author-name'),
         renderHTML: (attributes) =>
-          attributes.authorName
-            ? { 'data-author-name': attributes.authorName }
-            : {},
+          attributes.authorName ? { 'data-author-name': attributes.authorName } : {},
       },
       timestamp: {
         default: null,
         parseHTML: (element) => element.getAttribute('data-timestamp'),
         renderHTML: (attributes) =>
-          attributes.timestamp
-            ? { 'data-timestamp': attributes.timestamp }
-            : {},
+          attributes.timestamp ? { 'data-timestamp': attributes.timestamp } : {},
       },
     };
   },

@@ -178,7 +178,11 @@
   }
 
   // Find all ancestor node IDs for a given nodeId (from root to parent)
-  function findAncestorIds(nodes: TreeNode[], targetId: string, path: string[] = []): string[] | null {
+  function findAncestorIds(
+    nodes: TreeNode[],
+    targetId: string,
+    path: string[] = []
+  ): string[] | null {
     for (const node of nodes) {
       if (node.id === targetId) {
         return path; // Found! Return the path (ancestors only, not including target)
@@ -218,9 +222,7 @@
   let currentPanels = $derived(panelConfigs[activity] || []);
 
   // Get expanded panels for resize calculations
-  let expandedPanelsList = $derived(
-    currentPanels.filter(p => expandedPanels.has(p.id))
-  );
+  let expandedPanelsList = $derived(currentPanels.filter((p) => expandedPanels.has(p.id)));
 
   // Initialize panel heights when activity or expanded panels change
   $effect(() => {
@@ -261,10 +263,7 @@
       above: panelHeights[abovePanel.id] ?? 1,
       below: panelHeights[belowPanel.id] ?? 1,
     };
-    startTotalFlex = expandedList.reduce(
-      (sum, panel) => sum + (panelHeights[panel.id] ?? 1),
-      0
-    );
+    startTotalFlex = expandedList.reduce((sum, panel) => sum + (panelHeights[panel.id] ?? 1), 0);
 
     const target = e.target as HTMLElement;
     target.setPointerCapture(e.pointerId);
@@ -293,11 +292,11 @@
 
     // Enforce minimum heights
     if (newAbove < MIN_FLEX) {
-      newBelow += (newAbove - MIN_FLEX);
+      newBelow += newAbove - MIN_FLEX;
       newAbove = MIN_FLEX;
     }
     if (newBelow < MIN_FLEX) {
-      newAbove += (newBelow - MIN_FLEX);
+      newAbove += newBelow - MIN_FLEX;
       newBelow = MIN_FLEX;
     }
 
@@ -327,7 +326,7 @@
 
   // Get the index in expanded panels list for a panel
   function getExpandedIndex(panelId: string): number {
-    return expandedPanelsList.findIndex(p => p.id === panelId);
+    return expandedPanelsList.findIndex((p) => p.id === panelId);
   }
 
   // Check if resize handle should be shown after this panel
@@ -337,7 +336,7 @@
   }
 </script>
 
-<div bind:this={containerRef} class="flex flex-col h-full overflow-hidden {className}">
+<div bind:this={containerRef} class="flex flex-col h-full overflow-y-auto overflow-x-hidden {className}">
   {#if currentPanels.length > 0}
     {#each currentPanels as panel (panel.id)}
       {@const panelContent = panelContentMap[panel.id]}
@@ -345,7 +344,9 @@
       {@const isLoading = panelLoadingMap[panel.id] || false}
       <!-- Panel wrapper with flex sizing for expanded panels -->
       <div
-        class="flex flex-col min-h-0 {expandedPanels.has(panel.id) ? 'flex-1 overflow-hidden' : 'flex-shrink-0'} {isResizing ? '' : 'transition-[flex-grow] duration-300 ease-out'}"
+        class="flex flex-col {expandedPanels.has(panel.id)
+          ? 'flex-1 min-h-[120px] overflow-hidden'
+          : 'flex-shrink-0'} {isResizing ? '' : 'transition-[flex-grow] duration-300 ease-out'}"
         style="flex-grow: {expandedPanels.has(panel.id) ? getPanelFlex(panel.id) : 0}"
       >
         <CollapsiblePanel

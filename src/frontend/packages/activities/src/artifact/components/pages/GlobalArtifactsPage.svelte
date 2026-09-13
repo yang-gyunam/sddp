@@ -5,6 +5,7 @@
   import ArtifactSidebar from '../sections/ArtifactSidebar.svelte';
   import ArtifactContent from '../sections/ArtifactContent.svelte';
   import ArtifactMetaPanel from '../sections/ArtifactMetaPanel.svelte';
+  import ArtifactReviewPanel from '../sections/ArtifactReviewPanel.svelte';
   import {
     subscribeArtifact,
     getFilteredTypeGroups,
@@ -30,7 +31,12 @@
     class?: string;
   }
 
-  let { tenantId: _tenantId = '', projectId: _projectId = '', tabId = '', class: className = '' }: Props = $props();
+  let {
+    tenantId: _tenantId = '',
+    projectId: _projectId = '',
+    tabId = '',
+    class: className = '',
+  }: Props = $props();
 
   // State
   let typeGroups = $state<ArtifactTypeGroup[]>([]);
@@ -149,8 +155,11 @@
     console.log('Regenerate artifact:', selectedArtifactId);
   }
 
+  let reviewOpen = $state(false);
+
   function handleViewSource() {
-    console.log('View source:', currentArtifact?.artifactPath);
+    if (!currentArtifact) return;
+    reviewOpen = true;
   }
 
   function handleVerify() {
@@ -215,9 +224,14 @@
 
   <!-- Meta Panel -->
   <div class="w-64 flex-shrink-0">
-    <ArtifactMetaPanel
-      artifact={currentArtifact}
-      {statusCounts}
-    />
+    <ArtifactMetaPanel artifact={currentArtifact} {statusCounts} />
   </div>
 </div>
+
+<ArtifactReviewPanel
+  open={reviewOpen}
+  artifactId={currentArtifact?.id ?? null}
+  tenantId={_tenantId}
+  projectId={_projectId}
+  onClose={() => (reviewOpen = false)}
+/>

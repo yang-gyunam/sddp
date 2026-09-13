@@ -88,7 +88,7 @@ export const ENTITY_ICON_MAP: Record<EntityType, EntityIconMapping> = {
  * @example icon={ENTITY_ICONS.tasks} iconType="codicon"
  */
 export const ENTITY_ICONS: Record<EntityType, string> = Object.fromEntries(
-  Object.entries(ENTITY_ICON_MAP).map(([key, value]) => [key, value.codicon]),
+  Object.entries(ENTITY_ICON_MAP).map(([key, value]) => [key, value.codicon])
 ) as Record<EntityType, string>;
 
 /**
@@ -96,7 +96,7 @@ export const ENTITY_ICONS: Record<EntityType, string> = Object.fromEntries(
  * @example <Icon name={ENTITY_SVG_ICONS.tasks} />
  */
 export const ENTITY_SVG_ICONS: Record<EntityType, string> = Object.fromEntries(
-  Object.entries(ENTITY_ICON_MAP).map(([key, value]) => [key, value.svg]),
+  Object.entries(ENTITY_ICON_MAP).map(([key, value]) => [key, value.svg])
 ) as Record<EntityType, string>;
 
 /**

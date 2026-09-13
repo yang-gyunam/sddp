@@ -4,7 +4,7 @@
  */
 
 import { fetchWithAuth } from '../../shared/api';
-import type { Artifact, ArtifactSummary } from '../types';
+import type { Artifact, ArtifactFileContent, ArtifactDescriptor, ArtifactSummary } from '../types';
 
 // ============================================
 // Types
@@ -13,8 +13,11 @@ import type { Artifact, ArtifactSummary } from '../types';
 export interface ArtifactVerifyResult {
   isValid: boolean;
   storedHash: string;
+  /** The hash the server computed from the file on disk -- never anything the caller sent. */
   currentHash: string;
   artifactPath: string;
+  /** False when the file is gone. A missing file is not the same event as a modified one. */
+  fileExists?: boolean;
 }
 
 export interface UpsertArtifactRequest {
@@ -34,7 +37,7 @@ export interface UpsertArtifactRequest {
 
 export interface VerifyArtifactRequest {
   artifactId: string;
-  currentHash: string;
+  currentHash?: string;
 }
 
 export interface ArtifactPagedResult<T> {
@@ -101,18 +104,44 @@ export async function getArtifactsByProject(
   return items;
 }
 
+/** Project-wide totals per status, independent of which page is loaded. */
+export interface ArtifactStatusCounts {
+  valid: number;
+  modified: number;
+  missing: number;
+  unverified: number;
+}
+
+export interface ProjectArtifactsPage extends ArtifactPagedResult<ArtifactSummary> {
+  statusCounts?: ArtifactStatusCounts;
+}
+
+export interface ProjectArtifactsQuery {
+  pageNumber?: number;
+  pageSize?: number;
+  /** Valid | Modified | Missing | Unverified. Applied across the project, not the loaded page. */
+  status?: string;
+  /** Matches artifact path, type or entity name, case-insensitively, across the project. */
+  q?: string;
+}
+
 export async function getArtifactsByProjectPage(
   tenantId: string,
   projectId: string,
   pageNumber: number = 1,
-  pageSize: number = 20
-): Promise<ArtifactPagedResult<ArtifactSummary>> {
+  pageSize: number = 20,
+  filters: Pick<ProjectArtifactsQuery, 'status' | 'q'> = {}
+): Promise<ProjectArtifactsPage> {
   const params = new URLSearchParams({
     pageNumber: String(pageNumber),
     pageSize: String(pageSize),
   });
+
+  if (filters.status) params.set('status', filters.status);
+  if (filters.q?.trim()) params.set('q', filters.q.trim());
+
   const endpoint = `/projects/${projectId}/artifacts?${params}`;
-  return fetchWithAuth<ArtifactPagedResult<ArtifactSummary>>(endpoint, { tenantId, projectId });
+  return fetchWithAuth<ProjectArtifactsPage>(endpoint, { tenantId, projectId });
 }
 
 /**
@@ -136,6 +165,34 @@ export async function getArtifactById(
   artifactId: string
 ): Promise<Artifact> {
   return fetchWithAuth<Artifact>(`/artifacts/${artifactId}`, { tenantId, projectId });
+}
+
+/**
+ * Get the artifact's descriptor YAML.
+ */
+export async function getArtifactDescriptor(
+  tenantId: string,
+  projectId: string,
+  artifactId: string
+): Promise<ArtifactDescriptor> {
+  return fetchWithAuth<ArtifactDescriptor>(`/artifacts/${artifactId}/descriptor`, {
+    tenantId,
+    projectId,
+  });
+}
+
+/**
+ * Get the artifact file's actual contents, for reviewing it against the descriptor.
+ */
+export async function getArtifactFileContent(
+  tenantId: string,
+  projectId: string,
+  artifactId: string
+): Promise<ArtifactFileContent> {
+  return fetchWithAuth<ArtifactFileContent>(`/artifacts/${artifactId}/content`, {
+    tenantId,
+    projectId,
+  });
 }
 
 /**
@@ -248,6 +305,11 @@ export class ArtifactService {
   private tenantId = '';
   private projectId = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId;
@@ -276,6 +338,14 @@ export class ArtifactService {
     return getArtifactByPath(this.tenantId, this.projectId, path);
   }
 
+  getArtifactDescriptor(artifactId: string): Promise<ArtifactDescriptor> {
+    return getArtifactDescriptor(this.tenantId, this.projectId, artifactId);
+  }
+
+  getArtifactFileContent(artifactId: string): Promise<ArtifactFileContent> {
+    return getArtifactFileContent(this.tenantId, this.projectId, artifactId);
+  }
+
   upsertArtifact(request: UpsertArtifactRequest): Promise<Artifact> {
     return upsertArtifact(this.tenantId, this.projectId, request);
   }
@@ -295,6 +365,10 @@ export class ArtifactService {
   activateArtifact(artifactId: string): Promise<void> {
     return activateArtifact(this.tenantId, this.projectId, artifactId);
   }
+}
+
+export function createArtifactService(tenantId: string, projectId: string): ArtifactService {
+  return new ArtifactService(tenantId, projectId);
 }
 
 // ============================================

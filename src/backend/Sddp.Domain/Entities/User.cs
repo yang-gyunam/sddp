@@ -49,6 +49,21 @@ public class User : EntityBase
     public bool RequirePasswordChange { get; private set; }
 
     /// <summary>
+    /// Whether login is currently locked for this account.
+    /// </summary>
+    public bool IsLocked { get; private set; }
+
+    /// <summary>
+    /// Time at which the temporary login lock expires.
+    /// </summary>
+    public Timestamp? LockedUntil { get; private set; }
+
+    /// <summary>
+    /// Consecutive failed login attempts since the last successful login or expired lock.
+    /// </summary>
+    public int FailedLoginCount { get; private set; }
+
+    /// <summary>
     /// log
     /// </summary>
     public Timestamp? LastLoginAt { get; private set; }
@@ -110,7 +125,58 @@ public class User : EntityBase
 
     public void RecordLogin()
     {
-        LastLoginAt = Timestamp.Now;
+        RecordLogin(Timestamp.Now);
+    }
+
+    public void RecordLogin(Timestamp timestamp)
+    {
+        LastLoginAt = timestamp;
+        FailedLoginCount = 0;
+        IsLocked = false;
+        LockedUntil = null;
+        MarkAsModified();
+    }
+
+    public bool IsLoginLocked(Timestamp timestamp)
+    {
+        return IsLocked && (!LockedUntil.HasValue || LockedUntil.Value > timestamp);
+    }
+
+    public void ResetExpiredLoginLockout(Timestamp timestamp)
+    {
+        if (!IsLocked || !LockedUntil.HasValue || LockedUntil.Value > timestamp)
+        {
+            return;
+        }
+
+        FailedLoginCount = 0;
+        IsLocked = false;
+        LockedUntil = null;
+        MarkAsModified();
+    }
+
+    public void RecordFailedLogin(Timestamp timestamp, int maxFailedAttempts, TimeSpan lockoutDuration)
+    {
+        if (maxFailedAttempts <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxFailedAttempts));
+        }
+
+        if (lockoutDuration <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lockoutDuration));
+        }
+
+        ResetExpiredLoginLockout(timestamp);
+        FailedLoginCount++;
+
+        if (FailedLoginCount >= maxFailedAttempts)
+        {
+            IsLocked = true;
+            LockedUntil = Timestamp.FromDateTimeOffset(
+                timestamp.ToDateTimeOffset().Add(lockoutDuration));
+        }
+
         MarkAsModified();
     }
 }

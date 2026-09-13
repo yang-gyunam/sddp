@@ -56,8 +56,8 @@
           variant="unstyled"
           class="w-full text-left p-4 rounded-lg transition-colors cursor-pointer
             {isSelected
-              ? 'bg-[var(--color-accent-primary)]/10'
-              : 'hover:bg-[var(--color-bg-tertiary)]'}"
+            ? 'bg-[var(--color-accent-primary)]/10'
+            : 'hover:bg-[var(--color-bg-tertiary)]'}"
           aria-label={term.term}
           onclick={() => handleSelect(term)}
         >
@@ -89,7 +89,8 @@
               <!-- Synonyms -->
               {#if term.synonyms}
                 <div class="text-xs text-gray-500 dark:text-gray-500 mb-2">
-                  <span class="font-medium">Synonyms:</span> {term.synonyms}
+                  <span class="font-medium">Synonyms:</span>
+                  {term.synonyms}
                 </div>
               {/if}
 

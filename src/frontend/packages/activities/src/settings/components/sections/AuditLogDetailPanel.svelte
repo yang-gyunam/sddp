@@ -37,7 +37,7 @@
   {#if log}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="file-text" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="file-text" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Audit Log Detail</span>
       {#snippet actions()}

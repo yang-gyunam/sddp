@@ -52,12 +52,7 @@
       <span class="member-list__count">{members.length} members</span>
     </div>
     <div class="member-list__search">
-      <Input
-        type="search"
-        placeholder="Search members..."
-        bind:value={searchQuery}
-        size="sm"
-      />
+      <Input type="search" placeholder="Search members..." bind:value={searchQuery} size="sm" />
     </div>
   </div>
 
@@ -158,8 +153,12 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Table Header */

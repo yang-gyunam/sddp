@@ -12,12 +12,27 @@ import type { UserRef } from '../../shared/types';
 /**
  * Term categories
  */
-export type TermCategory = 'Technical' | 'Business' | 'Abbreviation' | 'Domain' | 'Architecture' | 'Infrastructure' | 'Security';
+export type TermCategory =
+  | 'Technical'
+  | 'Business'
+  | 'Abbreviation'
+  | 'Domain'
+  | 'Architecture'
+  | 'Infrastructure'
+  | 'Security';
 
 /**
  * Array of all term categories (for iteration)
  */
-export const TERM_CATEGORIES: TermCategory[] = ['Technical', 'Business', 'Abbreviation', 'Domain', 'Architecture', 'Infrastructure', 'Security'];
+export const TERM_CATEGORIES: TermCategory[] = [
+  'Technical',
+  'Business',
+  'Abbreviation',
+  'Domain',
+  'Architecture',
+  'Infrastructure',
+  'Security',
+];
 
 /**
  * Glossary term status
@@ -352,10 +367,7 @@ export function isStatusUsable(status: GlossaryTermStatus): boolean {
 /**
  * Check if transition is valid
  */
-export function canTransitionTo(
-  current: GlossaryTermStatus,
-  target: GlossaryTermStatus
-): boolean {
+export function canTransitionTo(current: GlossaryTermStatus, target: GlossaryTermStatus): boolean {
   const validTransitions: Record<GlossaryTermStatus, GlossaryTermStatus[]> = {
     Draft: ['Active', 'Deprecated'],
     Active: ['Draft', 'Deprecated'],

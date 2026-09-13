@@ -59,8 +59,7 @@
       prevTop = top;
     }
     const changed =
-      newWraps.size !== wrapStarts.size ||
-      [...newWraps].some((idx) => !wrapStarts.has(idx));
+      newWraps.size !== wrapStarts.size || [...newWraps].some((idx) => !wrapStarts.has(idx));
     if (changed) {
       wrapStarts.clear();
       for (const idx of newWraps) {

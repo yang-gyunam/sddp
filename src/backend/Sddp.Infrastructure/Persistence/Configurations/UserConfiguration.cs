@@ -62,6 +62,20 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("require_password_change")
             .HasDefaultValue(false);
 
+        builder.Property(u => u.IsLocked)
+            .HasColumnName("is_locked")
+            .HasDefaultValue(false);
+
+        builder.Property(u => u.LockedUntil)
+            .HasConversion(
+                ts => ts.HasValue ? ts.Value.ToDateTimeOffset() : (DateTimeOffset?)null,
+                dto => dto.HasValue ? Timestamp.FromDateTimeOffset(dto.Value) : null)
+            .HasColumnName("locked_until");
+
+        builder.Property(u => u.FailedLoginCount)
+            .HasColumnName("failed_login_count")
+            .HasDefaultValue(0);
+
         builder.Property(u => u.LastLoginAt)
             .HasConversion(
                 ts => ts.HasValue ? ts.Value.ToDateTimeOffset() : (DateTimeOffset?)null,

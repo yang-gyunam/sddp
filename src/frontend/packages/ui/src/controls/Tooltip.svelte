@@ -25,19 +25,23 @@
   const placementClasses: Record<TooltipPlacement, { position: string; arrow: string }> = {
     top: {
       position: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-      arrow: 'top-full left-1/2 -translate-x-1/2 border-t-[var(--color-neutral-800)] border-x-transparent border-b-transparent',
+      arrow:
+        'top-full left-1/2 -translate-x-1/2 border-t-[var(--color-neutral-800)] border-x-transparent border-b-transparent',
     },
     bottom: {
       position: 'top-full left-1/2 -translate-x-1/2 mt-2',
-      arrow: 'bottom-full left-1/2 -translate-x-1/2 border-b-[var(--color-neutral-800)] border-x-transparent border-t-transparent',
+      arrow:
+        'bottom-full left-1/2 -translate-x-1/2 border-b-[var(--color-neutral-800)] border-x-transparent border-t-transparent',
     },
     left: {
       position: 'right-full top-1/2 -translate-y-1/2 mr-2',
-      arrow: 'left-full top-1/2 -translate-y-1/2 border-l-[var(--color-neutral-800)] border-y-transparent border-r-transparent',
+      arrow:
+        'left-full top-1/2 -translate-y-1/2 border-l-[var(--color-neutral-800)] border-y-transparent border-r-transparent',
     },
     right: {
       position: 'left-full top-1/2 -translate-y-1/2 ml-2',
-      arrow: 'right-full top-1/2 -translate-y-1/2 border-r-[var(--color-neutral-800)] border-y-transparent border-l-transparent',
+      arrow:
+        'right-full top-1/2 -translate-y-1/2 border-r-[var(--color-neutral-800)] border-y-transparent border-l-transparent',
     },
   };
 
@@ -79,9 +83,7 @@
       >
         {content}
       </div>
-      <div
-        class="absolute w-0 h-0 border-4 {placementClasses[placement].arrow}"
-      ></div>
+      <div class="absolute w-0 h-0 border-4 {placementClasses[placement].arrow}"></div>
     </div>
   {/if}
 </div>

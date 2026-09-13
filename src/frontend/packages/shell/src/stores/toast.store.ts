@@ -66,8 +66,14 @@ export interface ToastStoreLike {
   removeToastData: (id: string) => void;
   clearAll: () => void;
   info: (message: string, options?: Partial<Omit<ToastData, 'id' | 'type' | 'message'>>) => string;
-  success: (message: string, options?: Partial<Omit<ToastData, 'id' | 'type' | 'message'>>) => string;
-  warning: (message: string, options?: Partial<Omit<ToastData, 'id' | 'type' | 'message'>>) => string;
+  success: (
+    message: string,
+    options?: Partial<Omit<ToastData, 'id' | 'type' | 'message'>>
+  ) => string;
+  warning: (
+    message: string,
+    options?: Partial<Omit<ToastData, 'id' | 'type' | 'message'>>
+  ) => string;
   error: (message: string, options?: Partial<Omit<ToastData, 'id' | 'type' | 'message'>>) => string;
   getSnapshot: () => ToastDataState;
 }
@@ -115,12 +121,13 @@ function normalizeToastState(state: ToastDataState): unknown {
       message: toastEntry.message,
       duration: toastEntry.duration ?? null,
       closable: toastEntry.closable ?? null,
-      actions: toastEntry.actions?.map((action) => ({
-        label: action.label,
-        dismissOnClick: action.dismissOnClick ?? null,
-        variant: action.variant ?? null,
-        hasOnClick: typeof action.onClick === 'function',
-      })) ?? [],
+      actions:
+        toastEntry.actions?.map((action) => ({
+          label: action.label,
+          dismissOnClick: action.dismissOnClick ?? null,
+          variant: action.variant ?? null,
+          hasOnClick: typeof action.onClick === 'function',
+        })) ?? [],
       hasOnContentClick: typeof toastEntry.onContentClick === 'function',
     })),
   };
@@ -176,20 +183,44 @@ function createWritableToastDataStore(
     clearAll,
     info: (message, optionsOverride) => {
       effects.outputInfo('Application', message);
-      effects.addProblem({ severity: 'info', type: 'runtime', message, source: 'Toast', code: 'TOAST_INFO' });
+      effects.addProblem({
+        severity: 'info',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_INFO',
+      });
       return addToastData({ type: 'info', message, ...optionsOverride });
     },
     success: (message, optionsOverride) => {
       effects.outputInfo('Application', message);
-      effects.addProblem({ severity: 'info', type: 'runtime', message, source: 'Toast', code: 'TOAST_SUCCESS' });
+      effects.addProblem({
+        severity: 'info',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_SUCCESS',
+      });
       return addToastData({ type: 'success', message, ...optionsOverride });
     },
     warning: (message, optionsOverride) => {
-      effects.addProblem({ severity: 'warning', type: 'runtime', message, source: 'Toast', code: 'TOAST_WARNING' });
+      effects.addProblem({
+        severity: 'warning',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_WARNING',
+      });
       return addToastData({ type: 'warning', message, ...optionsOverride });
     },
     error: (message, optionsOverride) => {
-      effects.addProblem({ severity: 'error', type: 'runtime', message, source: 'Toast', code: 'TOAST_ERROR' });
+      effects.addProblem({
+        severity: 'error',
+        type: 'runtime',
+        message,
+        source: 'Toast',
+        code: 'TOAST_ERROR',
+      });
       effects.panelShow();
       effects.panelSetActiveTab('problems');
       return addToastData({ type: 'error', message, ...optionsOverride });
@@ -282,11 +313,7 @@ function createParityAwareToastStore(
     };
   }
 
-  function execute<T>(
-    action: string,
-    invokePrimary: () => T,
-    invokeShadow: () => void
-  ): T {
+  function execute<T>(action: string, invokePrimary: () => T, invokeShadow: () => void): T {
     primaryEffectsLog.length = 0;
     shadowEffectsLog.length = 0;
 
@@ -299,8 +326,8 @@ function createParityAwareToastStore(
     const shadowEffects = [...shadowEffectsLog];
 
     if (
-      !areEqual(normalizeToastState(primaryState), normalizeToastState(shadowState))
-      || !areEqual(primaryEffects, shadowEffects)
+      !areEqual(normalizeToastState(primaryState), normalizeToastState(shadowState)) ||
+      !areEqual(primaryEffects, shadowEffects)
     ) {
       reportMismatch({ action, primaryState, shadowState, primaryEffects, shadowEffects });
     }
@@ -310,11 +337,14 @@ function createParityAwareToastStore(
 
   return {
     subscribe,
-    addToastData: (toastEntry) => execute(
-      'addToastData',
-      () => primary.addToastData(toastEntry),
-      () => { shadow.addToastData(toastEntry); }
-    ),
+    addToastData: (toastEntry) =>
+      execute(
+        'addToastData',
+        () => primary.addToastData(toastEntry),
+        () => {
+          shadow.addToastData(toastEntry);
+        }
+      ),
     removeToastData: (id) => {
       execute(
         'removeToastData',
@@ -322,7 +352,9 @@ function createParityAwareToastStore(
           primary.removeToastData(id);
           return undefined;
         },
-        () => { shadow.removeToastData(id); }
+        () => {
+          shadow.removeToastData(id);
+        }
       );
     },
     clearAll: () => {
@@ -332,35 +364,45 @@ function createParityAwareToastStore(
           primary.clearAll();
           return undefined;
         },
-        () => { shadow.clearAll(); }
+        () => {
+          shadow.clearAll();
+        }
       );
     },
     info: (message, optionsOverride) => {
       return execute(
         'info',
         () => primary.info(message, optionsOverride),
-        () => { shadow.info(message, optionsOverride); }
+        () => {
+          shadow.info(message, optionsOverride);
+        }
       );
     },
     success: (message, optionsOverride) => {
       return execute(
         'success',
         () => primary.success(message, optionsOverride),
-        () => { shadow.success(message, optionsOverride); }
+        () => {
+          shadow.success(message, optionsOverride);
+        }
       );
     },
     warning: (message, optionsOverride) => {
       return execute(
         'warning',
         () => primary.warning(message, optionsOverride),
-        () => { shadow.warning(message, optionsOverride); }
+        () => {
+          shadow.warning(message, optionsOverride);
+        }
       );
     },
     error: (message, optionsOverride) => {
       return execute(
         'error',
         () => primary.error(message, optionsOverride),
-        () => { shadow.error(message, optionsOverride); }
+        () => {
+          shadow.error(message, optionsOverride);
+        }
       );
     },
     getSnapshot: () => cloneToastState(currentState),
@@ -381,12 +423,18 @@ function createToastStore(): ToastStoreLike {
   const shadowEffectsLog: ToastEffectCall[] = [];
 
   const legacyStore = createWritableToastDataStore(
-    createRecordingEffects(enableRunesToastStore ? 'shadow' : 'active', enableRunesToastStore ? shadowEffectsLog : primaryEffectsLog),
+    createRecordingEffects(
+      enableRunesToastStore ? 'shadow' : 'active',
+      enableRunesToastStore ? shadowEffectsLog : primaryEffectsLog
+    ),
     { now, idFactory: enableRunesToastStore ? idFactories.shadow : idFactories.primary }
   );
 
   const runesStore = createRunesToastDataStore(
-    createRecordingEffects(enableRunesToastStore ? 'active' : 'shadow', enableRunesToastStore ? primaryEffectsLog : shadowEffectsLog),
+    createRecordingEffects(
+      enableRunesToastStore ? 'active' : 'shadow',
+      enableRunesToastStore ? primaryEffectsLog : shadowEffectsLog
+    ),
     { now, idFactory: enableRunesToastStore ? idFactories.primary : idFactories.shadow }
   );
 
@@ -397,15 +445,21 @@ function createToastStore(): ToastStoreLike {
     return primaryStore;
   }
 
-  return createParityAwareToastStore(primaryStore, shadowStore, primaryEffectsLog, shadowEffectsLog, ({ action, primaryState, shadowState, primaryEffects, shadowEffects }) => {
-    console.error('[toast.store parity mismatch]', {
-      action,
-      primaryState: normalizeToastState(primaryState),
-      shadowState: normalizeToastState(shadowState),
-      primaryEffects,
-      shadowEffects,
-    });
-  });
+  return createParityAwareToastStore(
+    primaryStore,
+    shadowStore,
+    primaryEffectsLog,
+    shadowEffectsLog,
+    ({ action, primaryState, shadowState, primaryEffects, shadowEffects }) => {
+      console.error('[toast.store parity mismatch]', {
+        action,
+        primaryState: normalizeToastState(primaryState),
+        shadowState: normalizeToastState(shadowState),
+        primaryEffects,
+        shadowEffects,
+      });
+    }
+  );
 }
 
 export const __internal = {

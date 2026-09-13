@@ -34,9 +34,7 @@ type TabStateMismatchContext = {
 const initialState: TabStateMap = {};
 
 function cloneTabStateMap(map: TabStateMap): TabStateMap {
-  return Object.fromEntries(
-    Object.entries(map).map(([tabId, state]) => [tabId, { ...state }])
-  );
+  return Object.fromEntries(Object.entries(map).map(([tabId, state]) => [tabId, { ...state }]));
 }
 
 function normalizeTabStateMap(map: TabStateMap): unknown {
@@ -190,19 +188,39 @@ function createParityAwareTabStateStore(
       return state ? ({ ...state } as T) : undefined;
     },
     setState: <T extends object>(tabId: string, state: T): void => {
-      execute('setState', () => primary.setState(tabId, state), () => shadow.setState(tabId, state));
+      execute(
+        'setState',
+        () => primary.setState(tabId, state),
+        () => shadow.setState(tabId, state)
+      );
     },
     updateState: <T extends object>(tabId: string, patch: Partial<T>): void => {
-      execute('updateState', () => primary.updateState<T>(tabId, patch), () => shadow.updateState<T>(tabId, patch));
+      execute(
+        'updateState',
+        () => primary.updateState<T>(tabId, patch),
+        () => shadow.updateState<T>(tabId, patch)
+      );
     },
     clearState: (tabId: string): void => {
-      execute('clearState', () => primary.clearState(tabId), () => shadow.clearState(tabId));
+      execute(
+        'clearState',
+        () => primary.clearState(tabId),
+        () => shadow.clearState(tabId)
+      );
     },
     clearStates: (tabIds: string[]): void => {
-      execute('clearStates', () => primary.clearStates(tabIds), () => shadow.clearStates(tabIds));
+      execute(
+        'clearStates',
+        () => primary.clearStates(tabIds),
+        () => shadow.clearStates(tabIds)
+      );
     },
     copyState: (sourceTabId: string, targetTabId: string): void => {
-      execute('copyState', () => primary.copyState(sourceTabId, targetTabId), () => shadow.copyState(sourceTabId, targetTabId));
+      execute(
+        'copyState',
+        () => primary.copyState(sourceTabId, targetTabId),
+        () => shadow.copyState(sourceTabId, targetTabId)
+      );
     },
   };
 }
@@ -221,13 +239,17 @@ function createStore(): TabStateStoreLike {
     return primaryStore;
   }
 
-  return createParityAwareTabStateStore(primaryStore, shadowStore, ({ action, primaryState, shadowState }) => {
-    console.error('[tab-state.store parity mismatch]', {
-      action,
-      primaryState: normalizeTabStateMap(primaryState),
-      shadowState: normalizeTabStateMap(shadowState),
-    });
-  });
+  return createParityAwareTabStateStore(
+    primaryStore,
+    shadowStore,
+    ({ action, primaryState, shadowState }) => {
+      console.error('[tab-state.store parity mismatch]', {
+        action,
+        primaryState: normalizeTabStateMap(primaryState),
+        shadowState: normalizeTabStateMap(shadowState),
+      });
+    }
+  );
 }
 
 export const __internal = {
@@ -246,10 +268,8 @@ export const getTabState = <T extends object>(tabId: string): T | undefined =>
 export const setTabState = <T extends object>(tabId: string, state: T): void =>
   tabStateStore.setState(tabId, state);
 
-export const updateTabState = <T extends object>(
-  tabId: string,
-  patch: Partial<T>
-): void => tabStateStore.updateState<T>(tabId, patch);
+export const updateTabState = <T extends object>(tabId: string, patch: Partial<T>): void =>
+  tabStateStore.updateState<T>(tabId, patch);
 
 export const clearTabState = (tabId: string): void => tabStateStore.clearState(tabId);
 

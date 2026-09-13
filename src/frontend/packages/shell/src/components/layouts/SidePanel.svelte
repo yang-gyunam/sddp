@@ -137,12 +137,21 @@
     style="width: {width}px"
   >
     <!-- Resize Handle -->
-    <ResizeHandle orientation="vertical" onmousedown={handleResizeStart} isResizing={resizing} class="bg-[var(--color-border)]" />
+    <ResizeHandle
+      orientation="vertical"
+      onmousedown={handleResizeStart}
+      isResizing={resizing}
+      class="bg-[var(--color-border)]"
+    />
 
     <!-- Panel Content -->
-    <div class="flex-1 flex flex-col bg-[var(--color-bg-secondary)] border-l border-[var(--color-border)] shadow-lg">
+    <div
+      class="flex-1 flex flex-col bg-[var(--color-bg-secondary)] border-l border-[var(--color-border)] shadow-lg"
+    >
       <!-- Header -->
-      <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
+      <div
+        class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-tertiary)]"
+      >
         <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">
           {title}
         </h3>

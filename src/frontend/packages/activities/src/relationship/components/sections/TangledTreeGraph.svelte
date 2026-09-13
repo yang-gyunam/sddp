@@ -3,10 +3,22 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
   import { select } from 'd3-selection';
-  import type { TraceabilityNode, TraceabilityCrossLink, PositionedNode, TangledTreeLayoutResult } from '../../types';
+  import type {
+    TraceabilityNode,
+    TraceabilityCrossLink,
+    PositionedNode,
+    TangledTreeLayoutResult,
+  } from '../../types';
   import type { EntityType, RelationType } from '../../types';
   import { NODE_COLORS, EDGE_COLORS } from '../../types';
-  import { computeTangledTreeLayout, getVisibleNodes, buildChildrenMap } from '../../graph';
+  import {
+    computeTangledTreeLayout,
+    getVisibleNodes,
+    buildChildrenMap,
+    resolveTraceabilityNodeOpacity,
+    CROSS_LINK_FOCUS,
+  } from '../../graph';
+  import type { TraceabilityFocus } from '../../graph';
   import TangledTreeTooltip from '../idioms/TangledTreeTooltip.svelte';
   import { Button } from '@sddp/ui';
 
@@ -19,8 +31,11 @@
     showCrossLinks?: boolean;
     showLabels?: boolean;
     filterEntityTypes?: Set<EntityType>;
+    focusedEntityType?: TraceabilityFocus | null;
     selectedNodeId?: string | null;
     onNodeClick?: (nodeId: string, entityType: EntityType) => void;
+    /** Called after the view is reset, so the owner can clear focus and display toggles. */
+    onResetView?: () => void;
     class?: string;
   }
 
@@ -33,8 +48,10 @@
     showCrossLinks = true,
     showLabels = true,
     filterEntityTypes,
+    focusedEntityType = null,
     selectedNodeId = null,
     onNodeClick,
+    onResetView,
     class: className = '',
   }: Props = $props();
 
@@ -96,9 +113,22 @@
     return ids;
   });
 
+  /**
+   * Nodes taking part in at least one cross-link. Cross-link focus keeps these lit and
+   * dims the rest, whatever their entity type.
+   */
+  const crossLinkedNodeIds = $derived.by((): SvelteSet<string> => {
+    const ids = new SvelteSet<string>();
+    for (const cl of layout.crossLinkPaths) {
+      ids.add(cl.sourceId);
+      ids.add(cl.targetId);
+    }
+    return ids;
+  });
+
   // Hovered node for tooltip
   const hoveredNode = $derived(
-    hoveredNodeId ? (layout.nodes.find((n) => n.id === hoveredNodeId) ?? null) : null,
+    hoveredNodeId ? (layout.nodes.find((n) => n.id === hoveredNodeId) ?? null) : null
   );
 
   // Compute node mark height based on bundles (for metro-style node marks)
@@ -135,16 +165,26 @@
     if (prevOrientation !== null && orientation !== prevOrientation) {
       if (svgElement && zoomBehavior) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (select(svgElement) as any).transition().duration(300).call(zoomBehavior.transform, getInitialTransform(orientation));
+        (select(svgElement) as any)
+          .transition()
+          .duration(300)
+          .call(zoomBehavior.transform, getInitialTransform(orientation));
       }
     }
     prevOrientation = orientation;
   });
 
-  function handleResetZoom() {
-    if (!svgElement || !zoomBehavior) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (select(svgElement) as any).transition().duration(300).call(zoomBehavior.transform, getInitialTransform(orientation));
+  function handleResetView() {
+    // Zoom lives here; focus and the display toggles live with the owner, so both halves
+    // have to be reset or the button only appears to work.
+    if (svgElement && zoomBehavior) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (select(svgElement) as any)
+        .transition()
+        .duration(300)
+        .call(zoomBehavior.transform, getInitialTransform(orientation));
+    }
+    onResetView?.();
   }
 
   function handleNodeClick(node: PositionedNode) {
@@ -172,17 +212,25 @@
     return EDGE_COLORS[type] ?? '#6b7280';
   }
 
-  function getNodeOpacity(nodeId: string): number {
-    if (!connectedNodeIds) return 1;
-    return connectedNodeIds.has(nodeId) ? 1 : 0.15;
+  function getNodeOpacity(node: PositionedNode): number {
+    return resolveTraceabilityNodeOpacity(
+      node.entityType,
+      focusedEntityType,
+      connectedNodeIds ? connectedNodeIds.has(node.id) : null,
+      crossLinkedNodeIds.has(node.id)
+    );
   }
 
   function getEdgeOpacity(sourceId: string, targetId: string): number {
+    // Hierarchy edges are not cross-links, so cross-link focus pushes them back rather
+    // than leaving them competing with the links being examined.
+    if (focusedEntityType === CROSS_LINK_FOCUS) return 0.06;
     if (!connectedNodeIds) return 0.7;
     return connectedNodeIds.has(sourceId) && connectedNodeIds.has(targetId) ? 0.85 : 0.06;
   }
 
   function getCrossLinkOpacity(sourceId: string, targetId: string): number {
+    if (focusedEntityType === CROSS_LINK_FOCUS) return 0.9;
     if (!connectedNodeIds) return 0.5;
     return connectedNodeIds.has(sourceId) && connectedNodeIds.has(targetId) ? 0.85 : 0.06;
   }
@@ -297,7 +345,9 @@
           {@const hiddenCount = hiddenChildrenCounts.get(node.id) ?? 0}
           {@const markH = getNodeMarkHeight(node)}
           <g
-            style="opacity: {getNodeOpacity(node.id)}; transition: opacity 150ms;"
+            data-node-id={node.id}
+            data-entity-type={node.entityType}
+            style="opacity: {getNodeOpacity(node)}; transition: opacity 150ms;"
             onmouseenter={() => (hoveredNodeId = node.id)}
             onmouseleave={() => (hoveredNodeId = null)}
           >
@@ -451,11 +501,9 @@
                 </text>
               {/if}
             {/if}
-
           </g>
         {/each}
       </g>
-
     </g>
   </svg>
 
@@ -463,8 +511,8 @@
   <Button
     variant="unstyled"
     class="absolute top-3 right-3 p-1.5 bg-[var(--color-bg-primary)] rounded-md border border-[var(--color-border-primary)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] shadow-sm text-xs"
-    onclick={handleResetZoom}
-    title="Reset zoom"
+    onclick={handleResetView}
+    title="Reset view"
   >
     Reset
   </Button>

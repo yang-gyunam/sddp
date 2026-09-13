@@ -22,12 +22,7 @@
     class?: string;
   }
 
-  let {
-    data,
-    weeks = 12,
-    onCellClick,
-    class: className = '',
-  }: Props = $props();
+  let { data, weeks = 12, onCellClick, class: className = '' }: Props = $props();
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -60,7 +55,9 @@
   function getTooltip(cell: HeatmapCell | null): string {
     if (!cell) return 'No data';
     if (cell.allocated === 0) return `${formatDate(cell.date)}: No allocation`;
-    const utilizationLabel = formatPercent(Math.round(cell.utilization) / 100, { maximumFractionDigits: 0 });
+    const utilizationLabel = formatPercent(Math.round(cell.utilization) / 100, {
+      maximumFractionDigits: 0,
+    });
     return `${formatDate(cell.date)}: ${formatNumber(cell.spent)}h/${formatNumber(cell.allocated)}h (${utilizationLabel})`;
   }
 </script>
@@ -82,7 +79,9 @@
             <Button
               variant="unstyled"
               class="heatmap__cell"
-              style="--cell-color: {getColor(cell?.utilization ?? null)}; --cell-color-dark: {getDarkColor(cell?.utilization ?? null)}"
+              style="--cell-color: {getColor(
+                cell?.utilization ?? null
+              )}; --cell-color-dark: {getDarkColor(cell?.utilization ?? null)}"
               title={getTooltip(cell)}
               onclick={() => cell && onCellClick?.(cell.date)}
               disabled={!cell}
@@ -97,11 +96,31 @@
   <div class="heatmap__legend">
     <span class="heatmap__legend-label">Less</span>
     <div class="heatmap__legend-cells">
-      <span class="heatmap__legend-cell" style="--cell-color: var(--color-bg-tertiary); --cell-color-dark: var(--color-bg-tertiary)" title="0%"></span>
-      <span class="heatmap__legend-cell" style="--cell-color: var(--color-danger-200); --cell-color-dark: var(--color-danger-800)" title="1-49%"></span>
-      <span class="heatmap__legend-cell" style="--cell-color: var(--color-warning-300); --cell-color-dark: var(--color-warning-700)" title="50-79%"></span>
-      <span class="heatmap__legend-cell" style="--cell-color: var(--color-accent-primary); --cell-color-dark: var(--color-accent-primary)" title="80-99%"></span>
-      <span class="heatmap__legend-cell" style="--cell-color: var(--color-success-400); --cell-color-dark: var(--color-success-600)" title="100%+"></span>
+      <span
+        class="heatmap__legend-cell"
+        style="--cell-color: var(--color-bg-tertiary); --cell-color-dark: var(--color-bg-tertiary)"
+        title="0%"
+      ></span>
+      <span
+        class="heatmap__legend-cell"
+        style="--cell-color: var(--color-danger-200); --cell-color-dark: var(--color-danger-800)"
+        title="1-49%"
+      ></span>
+      <span
+        class="heatmap__legend-cell"
+        style="--cell-color: var(--color-warning-300); --cell-color-dark: var(--color-warning-700)"
+        title="50-79%"
+      ></span>
+      <span
+        class="heatmap__legend-cell"
+        style="--cell-color: var(--color-accent-primary); --cell-color-dark: var(--color-accent-primary)"
+        title="80-99%"
+      ></span>
+      <span
+        class="heatmap__legend-cell"
+        style="--cell-color: var(--color-success-400); --cell-color-dark: var(--color-success-600)"
+        title="100%+"
+      ></span>
     </div>
     <span class="heatmap__legend-label">More</span>
   </div>
@@ -154,7 +173,9 @@
     padding: 0;
     background-color: var(--cell-color);
     cursor: pointer;
-    transition: transform 100ms ease, opacity 100ms ease;
+    transition:
+      transform 100ms ease,
+      opacity 100ms ease;
   }
 
   :global(.dark) .heatmap__cell {

@@ -42,11 +42,7 @@
     'Json',
   ];
 
-  const baseClassOptions = [
-    'AuditableEntityBase',
-    'EntityBase',
-    'VersionedEntityBase',
-  ];
+  const baseClassOptions = ['AuditableEntityBase', 'EntityBase', 'VersionedEntityBase'];
 
   const formId = `entity-schema-${Math.random().toString(36).substring(2, 9)}`;
   const entityNameId = `${formId}-entity-name`;
@@ -252,7 +248,9 @@
   });
 </script>
 
-<div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3">
+<div
+  class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3"
+>
   <div class="flex items-start justify-between gap-3">
     <div>
       <h3 class="text-sm font-medium text-[var(--color-text-secondary)]">Entity Schema</h3>
@@ -273,19 +271,36 @@
   </div>
 
   {#if showForm}
-    <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-3 space-y-4">
-      <div class="flex items-center justify-between pb-2 border-b border-[var(--color-border-secondary)]">
+    <div
+      class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-3 space-y-4"
+    >
+      <div
+        class="flex items-center justify-between pb-2 border-b border-[var(--color-border-secondary)]"
+      >
         <span class="text-xs font-semibold text-[var(--color-text-primary)]">
           {editingEntityId ? 'Edit Entity' : 'New Entity'}
         </span>
         <div class="flex items-center gap-1">
-          <IconButton icon="check" size="sm" variant={formState.entityName.trim() && formState.tableName.trim() ? 'success' : 'ghost'} onclick={saveEntity} disabled={!formState.entityName.trim() || !formState.tableName.trim()} title={editingEntityId ? 'Update' : 'Create'} />
+          <IconButton
+            icon="check"
+            size="sm"
+            variant={formState.entityName.trim() && formState.tableName.trim()
+              ? 'success'
+              : 'ghost'}
+            onclick={saveEntity}
+            disabled={!formState.entityName.trim() || !formState.tableName.trim()}
+            title={editingEntityId ? 'Update' : 'Create'}
+          />
           <IconButton icon="x" size="sm" variant="ghost" onclick={cancelForm} title="Cancel" />
         </div>
       </div>
       <div class="grid gap-3 md:grid-cols-2">
         <div>
-          <label for={entityNameId} class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Entity Name</label>
+          <label
+            for={entityNameId}
+            class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1"
+            >Entity Name</label
+          >
           <Input
             unstyled
             id={entityNameId}
@@ -295,7 +310,11 @@
           />
         </div>
         <div>
-          <label for={tableNameId} class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Table Name</label>
+          <label
+            for={tableNameId}
+            class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1"
+            >Table Name</label
+          >
           <Input
             unstyled
             id={tableNameId}
@@ -305,7 +324,11 @@
           />
         </div>
         <div>
-          <label for={namespaceId} class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Namespace</label>
+          <label
+            for={namespaceId}
+            class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1"
+            >Namespace</label
+          >
           <Input
             unstyled
             id={namespaceId}
@@ -314,7 +337,11 @@
           />
         </div>
         <div>
-          <label for={baseClassId} class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Base Class</label>
+          <label
+            for={baseClassId}
+            class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1"
+            >Base Class</label
+          >
           <Select
             unstyled
             id={baseClassId}
@@ -327,13 +354,12 @@
           </Select>
         </div>
         <div class="md:col-span-2">
-          <label for={descriptionId} class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Description</label>
-          <Textarea
-            id={descriptionId}
-            rows={2}
-            bind:value={formState.description}
-            resize="none"
-          />
+          <label
+            for={descriptionId}
+            class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1"
+            >Description</label
+          >
+          <Textarea id={descriptionId} rows={2} bind:value={formState.description} resize="none" />
         </div>
       </div>
 
@@ -354,26 +380,33 @@
         {:else}
           <div class="space-y-2">
             {#each formState.fields as field (field.localId)}
-              <div class="grid gap-2 md:grid-cols-[1.2fr_1.2fr_0.8fr_0.6fr_0.6fr_auto] items-center">
+              <div
+                class="grid gap-2 md:grid-cols-[1.2fr_1.2fr_0.8fr_0.6fr_0.6fr_auto] items-center"
+              >
                 <Input
                   unstyled
                   value={field.fieldName}
                   placeholder="FieldName"
                   class="w-full px-2 py-1 text-sm rounded border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
-                  oninput={(e) => updateField(field.localId, { fieldName: (e.target as HTMLInputElement).value })}
+                  oninput={(e) =>
+                    updateField(field.localId, { fieldName: (e.target as HTMLInputElement).value })}
                 />
                 <Input
                   unstyled
                   value={field.columnName}
                   placeholder="column_name"
                   class="w-full px-2 py-1 text-sm rounded border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
-                  oninput={(e) => updateField(field.localId, { columnName: (e.target as HTMLInputElement).value })}
+                  oninput={(e) =>
+                    updateField(field.localId, {
+                      columnName: (e.target as HTMLInputElement).value,
+                    })}
                 />
                 <Select
                   unstyled
                   value={field.fieldType}
                   class="w-full px-2 py-1 text-sm rounded border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
-                  onchange={(value) => updateField(field.localId, { fieldType: value as FieldType })}
+                  onchange={(value) =>
+                    updateField(field.localId, { fieldType: value as FieldType })}
                 >
                   {#each fieldTypeOptions as option (option)}
                     <option value={option}>{option}</option>
@@ -396,9 +429,27 @@
                   Unique
                 </label>
                 <div class="flex items-center gap-1">
-                  <IconButton icon="chevron-up" variant="ghost" size="sm" onclick={() => moveField(field.localId, -1)} title="Move up" />
-                  <IconButton icon="chevron-down" variant="ghost" size="sm" onclick={() => moveField(field.localId, 1)} title="Move down" />
-                  <IconButton icon="trash" variant="danger" size="sm" onclick={() => removeField(field.localId)} title="Remove field" />
+                  <IconButton
+                    icon="chevron-up"
+                    variant="ghost"
+                    size="sm"
+                    onclick={() => moveField(field.localId, -1)}
+                    title="Move up"
+                  />
+                  <IconButton
+                    icon="chevron-down"
+                    variant="ghost"
+                    size="sm"
+                    onclick={() => moveField(field.localId, 1)}
+                    title="Move down"
+                  />
+                  <IconButton
+                    icon="trash"
+                    variant="danger"
+                    size="sm"
+                    onclick={() => removeField(field.localId)}
+                    title="Remove field"
+                  />
                 </div>
               </div>
             {/each}
@@ -408,11 +459,13 @@
 
       {#if previewCode}
         <div>
-          <h4 class="text-xs font-medium text-[var(--color-text-secondary)] mb-2">Generated Preview</h4>
-          <pre class="text-xs bg-[var(--color-surface-200)] border border-[var(--color-border-secondary)] rounded p-3 overflow-auto">{previewCode}</pre>
+          <h4 class="text-xs font-medium text-[var(--color-text-secondary)] mb-2">
+            Generated Preview
+          </h4>
+          <pre
+            class="text-xs bg-[var(--color-surface-200)] border border-[var(--color-border-secondary)] rounded p-3 overflow-auto">{previewCode}</pre>
         </div>
       {/if}
-
     </div>
   {/if}
 
@@ -427,14 +480,18 @@
   {:else}
     <div class="space-y-3">
       {#each entities as entity (entity.id)}
-        <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-3 space-y-2">
+        <div
+          class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-3 space-y-2"
+        >
           <div class="flex items-start justify-between gap-2">
             <div>
               <div class="text-sm font-medium text-[var(--color-text-primary)]">
                 {entity.entityName}
                 <span class="text-xs text-[var(--color-text-tertiary)]">({entity.tableName})</span>
               </div>
-              <div class="text-xs text-[var(--color-text-tertiary)]">{entity.description || 'No description'}</div>
+              <div class="text-xs text-[var(--color-text-tertiary)]">
+                {entity.description || 'No description'}
+              </div>
             </div>
             <div class="flex items-center gap-2">
               <Button variant="ghost" size="sm" onclick={() => openEditForm(entity)}>
@@ -449,7 +506,9 @@
           {#if entity.fields.length > 0}
             <div class="grid gap-2 md:grid-cols-2">
               {#each entity.fields as field (field.id)}
-                <div class="rounded border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-2 py-1">
+                <div
+                  class="rounded border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-2 py-1"
+                >
                   <div class="text-xs font-medium text-[var(--color-text-primary)]">
                     {field.fieldName}
                   </div>

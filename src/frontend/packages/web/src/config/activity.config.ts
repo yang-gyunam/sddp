@@ -21,7 +21,5 @@ export const activityPanels: ActivityPanelMap = {
     { id: 'my-tasks', title: 'My Tasks', icon: 'check-square' },
     { id: 'backlog', title: 'Backlog', icon: 'inbox' },
   ],
-  dashboard: [
-    { id: 'my-dashboard', title: 'My Dashboard', icon: 'user' },
-  ],
+  dashboard: [{ id: 'my-dashboard', title: 'My Dashboard', icon: 'user' }],
 };

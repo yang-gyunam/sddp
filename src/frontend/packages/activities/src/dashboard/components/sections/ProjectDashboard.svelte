@@ -135,9 +135,7 @@
     {#if requirementStatusEntries.length > 0}
       <div class="section">
         <h3 class="section-title">Requirement Status</h3>
-        <PieChart
-          data={requirementStatusEntries.map(([label, value]) => ({ label, value }))}
-        />
+        <PieChart data={requirementStatusEntries.map(([label, value]) => ({ label, value }))} />
       </div>
     {/if}
 

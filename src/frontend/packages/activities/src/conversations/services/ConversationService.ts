@@ -34,7 +34,7 @@ import type {
 
 export interface ConversationSummaryDto {
   id: string;
-  projectId?: string | null;         // null = tenant-wide (global) conversation
+  projectId?: string | null; // null = tenant-wide (global) conversation
   name: string;
   description?: string | null;
   conversationType: ConversationType;
@@ -225,9 +225,12 @@ export async function getLinkedRequirements(
   tenantId: string,
   conversationId: string
 ): Promise<LinkedRequirement[]> {
-  return fetchWithAuth<LinkedRequirement[]>(`/conversations/${conversationId}/linked-requirements`, {
-    tenantId,
-  });
+  return fetchWithAuth<LinkedRequirement[]>(
+    `/conversations/${conversationId}/linked-requirements`,
+    {
+      tenantId,
+    }
+  );
 }
 
 /**
@@ -401,10 +404,7 @@ export async function addConversationMembers(
 /**
  * Get unread message counts
  */
-export async function getUnreadCounts(
-  tenantId: string,
-  projectId?: string
-): Promise<UnreadCounts> {
+export async function getUnreadCounts(tenantId: string, projectId?: string): Promise<UnreadCounts> {
   return fetchWithAuth<UnreadCounts>('/conversations/unread', {
     tenantId,
     projectId,
@@ -510,7 +510,10 @@ export async function getDMChannelsPage(
 
   const queryString = params.toString();
   const endpoint = `/conversations/dm${queryString ? `?${queryString}` : ''}`;
-  return fetchWithAuth<ConversationPagedResult<DirectMessageInfo>>(endpoint, { tenantId, projectId });
+  return fetchWithAuth<ConversationPagedResult<DirectMessageInfo>>(endpoint, {
+    tenantId,
+    projectId,
+  });
 }
 
 /**
@@ -536,11 +539,14 @@ export async function sendDMInvitation(
   targetUserId: string,
   projectId?: string
 ): Promise<DirectMessageInvitationResultDto> {
-  return fetchWithAuth<DirectMessageInvitationResultDto>(`/conversations/dm/invitations/${targetUserId}`, {
-    method: 'POST',
-    tenantId,
-    projectId,
-  });
+  return fetchWithAuth<DirectMessageInvitationResultDto>(
+    `/conversations/dm/invitations/${targetUserId}`,
+    {
+      method: 'POST',
+      tenantId,
+      projectId,
+    }
+  );
 }
 
 /**
@@ -551,11 +557,14 @@ export async function acceptDMInvitation(
   notificationId: string,
   projectId?: string
 ): Promise<ConversationSummaryDto> {
-  return fetchWithAuth<ConversationSummaryDto>(`/conversations/dm/invitations/${notificationId}/accept`, {
-    method: 'POST',
-    tenantId,
-    projectId,
-  });
+  return fetchWithAuth<ConversationSummaryDto>(
+    `/conversations/dm/invitations/${notificationId}/accept`,
+    {
+      method: 'POST',
+      tenantId,
+      projectId,
+    }
+  );
 }
 
 /**
@@ -566,11 +575,14 @@ export async function rejectDMInvitation(
   notificationId: string,
   projectId?: string
 ): Promise<{ message: string }> {
-  return fetchWithAuth<{ message: string }>(`/conversations/dm/invitations/${notificationId}/reject`, {
-    method: 'POST',
-    tenantId,
-    projectId,
-  });
+  return fetchWithAuth<{ message: string }>(
+    `/conversations/dm/invitations/${notificationId}/reject`,
+    {
+      method: 'POST',
+      tenantId,
+      projectId,
+    }
+  );
 }
 
 // ============================================
@@ -630,9 +642,7 @@ export async function getConversationsPage(
 /**
  * Get global (tenant-wide) conversations (no project association)
  */
-export async function getGlobalConversations(
-  tenantId: string
-): Promise<ConversationSummaryDto[]> {
+export async function getGlobalConversations(tenantId: string): Promise<ConversationSummaryDto[]> {
   return collectAllPages((pageNumber) =>
     getGlobalConversationsPage(tenantId, {
       pageNumber,
@@ -944,10 +954,9 @@ export async function getTopicById(
   conversationId: string,
   topicId: string
 ): Promise<TopicDetailDto> {
-  return fetchWithAuth<TopicDetailDto>(
-    `/conversations/${conversationId}/topics/${topicId}`,
-    { tenantId }
-  );
+  return fetchWithAuth<TopicDetailDto>(`/conversations/${conversationId}/topics/${topicId}`, {
+    tenantId,
+  });
 }
 
 /**
@@ -974,14 +983,11 @@ export async function updateTopic(
   topicId: string,
   request: UpdateTopicRequest
 ): Promise<TopicDto> {
-  return fetchWithAuth<TopicDto>(
-    `/conversations/${conversationId}/topics/${topicId}`,
-    {
-      method: 'PUT',
-      body: request,
-      tenantId,
-    }
-  );
+  return fetchWithAuth<TopicDto>(`/conversations/${conversationId}/topics/${topicId}`, {
+    method: 'PUT',
+    body: request,
+    tenantId,
+  });
 }
 
 /**
@@ -993,14 +999,11 @@ export async function closeTopic(
   topicId: string,
   request?: CloseTopicRequest
 ): Promise<TopicDto> {
-  return fetchWithAuth<TopicDto>(
-    `/conversations/${conversationId}/topics/${topicId}/close`,
-    {
-      method: 'POST',
-      body: request || {},
-      tenantId,
-    }
-  );
+  return fetchWithAuth<TopicDto>(`/conversations/${conversationId}/topics/${topicId}/close`, {
+    method: 'POST',
+    body: request || {},
+    tenantId,
+  });
 }
 
 /**
@@ -1011,13 +1014,10 @@ export async function reopenTopic(
   conversationId: string,
   topicId: string
 ): Promise<TopicDto> {
-  return fetchWithAuth<TopicDto>(
-    `/conversations/${conversationId}/topics/${topicId}/reopen`,
-    {
-      method: 'POST',
-      tenantId,
-    }
-  );
+  return fetchWithAuth<TopicDto>(`/conversations/${conversationId}/topics/${topicId}/reopen`, {
+    method: 'POST',
+    tenantId,
+  });
 }
 
 /**
@@ -1106,6 +1106,11 @@ export class ConversationService {
   private tenantId: string = '';
   private projectId: string = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   /**
    * Set tenant context
    */
@@ -1157,10 +1162,7 @@ export class ConversationService {
     return createChannel(this.tenantId, this.projectId, request);
   }
 
-  async closeChannel(
-    channelId: string,
-    request?: CloseChannelRequest
-  ): Promise<ChannelSummary> {
+  async closeChannel(channelId: string, request?: CloseChannelRequest): Promise<ChannelSummary> {
     return closeChannel(this.tenantId, this.projectId, channelId, request);
   }
 
@@ -1172,17 +1174,11 @@ export class ConversationService {
     return getMessages(this.tenantId, this.projectId, channelId, options);
   }
 
-  async getPinnedMessages(
-    channelId: string,
-    options?: { limit?: number }
-  ): Promise<Message[]> {
+  async getPinnedMessages(channelId: string, options?: { limit?: number }): Promise<Message[]> {
     return getPinnedMessages(this.tenantId, this.projectId, channelId, options);
   }
 
-  async postMessage(
-    channelId: string,
-    request: CreateMessageRequest
-  ): Promise<Message> {
+  async postMessage(channelId: string, request: CreateMessageRequest): Promise<Message> {
     return postMessage(this.tenantId, this.projectId, channelId, request);
   }
 
@@ -1191,21 +1187,33 @@ export class ConversationService {
     return getInvitableUsers(this.tenantId, conversationId, search);
   }
 
-  async addConversationMembers(conversationId: string, userIds: string[]): Promise<ConversationMember[]> {
+  async addConversationMembers(
+    conversationId: string,
+    userIds: string[]
+  ): Promise<ConversationMember[]> {
     return addConversationMembers(this.tenantId, conversationId, userIds);
   }
 
-  async removeConversationMember(conversationId: string, targetUserId: string): Promise<{ removed: boolean }> {
+  async removeConversationMember(
+    conversationId: string,
+    targetUserId: string
+  ): Promise<{ removed: boolean }> {
     return removeConversationMember(this.tenantId, conversationId, targetUserId);
   }
 
   // Channel Status
-  async concludeChannel(conversationId: string, request?: { decisionSpecId?: string }): Promise<ConversationSummaryDto> {
+  async concludeChannel(
+    conversationId: string,
+    request?: { decisionSpecId?: string }
+  ): Promise<ConversationSummaryDto> {
     return concludeChannel(this.tenantId, conversationId, request);
   }
 
   // Search
-  async searchConversations(query: string, limit: number = 15): Promise<ConversationSearchResult[]> {
+  async searchConversations(
+    query: string,
+    limit: number = 15
+  ): Promise<ConversationSearchResult[]> {
     return searchConversations(this.tenantId, this.projectId, query, limit);
   }
 
@@ -1269,7 +1277,10 @@ export class ConversationService {
   }
 
   // DM Status
-  async concludeDM(dmId: string, request?: { decisionSpecId?: string }): Promise<ConversationSummaryDto> {
+  async concludeDM(
+    dmId: string,
+    request?: { decisionSpecId?: string }
+  ): Promise<ConversationSummaryDto> {
     return concludeDM(this.tenantId, dmId, request);
   }
 
@@ -1319,7 +1330,9 @@ export class ConversationService {
   /**
    * Create a global (tenant-wide) conversation
    */
-  async createGlobalConversation(request: CreateConversationRequest): Promise<ConversationSummaryDto> {
+  async createGlobalConversation(
+    request: CreateConversationRequest
+  ): Promise<ConversationSummaryDto> {
     return createConversation(this.tenantId, this.projectId, {
       ...request,
       scope: 'TenantWide',
@@ -1352,13 +1365,16 @@ export class ConversationService {
     messageId: string,
     content: string
   ): Promise<ConversationMessageDto> {
-    return editConversationMessage(this.tenantId, this.projectId, conversationId, messageId, content);
+    return editConversationMessage(
+      this.tenantId,
+      this.projectId,
+      conversationId,
+      messageId,
+      content
+    );
   }
 
-  async deleteConversationMessage(
-    conversationId: string,
-    messageId: string
-  ): Promise<void> {
+  async deleteConversationMessage(conversationId: string, messageId: string): Promise<void> {
     return deleteConversationMessage(this.tenantId, this.projectId, conversationId, messageId);
   }
 
@@ -1374,17 +1390,11 @@ export class ConversationService {
     return getTopics(this.tenantId, conversationId, options);
   }
 
-  async getTopicById(
-    conversationId: string,
-    topicId: string
-  ): Promise<TopicDetailDto> {
+  async getTopicById(conversationId: string, topicId: string): Promise<TopicDetailDto> {
     return getTopicById(this.tenantId, conversationId, topicId);
   }
 
-  async createTopic(
-    conversationId: string,
-    request: CreateTopicRequest
-  ): Promise<TopicDetailDto> {
+  async createTopic(conversationId: string, request: CreateTopicRequest): Promise<TopicDetailDto> {
     return createTopic(this.tenantId, conversationId, request);
   }
 
@@ -1404,24 +1414,15 @@ export class ConversationService {
     return closeTopic(this.tenantId, conversationId, topicId, request);
   }
 
-  async reopenTopic(
-    conversationId: string,
-    topicId: string
-  ): Promise<TopicDto> {
+  async reopenTopic(conversationId: string, topicId: string): Promise<TopicDto> {
     return reopenTopic(this.tenantId, conversationId, topicId);
   }
 
-  async toggleTopicPin(
-    conversationId: string,
-    topicId: string
-  ): Promise<{ isPinned: boolean }> {
+  async toggleTopicPin(conversationId: string, topicId: string): Promise<{ isPinned: boolean }> {
     return toggleTopicPin(this.tenantId, conversationId, topicId);
   }
 
-  async toggleTopicLock(
-    conversationId: string,
-    topicId: string
-  ): Promise<{ isLocked: boolean }> {
+  async toggleTopicLock(conversationId: string, topicId: string): Promise<{ isLocked: boolean }> {
     return toggleTopicLock(this.tenantId, conversationId, topicId);
   }
 
@@ -1443,6 +1444,14 @@ export class ConversationService {
   ): Promise<ForumMessageDto> {
     return postTopicMessage(this.tenantId, conversationId, topicId, request);
   }
+}
+
+/** Create a context-bound service for a single tab or request flow. */
+export function createConversationService(
+  tenantId: string = '',
+  projectId: string = ''
+): ConversationService {
+  return new ConversationService(tenantId, projectId);
 }
 
 // Singleton instance

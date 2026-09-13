@@ -1,9 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.Sla.Commands;
 using Sddp.Application.Features.Sla.Queries;
 
@@ -24,6 +27,7 @@ public class SlaPoliciesController : BaseApiController
     }
 
     [HttpGet("policies")]
+    [ResourceScopeExempt("Listing endpoint with no resource id in the route; the query is filtered by the caller's requested project, whose membership ProjectMembershipMiddleware has already verified.")]
     public async Task<IActionResult> GetPolicies(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -40,7 +44,8 @@ public class SlaPoliciesController : BaseApiController
         return Ok(ApiResponse<IReadOnlyList<SlaPolicyDto>>.Ok(result));
     }
 
-    [HttpGet("policies/{id:guid}")]
+    [HttpGet("policies/{id}")]
+    [ResourceScope<SlaPolicy>("id")]
     public async Task<IActionResult> GetPolicyById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -65,6 +70,9 @@ public class SlaPoliciesController : BaseApiController
     }
 
     [HttpPost("policies")]
+    [ResourceScopeExempt("Creation endpoint: the policy does not exist yet, so there is no resource to resolve a project from; it is written into the requested project, which membership and the UserManage permission already gate.")]
+    [RequirePermission(PermissionCodes.UserManage)]
+    [Authorize]
     public async Task<IActionResult> CreatePolicy(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -88,7 +96,10 @@ public class SlaPoliciesController : BaseApiController
         return CreatedResponse($"api/sla/policies/{result.Id}", result);
     }
 
-    [HttpPut("policies/{id:guid}")]
+    [HttpPut("policies/{id}")]
+    [ResourceScope<SlaPolicy>("id")]
+    [RequirePermission(PermissionCodes.UserManage)]
+    [Authorize]
     public async Task<IActionResult> UpdatePolicy(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -113,7 +124,10 @@ public class SlaPoliciesController : BaseApiController
         return Ok(ApiResponse<SlaPolicyDto>.Ok(result));
     }
 
-    [HttpDelete("policies/{id:guid}")]
+    [HttpDelete("policies/{id}")]
+    [ResourceScope<SlaPolicy>("id")]
+    [RequirePermission(PermissionCodes.UserManage)]
+    [Authorize]
     public async Task<IActionResult> DeletePolicy(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -137,6 +151,7 @@ public class SlaPoliciesController : BaseApiController
     }
 
     [HttpGet("status")]
+    [ResourceScopeExempt("Project-wide aggregate with no resource id in the route; every pending sign-off it reports is filtered by the requested project, whose membership is already checked.")]
     public async Task<IActionResult> GetSlaStatus(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,

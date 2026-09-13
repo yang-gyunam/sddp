@@ -114,7 +114,10 @@ export class DashboardHubService {
 
       // Report to problems panel
       problems.clearBySource('SignalR');
-      reportWarning('Connection lost - reconnecting...', { source: 'SignalR', code: 'SIGNALR_RECONNECTING' });
+      reportWarning('Connection lost - reconnecting...', {
+        source: 'SignalR',
+        code: 'SIGNALR_RECONNECTING',
+      });
       showProblemsPanel();
     });
 
@@ -141,7 +144,10 @@ export class DashboardHubService {
 
         // Report to problems panel
         problems.clearBySource('SignalR');
-        reportError(`Server connection closed: ${error.message}`, { source: 'SignalR', code: 'SIGNALR_CLOSED' });
+        reportError(`Server connection closed: ${error.message}`, {
+          source: 'SignalR',
+          code: 'SIGNALR_CLOSED',
+        });
         showProblemsPanel();
       }
 
@@ -220,7 +226,10 @@ export class DashboardHubService {
     }
 
     // Unsubscribe from current if different
-    if (this.currentView && (this.currentView !== view || this.currentProjectId !== (projectId ?? null))) {
+    if (
+      this.currentView &&
+      (this.currentView !== view || this.currentProjectId !== (projectId ?? null))
+    ) {
       await this.unsubscribeDashboard();
     }
 

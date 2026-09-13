@@ -3,9 +3,10 @@
   import type { HTMLButtonAttributes } from 'svelte/elements';
   import type { ButtonVariant, ButtonSize } from '../types';
 
-  interface Props
-    extends Omit<HTMLButtonAttributes, 'type' | 'onclick' | 'onmousedown' | 'children' | 'class'>
-  {
+  interface Props extends Omit<
+    HTMLButtonAttributes,
+    'type' | 'onclick' | 'onmousedown' | 'children' | 'class'
+  > {
     variant?: ButtonVariant;
     size?: ButtonSize;
     disabled?: boolean;
@@ -74,8 +75,12 @@
   {style}
   disabled={disabled || loading}
   onclick={handleClick}
-  onmousedown={onmousedown}
-  class="{variant === 'unstyled' ? '' : `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`} {fullWidth ? 'w-full' : ''} {className}"
+  {onmousedown}
+  class="{variant === 'unstyled'
+    ? ''
+    : `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`} {fullWidth
+    ? 'w-full'
+    : ''} {className}"
 >
   {#if loading}
     <svg

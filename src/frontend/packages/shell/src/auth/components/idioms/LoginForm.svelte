@@ -3,7 +3,7 @@
   Login form with validation and error handling
 -->
 <script lang="ts">
-  import { Button, Checkbox, Input } from '@sddp/ui';
+  import { Button, Checkbox, Input, Select } from '@sddp/ui';
   import { validateField, required, minLength } from '../../../utils/validation.utils';
   import type { LoginRequest } from '../../types';
 
@@ -11,13 +11,22 @@
     onSubmit: (credentials: LoginRequest) => Promise<void>;
     error?: string | null;
     isLoading?: boolean;
+    tenantIds?: string[];
+    onCredentialsChange?: () => void;
   }
 
-  let { onSubmit, error = null, isLoading = false }: Props = $props();
+  let { onSubmit, error = null, isLoading = false, tenantIds = [], onCredentialsChange }: Props = $props();
 
   // Form state
   let username = $state('');
   let password = $state('');
+  let tenantId = $state('');
+  $effect(() => { if (!tenantIds.includes(tenantId)) tenantId = ''; });
+
+  function credentialsChanged() {
+    tenantId = '';
+    onCredentialsChange?.();
+  }
 
   // Validation state
   let usernameError = $state('');
@@ -62,7 +71,9 @@
       return;
     }
 
-    await onSubmit({ username: username.trim(), password });
+    if (tenantIds.length > 0 && !tenantId) return;
+    await onSubmit({ username: username.trim(), password,
+      ...(tenantIds.length > 0 ? { tenantId } : {}) });
   }
 
   // Handle input blur for field-level validation
@@ -100,6 +111,7 @@
     disabled={isLoading}
     required
     autocomplete="username"
+    oninput={credentialsChanged}
     onblur={handleUsernameBlur}
   />
 
@@ -113,22 +125,25 @@
     disabled={isLoading}
     required
     autocomplete="current-password"
+    oninput={credentialsChanged}
     onblur={handlePasswordBlur}
   />
+
+  {#if tenantIds.length > 0}
+    <Select label="Tenant" placeholder="Select a tenant" bind:value={tenantId}
+      options={tenantIds.map((id) => ({ value: id, label: id }))} disabled={isLoading} required />
+  {/if}
 
   <!-- Remember Me & Forgot Password -->
   <div class="flex items-center justify-between text-sm">
     <label class="flex items-center gap-2 cursor-pointer">
       <Checkbox
         unstyled
-        class="rounded border-[var(--color-border)] text-[var(--color-accent-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+        class="rounded border-[var(--color-border)] text-[var(--color-accent-text)] focus:border-[var(--color-accent-primary)] focus:outline-none"
       />
       <span class="text-[var(--color-text-secondary)]">Remember me</span>
     </label>
-    <a
-      href="#forgot-password"
-      class="text-[#4338ca] hover:text-[#3730a3] hover:underline"
-    >
+    <a href="#forgot-password" class="text-[#4338ca] hover:text-[#3730a3] hover:underline">
       Forgot password?
     </a>
   </div>

@@ -133,12 +133,16 @@
     };
   }
 
-  const availableTypes = $derived(getAvailableRelationTypes(entityType, createFormData.toEntityType));
+  const availableTypes = $derived(
+    getAvailableRelationTypes(entityType, createFormData.toEntityType)
+  );
 </script>
 
 <div class="flex flex-col h-full {className}">
   <!-- Header -->
-  <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+  <div
+    class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+  >
     <div class="flex items-center gap-2">
       <EntityTypeBadge type={entityType} size="sm" />
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -161,7 +165,10 @@
     <div class="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label for={targetTypeId} class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label
+            for={targetTypeId}
+            class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+          >
             Target Entity Type
           </label>
           <Select
@@ -190,7 +197,10 @@
           />
         </div>
         <div>
-          <label for={relationshipTypeId} class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label
+            for={relationshipTypeId}
+            class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+          >
             Relationship Type
           </label>
           <Select
@@ -205,7 +215,10 @@
           </Select>
         </div>
         <div>
-          <label for={relationshipReasonId} class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label
+            for={relationshipReasonId}
+            class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+          >
             Reason (optional)
           </label>
           <Input
@@ -218,7 +231,12 @@
         </div>
       </div>
       <div class="mt-3 flex justify-end">
-        <Button variant="primary" size="sm" disabled={!createFormData.toEntityId.trim()} onclick={handleCreateRelationship}>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={!createFormData.toEntityId.trim()}
+          onclick={handleCreateRelationship}
+        >
           Create Relationship
         </Button>
       </div>
@@ -231,8 +249,8 @@
       variant="unstyled"
       class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
         {activeTab === 'list'
-          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
       onclick={() => handleTabChange('list')}
     >
       <Icon name="list" size="sm" class="inline mr-1" />
@@ -242,8 +260,8 @@
       variant="unstyled"
       class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
         {activeTab === 'graph'
-          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
       onclick={() => handleTabChange('graph')}
     >
       <Icon name="git-branch" size="sm" class="inline mr-1" />
@@ -254,8 +272,8 @@
         variant="unstyled"
         class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
           {activeTab === 'timeline'
-            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
         onclick={() => handleTabChange('timeline')}
       >
         <Icon name="clock" size="sm" class="inline mr-1" />
@@ -265,8 +283,8 @@
         variant="unstyled"
         class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
           {activeTab === 'diff'
-            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
         onclick={() => handleTabChange('diff')}
       >
         <Icon name="git-compare" size="sm" class="inline mr-1" />
@@ -280,7 +298,9 @@
     {#if loading}
       <div class="flex items-center justify-center h-full">
         <div class="text-center text-gray-500 dark:text-gray-400">
-          <div class="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+          <div
+            class="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"
+          ></div>
           <p class="text-sm">Loading...</p>
         </div>
       </div>
@@ -293,10 +313,7 @@
       </div>
     {:else if activeTab === 'list'}
       {#if relationships}
-        <RelationshipList
-          {relationships}
-          onInvalidate={onInvalidateRelationship}
-        />
+        <RelationshipList {relationships} onInvalidate={onInvalidateRelationship} />
       {:else}
         <div class="text-center py-8 text-gray-500 dark:text-gray-400">
           <Icon name="link-2" size="xl" class="mx-auto mb-2 opacity-50" />
@@ -329,7 +346,7 @@
       <VersionTimeline
         {versions}
         currentVersionId={entityId}
-        onVersionSelect={onVersionSelect}
+        {onVersionSelect}
         onCompare={handleCompare}
       />
     {:else if activeTab === 'diff'}

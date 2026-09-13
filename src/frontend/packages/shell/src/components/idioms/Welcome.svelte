@@ -11,9 +11,7 @@
     class?: string;
   }
 
-  let {
-    class: className = '',
-  }: Props = $props();
+  let { class: className = '' }: Props = $props();
 
   // Keyboard shortcuts to display (only actually registered ones)
   const shortcuts = [
@@ -23,7 +21,9 @@
   ];
 </script>
 
-<div class="flex flex-col items-center justify-center h-full p-8 text-center select-none {className}">
+<div
+  class="flex flex-col items-center justify-center h-full p-8 text-center select-none {className}"
+>
   <!-- Logo -->
   <div class="mb-8 opacity-60" style="transform: scale(2.5);">
     <Spinner variant="onbrick" size="xl" />
@@ -37,9 +37,11 @@
           <span class="text-[var(--color-text-secondary)]">{shortcut.label}</span>
           <div class="flex items-center gap-1">
             {#each shortcut.keys as key (key)}
-              <kbd class="px-1.5 py-0.5 text-xs font-mono rounded
+              <kbd
+                class="px-1.5 py-0.5 text-xs font-mono rounded
                          bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]
-                         border border-[var(--color-border)]">
+                         border border-[var(--color-border)]"
+              >
                 {key}
               </kbd>
             {/each}

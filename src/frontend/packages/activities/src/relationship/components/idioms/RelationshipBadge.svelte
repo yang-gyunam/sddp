@@ -17,7 +17,13 @@
     class?: string;
   }
 
-  let { type, size = 'md', showLabel = true, showIcon = true, class: className = '' }: Props = $props();
+  let {
+    type,
+    size = 'md',
+    showLabel = true,
+    showIcon = true,
+    class: className = '',
+  }: Props = $props();
 
   // Cast domain styles to BadgeStyleConfig (they are compatible)
   const styles = RELATION_TYPE_STYLES as unknown as Record<RelationType, BadgeStyleConfig>;

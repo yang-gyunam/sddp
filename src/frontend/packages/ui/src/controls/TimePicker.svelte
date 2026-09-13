@@ -54,7 +54,10 @@
 
 <div class="timepicker-wrapper {className}">
   {#if label}
-    <label for={generatedId} class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+    <label
+      for={generatedId}
+      class="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5"
+    >
       {label}
       {#if required}
         <span class="text-[var(--color-error-500)]">*</span>
@@ -103,7 +106,9 @@
     border: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
-    transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+    transition:
+      border-color 150ms ease-in-out,
+      box-shadow 150ms ease-in-out;
   }
 
   .timepicker-input:focus-within {

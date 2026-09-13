@@ -24,6 +24,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   requirePasswordChange?: boolean;
+  sessionStatus?: 'checking' | 'active' | 'anonymous' | 'expired' | 'unavailable';
 }
 
 /**
@@ -32,6 +33,7 @@ export interface AuthState {
 export interface LoginRequest {
   username: string;
   password: string;
+  tenantId?: string;
 }
 
 /**
@@ -51,7 +53,6 @@ export interface AuthUserInfo {
  */
 export interface LoginResponse {
   accessToken: string;
-  refreshToken?: string;
   expiresIn: number;
   user: AuthUserInfo;
   requirePasswordChange?: boolean;

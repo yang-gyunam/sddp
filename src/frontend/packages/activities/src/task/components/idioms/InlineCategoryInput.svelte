@@ -61,11 +61,5 @@
     disabled={!isValid}
     onclick={handleSubmit}
   />
-  <IconButton
-    icon="x"
-    size="sm"
-    variant="ghost"
-    title="Cancel"
-    onclick={onCancel}
-  />
+  <IconButton icon="x" size="sm" variant="ghost" title="Cancel" onclick={onCancel} />
 </div>

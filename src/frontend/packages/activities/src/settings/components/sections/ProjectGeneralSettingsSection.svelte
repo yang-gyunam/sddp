@@ -6,14 +6,23 @@
    */
 
   import { untrack } from 'svelte';
-  import { config as appConfig, toast, SingleColumnLayout, PageHeader, PageShell, getTabState, setTabState, formatDateByPreference } from '@sddp/shell';
+  import {
+    config as appConfig,
+    toast,
+    SingleColumnLayout,
+    PageHeader,
+    PageShell,
+    getTabState,
+    setTabState,
+    formatDateByPreference,
+  } from '@sddp/shell';
   import { Icon, IconButton, Input, Switch, Textarea, Button, Spinner } from '@sddp/ui';
   import type { ProjectSettings, ProjectSnapshot } from '../../types';
   import { type ProjectStatus, PROJECT_STATUS_CONFIG } from '../../../projects/types';
-  import { getProjectService } from '../../../projects/services';
+  import { createProjectService } from '../../../projects/services';
   import { resetProjectData } from '../../../projects/services/ProjectService';
   import { getSnapshotService } from '../../services/snapshotService';
-  import { getSystemConfigService } from '../../services/SystemConfigService';
+  import { createSystemConfigService } from '../../services/SystemConfigService';
   import { getAiStatus } from '../../../ai/services/AiStatusService';
   import { SettingItem, SettingGroupHeader, ConfirmResetModal } from '../idioms';
 
@@ -30,9 +39,9 @@
     snapshots: ProjectSnapshot[];
   }
 
-  const projectService = getProjectService();
+  let projectService = $derived(createProjectService(tenantId, projectId));
   const snapshotService = getSnapshotService();
-  const systemConfigService = getSystemConfigService();
+  let systemConfigService = $derived(createSystemConfigService(tenantId, projectId));
 
   let settings = $state<ProjectSettings | null>(null);
   let snapshots = $state<ProjectSnapshot[]>([]);
@@ -93,7 +102,6 @@
     error = null;
 
     try {
-      projectService.setTenantId(tenantId);
       const projectDetail = await projectService.getProjectById(projectId);
 
       projectStatus = (projectDetail.status as ProjectStatus) || 'planning';
@@ -129,10 +137,15 @@
     saving = true;
 
     try {
-      const success = await projectService.updateProject(projectId, {
-        name: settings.name,
-        description: settings.description,
-      }).then(() => true, () => false);
+      const success = await projectService
+        .updateProject(projectId, {
+          name: settings.name,
+          description: settings.description,
+        })
+        .then(
+          () => true,
+          () => false
+        );
       if (success) toast.success('Project settings saved');
       else toast.error('Failed to save project settings');
     } finally {
@@ -163,7 +176,12 @@
 
   async function handleRestore(snapshot: ProjectSnapshot) {
     if (!tenantId || !projectId) return;
-    if (!confirm(`Restore from "${snapshot.name}"?\n\nThis will replace ALL current project data with the snapshot data. A safety backup will be created automatically.`)) return;
+    if (
+      !confirm(
+        `Restore from "${snapshot.name}"?\n\nThis will replace ALL current project data with the snapshot data. A safety backup will be created automatically.`
+      )
+    )
+      return;
 
     snapshotLoading = true;
     try {
@@ -207,13 +225,20 @@
     if (!tenantId || !projectId) return;
     lifecycleLoading = true;
     try {
-      projectService.setTenantId(tenantId);
       let result;
       switch (action) {
-        case 'initialize': result = await projectService.initializeProject(projectId); break;
-        case 'conclude': result = await projectService.concludeProject(projectId); break;
-        case 'reopen': result = await projectService.reopenProject(projectId); break;
-        case 'archive': result = await projectService.archiveProject(projectId); break;
+        case 'initialize':
+          result = await projectService.initializeProject(projectId);
+          break;
+        case 'conclude':
+          result = await projectService.concludeProject(projectId);
+          break;
+        case 'reopen':
+          result = await projectService.reopenProject(projectId);
+          break;
+        case 'archive':
+          result = await projectService.archiveProject(projectId);
+          break;
       }
       projectStatus = (result.status as ProjectStatus) || 'planning';
       toast.success(`Project ${action}d successfully`);
@@ -271,10 +296,11 @@
     aiToggleSaving = true;
     const newValue = !aiProjectEnabled;
     try {
-      systemConfigService.setContext(tenantId, projectId);
       await systemConfigService.saveConfigValue('aiAgent', 'enabled', String(newValue));
       aiProjectEnabled = newValue;
-      toast.success(newValue ? 'AI features enabled for this project' : 'AI features disabled for this project');
+      toast.success(
+        newValue ? 'AI features enabled for this project' : 'AI features disabled for this project'
+      );
     } catch {
       toast.error('Failed to update AI setting');
     } finally {
@@ -294,188 +320,232 @@
       </div>
     </div>
   {:else}
-  <PageHeader title="General" loading={busy}>
-    {#snippet actions()}
-      <IconButton icon="refresh-cw" variant="ghost" size="sm" title="Refresh" onclick={() => { loadSettings(); loadSnapshots(); }} />
-      <IconButton icon="check" variant="success" size="sm" title="Save" onclick={handleSave} disabled={saving} />
-    {/snippet}
-  </PageHeader>
-
-  <SingleColumnLayout>
-  {#if settings}
-    <!-- Project Information -->
-    <SettingGroupHeader title="Project Information" />
-
-    <SettingItem
-      category="Project Information"
-      title="Project Name"
-      description="The display name of this project."
-    >
-      <Input type="text" bind:value={settings.name} />
-    </SettingItem>
-
-    <SettingItem
-      category="Project Information"
-      title="Description"
-      description="Brief description of the project purpose and scope."
-    >
-      <Textarea bind:value={settings.description} rows={3} />
-    </SettingItem>
-
-    <!-- Project Lifecycle -->
-    <SettingGroupHeader title="Project Lifecycle" />
-
-    <SettingItem
-      category="Project Lifecycle"
-      title="Status"
-      description={PROJECT_STATUS_CONFIG[projectStatus]?.description ?? ''}
-    >
-      <div class="lifecycle-section">
-        <span class="status-badge {projectStatus}">
-          {PROJECT_STATUS_CONFIG[projectStatus]?.label ?? projectStatus}
-        </span>
-        <div class="lifecycle-actions">
-          {#if projectStatus === 'planning'}
-            <Button variant="primary" size="sm" onclick={() => handleLifecycleAction('initialize')} disabled={lifecycleLoading}>
-              Initialize Project
-            </Button>
-          {:else if projectStatus === 'active'}
-            <Button variant="secondary" size="sm" onclick={() => handleLifecycleAction('conclude')} disabled={lifecycleLoading}>
-              Conclude Project
-            </Button>
-          {:else if projectStatus === 'concluded'}
-            <Button variant="primary" size="sm" onclick={() => handleLifecycleAction('reopen')} disabled={lifecycleLoading}>
-              Reopen
-            </Button>
-            <Button variant="secondary" size="sm" onclick={() => handleLifecycleAction('archive')} disabled={lifecycleLoading}>
-              Archive
-            </Button>
-          {:else if projectStatus === 'archived'}
-            <span class="archived-notice">This project is archived and read-only.</span>
-          {/if}
-        </div>
-      </div>
-    </SettingItem>
-
-    <!-- AI Features -->
-    <SettingGroupHeader title="AI Features" />
-
-    <SettingItem
-      category="AI Features"
-      title="AI Analysis"
-      description={!aiFeatureFlagEnabled
-        ? 'Coming Soon. AI runtime is temporarily disabled due to hardware constraints in this environment.'
-        : aiSystemEnabled
-        ? 'Enable AI-powered quality analysis and automated suggestions for this project.'
-        : 'AI features are disabled by the system administrator.'}
-    >
-      <Switch
-        checked={aiProjectEnabled}
-        disabled={!aiFeatureFlagEnabled || !aiSystemEnabled || aiToggleSaving}
-        onchange={handleAiToggle}
-      />
-    </SettingItem>
-
-    {#if !aiFeatureFlagEnabled}
-      <div class="ai-disabled-notice">
-        <Icon name="clock" size="sm" />
-        <span>Coming Soon: AI features are temporarily unavailable in this environment.</span>
-      </div>
-    {:else if !aiSystemEnabled}
-      <div class="ai-disabled-notice">
-        <Icon name="info" size="sm" />
-        <span>AI features are disabled system-wide by the administrator. Contact your admin to enable.</span>
-      </div>
-    {/if}
-
-    <!-- Snapshots -->
-    <SettingGroupHeader title="Snapshots" />
-
-    <SettingItem
-      category="Snapshots"
-      title="Create Snapshot"
-      description="Backup all project data (specs, requirements, conversations, tasks, etc.) as a snapshot."
-    >
-      <div class="snapshot-create">
-        <Input
-          type="text"
-          placeholder="Snapshot name (e.g. Before refactor)"
-          bind:value={snapshotName}
-          disabled={snapshotLoading}
-        />
-        <Button
-          variant="primary"
+    <PageHeader title="General" loading={busy}>
+      {#snippet actions()}
+        <IconButton
+          icon="refresh-cw"
+          variant="ghost"
           size="sm"
-          onclick={handleCreateSnapshot}
-          disabled={snapshotLoading || !snapshotName.trim()}
-        >
-          {#if snapshotLoading}
-            Creating...
-          {:else}
-            Create Snapshot
-          {/if}
-        </Button>
-      </div>
-    </SettingItem>
+          title="Refresh"
+          onclick={() => {
+            loadSettings();
+            loadSnapshots();
+          }}
+        />
+        <IconButton
+          icon="check"
+          variant="success"
+          size="sm"
+          title="Save"
+          onclick={handleSave}
+          disabled={saving}
+        />
+      {/snippet}
+    </PageHeader>
 
-    {#if snapshots.length > 0}
-      <div class="snapshot-list">
-        {#each snapshots as snapshot (snapshot.id)}
-          <div class="snapshot-item">
-            <div class="snapshot-info">
-              <div class="snapshot-header">
-                {#if snapshot.snapshotType === 'pre_restore'}
-                  <span class="snapshot-badge badge-auto">auto</span>
-                {/if}
-                <span class="snapshot-name">{snapshot.name}</span>
-              </div>
-              <div class="snapshot-meta">
-                <span>{formatDateByPreference(snapshot.createdAt)}</span>
-                <span class="meta-sep">&middot;</span>
-                <span>{formatSize(snapshot.dataSizeBytes)}</span>
-                <span class="meta-sep">&middot;</span>
-                <span>{tableCountSummary(snapshot.tableCounts)}</span>
-              </div>
-            </div>
-            <div class="snapshot-actions">
-              <Button
-                variant="outline"
-                size="sm"
-                onclick={() => handleRestore(snapshot)}
-                disabled={snapshotLoading}
-                title="Restore from this snapshot"
-              >
-                Restore
-              </Button>
-              <IconButton
-                icon="trash"
-                variant="danger"
-                size="sm"
-                onclick={() => handleDeleteSnapshot(snapshot)}
-                disabled={snapshotLoading}
-                title="Delete this snapshot"
-              />
+    <SingleColumnLayout>
+      {#if settings}
+        <!-- Project Information -->
+        <SettingGroupHeader title="Project Information" />
+
+        <SettingItem
+          category="Project Information"
+          title="Project Name"
+          description="The display name of this project."
+        >
+          <Input type="text" bind:value={settings.name} />
+        </SettingItem>
+
+        <SettingItem
+          category="Project Information"
+          title="Description"
+          description="Brief description of the project purpose and scope."
+        >
+          <Textarea bind:value={settings.description} rows={3} />
+        </SettingItem>
+
+        <!-- Project Lifecycle -->
+        <SettingGroupHeader title="Project Lifecycle" />
+
+        <SettingItem
+          category="Project Lifecycle"
+          title="Status"
+          description={PROJECT_STATUS_CONFIG[projectStatus]?.description ?? ''}
+        >
+          <div class="lifecycle-section">
+            <span class="status-badge {projectStatus}">
+              {PROJECT_STATUS_CONFIG[projectStatus]?.label ?? projectStatus}
+            </span>
+            <div class="lifecycle-actions">
+              {#if projectStatus === 'planning'}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onclick={() => handleLifecycleAction('initialize')}
+                  disabled={lifecycleLoading}
+                >
+                  Initialize Project
+                </Button>
+              {:else if projectStatus === 'active'}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onclick={() => handleLifecycleAction('conclude')}
+                  disabled={lifecycleLoading}
+                >
+                  Conclude Project
+                </Button>
+              {:else if projectStatus === 'concluded'}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onclick={() => handleLifecycleAction('reopen')}
+                  disabled={lifecycleLoading}
+                >
+                  Reopen
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onclick={() => handleLifecycleAction('archive')}
+                  disabled={lifecycleLoading}
+                >
+                  Archive
+                </Button>
+              {:else if projectStatus === 'archived'}
+                <span class="archived-notice">This project is archived and read-only.</span>
+              {/if}
             </div>
           </div>
-        {/each}
-      </div>
-    {:else}
-      <p class="snapshot-empty">No snapshots yet.</p>
-    {/if}
-    <!-- Danger Zone -->
-    <SettingGroupHeader title="Danger Zone" />
+        </SettingItem>
 
-    <SettingItem
-      category="Danger Zone"
-      title="Reset Project Data"
-      description="Delete all specs, requirements, conversations, tasks, and other data. A backup snapshot will be created automatically before reset."
-    >
-      <Button variant="danger" size="sm" onclick={() => showResetModal = true} disabled={projectStatus === 'archived'}>
-        Reset Data
-      </Button>
-    </SettingItem>
-  {/if}
-  </SingleColumnLayout>
+        <!-- AI Features -->
+        <SettingGroupHeader title="AI Features" />
+
+        <SettingItem
+          category="AI Features"
+          title="AI Analysis"
+          description={!aiFeatureFlagEnabled
+            ? 'Coming Soon. AI runtime is temporarily disabled due to hardware constraints in this environment.'
+            : aiSystemEnabled
+              ? 'Enable AI-powered quality analysis and automated suggestions for this project.'
+              : 'AI features are disabled by the system administrator.'}
+        >
+          <Switch
+            checked={aiProjectEnabled}
+            disabled={!aiFeatureFlagEnabled || !aiSystemEnabled || aiToggleSaving}
+            onchange={handleAiToggle}
+          />
+        </SettingItem>
+
+        {#if !aiFeatureFlagEnabled}
+          <div class="ai-disabled-notice">
+            <Icon name="clock" size="sm" />
+            <span>Coming Soon: AI features are temporarily unavailable in this environment.</span>
+          </div>
+        {:else if !aiSystemEnabled}
+          <div class="ai-disabled-notice">
+            <Icon name="info" size="sm" />
+            <span
+              >AI features are disabled system-wide by the administrator. Contact your admin to
+              enable.</span
+            >
+          </div>
+        {/if}
+
+        <!-- Snapshots -->
+        <SettingGroupHeader title="Snapshots" />
+
+        <SettingItem
+          category="Snapshots"
+          title="Create Snapshot"
+          description="Backup all project data (specs, requirements, conversations, tasks, etc.) as a snapshot."
+        >
+          <div class="snapshot-create">
+            <Input
+              type="text"
+              placeholder="Snapshot name (e.g. Before refactor)"
+              bind:value={snapshotName}
+              disabled={snapshotLoading}
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onclick={handleCreateSnapshot}
+              disabled={snapshotLoading || !snapshotName.trim()}
+            >
+              {#if snapshotLoading}
+                Creating...
+              {:else}
+                Create Snapshot
+              {/if}
+            </Button>
+          </div>
+        </SettingItem>
+
+        {#if snapshots.length > 0}
+          <div class="snapshot-list">
+            {#each snapshots as snapshot (snapshot.id)}
+              <div class="snapshot-item">
+                <div class="snapshot-info">
+                  <div class="snapshot-header">
+                    {#if snapshot.snapshotType === 'pre_restore'}
+                      <span class="snapshot-badge badge-auto">auto</span>
+                    {/if}
+                    <span class="snapshot-name">{snapshot.name}</span>
+                  </div>
+                  <div class="snapshot-meta">
+                    <span>{formatDateByPreference(snapshot.createdAt)}</span>
+                    <span class="meta-sep">&middot;</span>
+                    <span>{formatSize(snapshot.dataSizeBytes)}</span>
+                    <span class="meta-sep">&middot;</span>
+                    <span>{tableCountSummary(snapshot.tableCounts)}</span>
+                  </div>
+                </div>
+                <div class="snapshot-actions">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => handleRestore(snapshot)}
+                    disabled={snapshotLoading}
+                    title="Restore from this snapshot"
+                  >
+                    Restore
+                  </Button>
+                  <IconButton
+                    icon="trash"
+                    variant="danger"
+                    size="sm"
+                    onclick={() => handleDeleteSnapshot(snapshot)}
+                    disabled={snapshotLoading}
+                    title="Delete this snapshot"
+                  />
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="snapshot-empty">No snapshots yet.</p>
+        {/if}
+        <!-- Danger Zone -->
+        <SettingGroupHeader title="Danger Zone" />
+
+        <SettingItem
+          category="Danger Zone"
+          title="Reset Project Data"
+          description="Delete all specs, requirements, conversations, tasks, and other data. A backup snapshot will be created automatically before reset."
+        >
+          <Button
+            variant="danger"
+            size="sm"
+            onclick={() => (showResetModal = true)}
+            disabled={projectStatus === 'archived'}
+          >
+            Reset Data
+          </Button>
+        </SettingItem>
+      {/if}
+    </SingleColumnLayout>
   {/if}
 </PageShell>
 
@@ -486,7 +556,9 @@
   confirmationCode={`RESET-${projectCode}`}
   loading={resetLoading}
   onConfirm={handleResetData}
-  onCancel={() => { showResetModal = false; }}
+  onCancel={() => {
+    showResetModal = false;
+  }}
 />
 
 <style>
@@ -582,7 +654,6 @@
     margin-left: 0.5rem;
   }
 
-
   .snapshot-empty {
     margin-top: 0.25rem;
     font-size: 0.8125rem;
@@ -649,5 +720,4 @@
     border: 1px solid var(--color-warning-200, #fde68a);
     border-radius: 6px;
   }
-
 </style>

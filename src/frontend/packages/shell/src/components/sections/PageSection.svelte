@@ -10,18 +10,15 @@
     children?: import('svelte').Snippet;
   }
 
-  let {
-    title,
-    description,
-    class: className = '',
-    children,
-  }: Props = $props();
+  let { title, description, class: className = '', children }: Props = $props();
 </script>
 
 <section class="page-section space-y-2 {className}">
   {#if title}
     <div class="space-y-0.5">
-      <div class="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+      <div
+        class="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]"
+      >
         {title}
       </div>
       {#if description}

@@ -21,12 +21,7 @@ export async function getAiStatus(tenantId: string, projectId?: string): Promise
   }
 
   try {
-    const params = new URLSearchParams();
-    if (projectId) params.set('projectId', projectId);
-    const query = params.toString();
-    const url = query ? `/ai/status?${query}` : '/ai/status';
-
-    const result = await fetchWithAuth<AiStatus>(url, { tenantId });
+    const result = await fetchWithAuth<AiStatus>('/ai/status', { tenantId, projectId });
     if (!result) {
       return { systemEnabled: true, projectEnabled: true, effectiveEnabled: true };
     }

@@ -4,7 +4,7 @@
 
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { type Actor, showcaseLogin, openActivity } from '../helpers/showcase.helpers';
+import { showcaseLogin, openActivity } from '../helpers/showcase.helpers';
 import { E2E_API_BASE } from '../helpers/constants';
 
 const ONBRICK_USERS = {
@@ -16,26 +16,6 @@ const ONBRICK_USERS = {
 
 const ONBRICK_TENANT_ID = '00000000-0000-0000-0010-000000000001';
 const ONBRICK_PROJECT_ID = '00000000-0000-0000-0020-000000000021';
-
-const ACTOR_DISPLAY_NAMES: Record<string, string> = {
-  minjun: 'Minjun Park',
-  soojin: 'Soojin Yoon',
-  hyunwoo: 'Hyunwoo Kim',
-  jieun: 'Jieun Lee',
-};
-
-type OnBrickUserKey = keyof typeof ONBRICK_USERS;
-
-function toActor(key: OnBrickUserKey): Actor {
-  const user = ONBRICK_USERS[key];
-  return {
-    key,
-    name: ACTOR_DISPLAY_NAMES[key] ?? key,
-    username: user.username,
-    password: user.password,
-    role: user.role,
-  };
-}
 
 const API = E2E_API_BASE;
 

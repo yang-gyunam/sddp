@@ -13,12 +13,23 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 /**
  * Input component types
  */
-export type InputType = 'text' | 'password' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'datetime-local' | 'time';
+export type InputType =
+  | 'text'
+  | 'password'
+  | 'email'
+  | 'number'
+  | 'tel'
+  | 'url'
+  | 'search'
+  | 'date'
+  | 'datetime-local'
+  | 'time';
 
 /**
  * Badge component variants
  */
-export type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
+export type BadgeVariant =
+  'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
 
 /**
  * Badge component sizes
@@ -39,16 +50,7 @@ export type IconSource = 'lucide' | 'codicon';
  * Typography component variants
  */
 export type TypographyVariant =
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'h4'
-  | 'h5'
-  | 'h6'
-  | 'body1'
-  | 'body2'
-  | 'caption'
-  | 'overline';
+  'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body1' | 'body2' | 'caption' | 'overline';
 
 /**
  * Checkbox sizes

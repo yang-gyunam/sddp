@@ -170,10 +170,7 @@ export function toSimulationNodes(nodes: GraphNode[]): SimulationNode[] {
 /**
  * Convert GraphEdge[] to SimulationLink[] (source/target resolved after simulation init)
  */
-export function toSimulationLinks(
-  edges: GraphEdge[],
-  nodes: SimulationNode[]
-): SimulationLink[] {
+export function toSimulationLinks(edges: GraphEdge[], nodes: SimulationNode[]): SimulationLink[] {
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   return edges
     .filter((e) => nodeMap.has(e.sourceId) && nodeMap.has(e.targetId))

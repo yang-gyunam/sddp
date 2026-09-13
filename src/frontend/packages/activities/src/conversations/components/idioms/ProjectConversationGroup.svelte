@@ -6,7 +6,10 @@
 <script lang="ts">
   import { Icon, Button } from '@sddp/ui';
   import { CollapsibleGroup } from '@sddp/shell';
-  import type { ProjectConversationGroup as ProjectConversationGroupType, ConversationSummary } from '../../types';
+  import type {
+    ProjectConversationGroup as ProjectConversationGroupType,
+    ConversationSummary,
+  } from '../../types';
   import ConversationItem from './ConversationItem.svelte';
 
   interface Props {
@@ -72,9 +75,7 @@
     {/if}
 
     {#if group.conversations.length === 0}
-      <div class="px-4 py-3 text-sm text-[var(--color-text-tertiary)] italic">
-        No conversations
-      </div>
+      <div class="px-4 py-3 text-sm text-[var(--color-text-tertiary)] italic">No conversations</div>
     {/if}
   </div>
 </CollapsibleGroup>

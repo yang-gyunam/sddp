@@ -42,7 +42,7 @@ test.describe('Activity Bar and Sidebar Integration', () => {
   test('should set aria-selected=true on clicked activity item', async ({ page }) => {
     const items = page.locator(ACTIVITY_TAB);
     const count = await items.count();
-    if (count < 2) { test.skip(true, 'Need at least two activity tabs'); return; }
+    expect(count, 'the activity bar must offer more than one activity').toBeGreaterThanOrEqual(2);
 
     // Click the second tab
     const second = items.nth(1);

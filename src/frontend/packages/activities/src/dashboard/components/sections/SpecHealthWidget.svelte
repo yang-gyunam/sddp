@@ -43,12 +43,7 @@
       <span>No specs found</span>
     </div>
   {:else}
-    <DonutChart
-      data={chartData}
-      showLegend={true}
-      size={160}
-      onSegmentClick={handleSegmentClick}
-    />
+    <DonutChart data={chartData} showLegend={true} size={160} onSegmentClick={handleSegmentClick} />
   {/if}
 </div>
 

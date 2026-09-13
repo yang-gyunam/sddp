@@ -27,6 +27,7 @@ coverage/
 .eslintcache
 .vite/
 .svelte-kit/
+storybook-static/
 
 # Playwright
 playwright-report/
@@ -82,3 +83,17 @@ backups/
 
 # Generated public staging
 /publish/
+
+# Runtime data (git clones, materialized artifact descriptors)
+data/
+releases/
+
+# Playwright auth cache. Written per worker slot at run time and holds session cookies -- it is a
+# credential, not a fixture.
+src/frontend/tests/e2e/.auth/
+src/frontend/packages/web/tests/e2e/.auth/
+
+# Local acceptance session state and Python bytecode
+/tests/e2e/.auth/
+__pycache__/
+*.pyc

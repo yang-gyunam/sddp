@@ -87,6 +87,11 @@ export class TimelineService {
   private tenantId = '';
   private projectId?: string;
 
+  constructor(tenantId: string = '', projectId?: string) {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId?: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId;
@@ -103,6 +108,10 @@ export class TimelineService {
   getByProject(limit?: number, actorId?: string, startDate?: string): Promise<AuditLogDto[]> {
     return getTimelineByProject(this.tenantId, this.projectId, limit, actorId, startDate);
   }
+}
+
+export function createTimelineService(tenantId: string, projectId?: string): TimelineService {
+  return new TimelineService(tenantId, projectId);
 }
 
 // ============================================

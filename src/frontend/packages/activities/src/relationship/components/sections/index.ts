@@ -3,7 +3,7 @@
 export { default as TraceGraphSection } from './TraceGraphSection.svelte';
 export { default as RelatedItemsList } from './RelatedItemsList.svelte';
 
-// Complex UI components 
+// Complex UI components
 export { default as DiffViewer } from './DiffViewer.svelte';
 export { default as ForceGraph } from './ForceGraph.svelte';
 export { default as RelationshipForm } from './RelationshipForm.svelte';

@@ -63,7 +63,7 @@
       size="sm"
       variant="ghost"
       title="Previous week"
-      onclick={previousWeek}
+      onclick={() => previousWeek()}
       disabled={isLoading}
     />
 
@@ -74,7 +74,7 @@
       size="sm"
       variant="ghost"
       title="Next week"
-      onclick={nextWeek}
+      onclick={() => nextWeek()}
       disabled={isLoading}
     />
   </div>
@@ -87,14 +87,9 @@
     {/if}
 
     {#if !isCurrentWeek}
-      <Button
-        variant="ghost"
-        size="sm"
-        onclick={goToToday}
-        disabled={isLoading}
+      <Button variant="ghost" size="sm" onclick={() => goToToday()} disabled={isLoading}
+        >Today</Button
       >
-        Today
-      </Button>
     {/if}
 
     <IconButton

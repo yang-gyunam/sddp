@@ -1,13 +1,16 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
 using Sddp.Api.Hubs;
 using Sddp.Application.Features.Conversations.Commands;
 using Sddp.Application.Features.Conversations.Queries;
+using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Controllers;
 
@@ -29,7 +32,8 @@ public class ConversationMessagesController : BaseApiController
         _hubService = hubService;
     }
 
-    [HttpGet("{id:guid}/messages")]
+    [HttpGet("{id}/messages")]
+    [ResourceScope<Conversation>("id", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetConversationMessages(
         string id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -78,7 +82,8 @@ public class ConversationMessagesController : BaseApiController
         return Ok(ApiResponse<ConversationMessagesPageDto>.Ok(messagesPage));
     }
 
-    [HttpGet("{id:guid}/pinned")]
+    [HttpGet("{id}/pinned")]
+    [ResourceScope<Conversation>("id", OnNullProject = NullProjectPolicy.Tenant)]
     public async Task<IActionResult> GetPinnedConversationMessages(
         string id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -120,7 +125,10 @@ public class ConversationMessagesController : BaseApiController
         return Ok(ApiResponse<IEnumerable<ConversationMessageDto>>.Ok(messages));
     }
 
-    [HttpPost("{id:guid}/messages")]
+    [HttpPost("{id}/messages")]
+    [ResourceScope<Conversation>("id", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
+    [Authorize]
     public async Task<IActionResult> PostConversationMessage(
         string id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -199,7 +207,9 @@ public class ConversationMessagesController : BaseApiController
     /// <summary>
     /// Edit a message in a conversation
     /// </summary>
-    [HttpPut("{id:guid}/messages/{messageId:guid}")]
+    [HttpPut("{id}/messages/{messageId}")]
+    [ResourceScope<Message>("messageId", Through = nameof(Message.ConversationId), ParentType = typeof(Conversation), ParentRouteKey = "id", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> EditConversationMessage(
         string id,
@@ -259,7 +269,9 @@ public class ConversationMessagesController : BaseApiController
     /// <summary>
     /// Delete a message from a conversation (soft delete)
     /// </summary>
-    [HttpDelete("{id:guid}/messages/{messageId:guid}")]
+    [HttpDelete("{id}/messages/{messageId}")]
+    [ResourceScope<Message>("messageId", Through = nameof(Message.ConversationId), ParentType = typeof(Conversation), ParentRouteKey = "id", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationPost)]
     [Authorize]
     public async Task<IActionResult> DeleteConversationMessage(
         string id,

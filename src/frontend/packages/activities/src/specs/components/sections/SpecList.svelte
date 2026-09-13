@@ -50,7 +50,9 @@
 
 <div class="flex flex-col h-full {className}">
   <!-- Header -->
-  <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
+  <div
+    class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]"
+  >
     <h2 class="text-sm font-medium text-[var(--color-text-primary)]">Specs</h2>
     <div class="flex items-center gap-1">
       <Button
@@ -74,7 +76,9 @@
 
   <!-- Filters -->
   {#if showFilters}
-    <div class="px-4 py-3 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] space-y-3">
+    <div
+      class="px-4 py-3 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] space-y-3"
+    >
       <!-- Status filter -->
       <div>
         <span class="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Status</span>
@@ -97,7 +101,7 @@
         <Button
           variant="unstyled"
           onclick={clearFilters}
-          class="text-xs text-[var(--color-accent-primary)] hover:underline"
+          class="text-xs text-[var(--color-accent-text)] hover:underline"
         >
           Clear filters
         </Button>
@@ -115,8 +119,12 @@
       <EmptyState
         icon="file-code"
         heading="No specs found"
-        subtext={hasActiveFilters() ? 'Try adjusting your filters' : 'Create a new spec to get started'}
-        action={onCreate && !hasActiveFilters() ? { label: 'New Spec', onclick: onCreate } : undefined}
+        subtext={hasActiveFilters()
+          ? 'Try adjusting your filters'
+          : 'Create a new spec to get started'}
+        action={onCreate && !hasActiveFilters()
+          ? { label: 'New Spec', onclick: onCreate }
+          : undefined}
       />
     {:else}
       <ul class="divide-y divide-[var(--color-border-secondary)]">
@@ -127,8 +135,8 @@
               onclick={() => onSelect(spec)}
               class="w-full text-left px-4 py-3 transition-colors
                 {selectedId === spec.id
-                  ? 'bg-[var(--color-accent-primary)]/10'
-                  : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                ? 'bg-[var(--color-accent-primary)]/10'
+                : 'hover:bg-[var(--color-bg-tertiary)]'}"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="flex-1 min-w-0">

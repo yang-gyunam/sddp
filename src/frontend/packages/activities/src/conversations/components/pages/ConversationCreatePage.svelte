@@ -2,7 +2,7 @@
 <script lang="ts">
   import { toast, getAuthState, subscribeAuth, getTabState, setTabState } from '@sddp/shell';
   import { tabActions } from '@sddp/shell/stores';
-  import { getConversationService } from '../../services/ConversationService';
+  import { createConversationService } from '../../services/ConversationService';
   import { ConversationCreatePanel } from '../sections';
 
   interface Props {
@@ -17,7 +17,9 @@
 
   let authState = $state(getAuthState());
   $effect(() => {
-    const unsub = subscribeAuth((s) => { authState = s; });
+    const unsub = subscribeAuth((s) => {
+      authState = s;
+    });
     return unsub;
   });
 
@@ -73,8 +75,7 @@
     isCreating = true;
     createError = null;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, '');
+      const service = createConversationService(tenantId);
       const convType = createType === 'forum' ? 'Forum' : 'Channel';
       const created = await service.createGlobalConversation({
         name: createName.trim(),
@@ -104,7 +105,7 @@
     showDescription={false}
     loading={isCreating}
     error={createError}
-    isValid={isValid}
+    {isValid}
     onSubmit={handleSubmit}
     onCancel={handleCancel}
     class={className}
@@ -120,7 +121,7 @@
     descriptionPlaceholder="What is this conversation for?"
     loading={isCreating}
     error={createError}
-    isValid={isValid}
+    {isValid}
     onSubmit={handleSubmit}
     onCancel={handleCancel}
     class={className}

@@ -12,7 +12,8 @@ import type { UserRef } from '../../shared/types';
 /**
  * Entity types that can participate in relationships
  */
-export type EntityType = 'Spec' | 'Requirement' | 'Conversation' | 'GlossaryTerm' | 'Artifact' | 'Task';
+export type EntityType =
+  'Spec' | 'Requirement' | 'Conversation' | 'GlossaryTerm' | 'Artifact' | 'Task';
 
 /**
  * 8 relationship types
@@ -373,6 +374,18 @@ export const ENTITY_TYPE_STYLES: Record<EntityType, EntityTypeStyle> = {
     label: 'Task',
     icon: 'clipboard-list',
   },
+};
+
+/**
+ * Cross-links are relationships rather than an entity type, so they get their own style
+ * outside ENTITY_TYPE_STYLES — amber, which none of the entity types use.
+ */
+export const CROSS_LINK_STYLE: EntityTypeStyle = {
+  color: 'text-[var(--color-amber-600)] dark:text-[var(--color-amber-400)]',
+  bgColor: 'bg-[var(--color-amber-500)]/10',
+  borderColor: 'border-[var(--color-amber-500)]/20',
+  label: 'Cross-link',
+  icon: 'git-merge',
 };
 
 export interface DiffChangeTypeStyle {

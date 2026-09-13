@@ -28,9 +28,12 @@ internal static class UserMapping
         Dictionary<GlobalUniqueId, Role> roleMap,
         IReadOnlyList<UserProjectDto> projects)
     {
-        // user role 1 (UpdateSystemUser handler)
-        // role: Admin, enum ordinal
+        // The global role comes from tenant-scoped assignments only. Project-scoped rows
+        // (ProjectId set) describe membership of one project, not the user's system role,
+        // and a user holds several of them at once.
+        // Ranking: Admin wins, then the highest enum ordinal.
         var globalRole = userRoles
+            .Where(ur => ur.ProjectId is null)
             .Where(ur => roleMap.ContainsKey(ur.RoleId))
             .Select(ur => roleMap[ur.RoleId].Type)
             .OrderByDescending(t => t == RoleType.Admin ? int.MaxValue : (int)t)

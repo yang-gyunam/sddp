@@ -8,7 +8,7 @@
 
   interface Props {
     level: RequirementLevel;
-    size?: 'sm' | 'md';
+    size?: 'sm' | 'md' | 'icon';
     showIcon?: boolean;
     class?: string;
   }
@@ -17,7 +17,11 @@
 
   const style = $derived(REQUIREMENT_LEVEL_STYLES[level]);
   const sizeClasses = $derived(
-    size === 'sm' ? 'text-xs px-1.5 py-0.5' : 'text-sm px-2 py-1'
+    size === 'icon'
+      ? 'h-5 w-5 justify-center p-0 text-xs'
+      : size === 'sm'
+        ? 'text-xs px-1.5 py-0.5'
+        : 'text-sm px-2 py-1'
   );
 </script>
 

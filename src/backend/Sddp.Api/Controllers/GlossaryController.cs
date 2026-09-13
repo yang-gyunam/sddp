@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.AuditLogs.Queries;
 using Sddp.Application.Features.Glossary.Commands;
 using Sddp.Application.Features.Glossary.Queries;
@@ -50,6 +53,7 @@ public class GlossaryController : BaseApiController
     }
 
     [HttpGet]
+        [ResourceScopeExempt("Listing endpoint: no resource id in the route, so the tenant and the optional header project remain the scope as before.")]
     public async Task<IActionResult> GetTerms(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -83,6 +87,7 @@ public class GlossaryController : BaseApiController
     }
 
     [HttpGet("search")]
+        [ResourceScopeExempt("Search endpoint: no resource id in the route; results are filtered by the requested tenant and the header project that ProjectMembershipMiddleware validates.")]
     public async Task<IActionResult> SearchTerms(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -123,6 +128,7 @@ public class GlossaryController : BaseApiController
     }
 
     [HttpGet("autocomplete")]
+        [ResourceScopeExempt("Prefix lookup with no resource id in the route; matches are filtered by the requested tenant and the mandatory header project.")]
     public async Task<IActionResult> Autocomplete(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -156,7 +162,8 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<List<GlossaryTermSummaryDto>>.Ok(result));
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
+        [ResourceScope<GlossaryTerm>("id")]
     public async Task<IActionResult> GetTermById(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -187,6 +194,7 @@ public class GlossaryController : BaseApiController
     }
 
     [HttpGet("term/{term}")]
+        [ResourceScopeExempt("Lookup by natural key: {term} is a term string, not a stored id, so the row is resolved inside the mandatory header project that ProjectMembershipMiddleware validates.")]
     public async Task<IActionResult> GetTermByTerm(
         string term,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -216,6 +224,8 @@ public class GlossaryController : BaseApiController
     }
 
     [HttpPost]
+        [ResourceScopeExempt("Creation endpoint: the term does not exist yet, so there is nothing to resolve a project from; the header project is the target and is membership-checked.")]
+    [RequirePermission(PermissionCodes.GlossaryCreate)]
     [Authorize]
     public async Task<IActionResult> CreateTerm(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -251,7 +261,9 @@ public class GlossaryController : BaseApiController
         return Created($"/api/glossary/{result.Id}", ApiResponse<GlossaryTermDetailDto>.Ok(result));
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryUpdate)]
     [Authorize]
     public async Task<IActionResult> UpdateTerm(
         Guid id,
@@ -290,7 +302,9 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryTermDetailDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/approve")]
+    [HttpPost("{id}/approve")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryUpdate)]
     [Authorize]
     public async Task<IActionResult> ApproveTerm(
         Guid id,
@@ -328,7 +342,9 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryTermDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/deprecate")]
+    [HttpPost("{id}/deprecate")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryDeprecate)]
     [Authorize]
     public async Task<IActionResult> DeprecateTerm(
         Guid id,
@@ -382,7 +398,9 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryTermDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/reactivate")]
+    [HttpPost("{id}/reactivate")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryDeprecate)]
     [Authorize]
     public async Task<IActionResult> ReactivateTerm(
         Guid id,
@@ -424,7 +442,9 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryTermDto>.Ok(result));
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id}")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryDeprecate)]
     [Authorize]
     public async Task<IActionResult> DeleteTerm(
         Guid id,
@@ -456,7 +476,8 @@ public class GlossaryController : BaseApiController
     }
 
     [HttpPost("detect-conflicts")]
-    [Authorize]
+        [ResourceScopeExempt("Read-only conflict calculation with no resource id in the route; candidates are compared inside the requested tenant and the mandatory header project.")]
+    [MutationAuthorizationExempt("Conflict detection is a read-only calculation.", allowsAutomatedCaller: true)]
     public async Task<IActionResult> DetectConflicts(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -500,7 +521,8 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryConflictResultDto>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/usage")]
+    [HttpGet("{id}/usage")]
+        [ResourceScope<GlossaryTerm>("id")]
     public async Task<IActionResult> GetTermUsage(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -525,7 +547,8 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryTermUsageDto>.Ok(result));
     }
 
-    [HttpGet("{id:guid}/versions")]
+    [HttpGet("{id}/versions")]
+        [ResourceScope<GlossaryTerm>("id")]
     public async Task<IActionResult> GetVersionHistory(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -550,7 +573,9 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<List<GlossaryTermVersionDto>>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/related-terms")]
+    [HttpPost("{id}/related-terms")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryUpdate)]
     [Authorize]
     public async Task<IActionResult> AddRelatedTerm(
         Guid id,
@@ -592,7 +617,9 @@ public class GlossaryController : BaseApiController
         return Ok(ApiResponse<GlossaryTermDto>.Ok(result));
     }
 
-    [HttpPost("{id:guid}/examples")]
+    [HttpPost("{id}/examples")]
+        [ResourceScope<GlossaryTerm>("id")]
+    [RequirePermission(PermissionCodes.GlossaryUpdate)]
     [Authorize]
     public async Task<IActionResult> AddUsageExample(
         Guid id,
@@ -637,7 +664,8 @@ public class GlossaryController : BaseApiController
     /// <summary>
     /// glossary update get
     /// </summary>
-    [HttpGet("{id:guid}/field-authors")]
+    [HttpGet("{id}/field-authors")]
+        [ResourceScope<GlossaryTerm>("id")]
     public async Task<IActionResult> GetFieldAuthors(
         Guid id,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,

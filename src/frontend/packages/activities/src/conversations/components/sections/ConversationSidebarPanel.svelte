@@ -22,7 +22,11 @@
   interface Props {
     tenantId: string;
     onConversationSelect: (conversation: ConversationEntry) => void;
-    onDirectMessageSelect: (dm: { id: string; name: string; channelStatus?: 'Active' | 'Concluded' | null }) => void;
+    onDirectMessageSelect: (dm: {
+      id: string;
+      name: string;
+      channelStatus?: 'Active' | 'Concluded' | null;
+    }) => void;
     onCreateChannel: () => void;
     onCreateForum: () => void;
     onCreateDM: () => void;
@@ -90,7 +94,7 @@
   function handleConversationSelect(conversationId: string) {
     setSelectedConversation(conversationId);
     // Find conversation from store data to build ConversationEntry
-    const conv = [...channels, ...privateChannels].find(c => c.id === conversationId);
+    const conv = [...channels, ...privateChannels].find((c) => c.id === conversationId);
     if (conv) {
       onConversationSelect({
         id: conv.id,
@@ -101,7 +105,7 @@
       });
       return;
     }
-    const topic = topics.find(c => c.id === conversationId);
+    const topic = topics.find((c) => c.id === conversationId);
     if (topic) {
       onConversationSelect({
         id: topic.id,
@@ -113,9 +117,9 @@
       return;
     }
     // Starred conversation
-    const starred = starredConversations.find(c => c.id === conversationId);
+    const starred = starredConversations.find((c) => c.id === conversationId);
     if (starred) {
-      const isForum = starred.type === 'public' && topics.some(t => t.id === starred.id);
+      const isForum = starred.type === 'public' && topics.some((t) => t.id === starred.id);
       onConversationSelect({
         id: starred.id,
         name: starred.name,
@@ -150,8 +154,8 @@
   {loading}
   onConversationSelect={handleConversationSelect}
   onConversationStarToggle={handleStarToggle}
-  onCreateChannel={onCreateChannel}
-  onCreateForum={onCreateForum}
+  {onCreateChannel}
+  {onCreateForum}
 >
   <!-- Direct Messages Section (rendered inside ConversationSidebar's scrollable area) -->
   {#if !loading}
@@ -168,8 +172,8 @@
             class="w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
               transition-colors duration-150
               {selectedConversationId === dm.id
-                ? 'bg-[var(--color-accent-primary)]/10'
-                : 'hover:bg-[var(--color-bg-tertiary)]'}"
+              ? 'bg-[var(--color-accent-primary)]/10'
+              : 'hover:bg-[var(--color-bg-tertiary)]'}"
             onclick={() => handleDMSelect(dm)}
           >
             <div class="relative flex-shrink-0">

@@ -224,7 +224,10 @@ export class ConversationHubService {
       this.invokeCallbacks('onConnectionStateChange', false);
 
       // Report to problems panel (accumulate, don't clear)
-      reportWarning('Connection lost - reconnecting...', { source: 'SignalR', code: 'SIGNALR_RECONNECTING' });
+      reportWarning('Connection lost - reconnecting...', {
+        source: 'SignalR',
+        code: 'SIGNALR_RECONNECTING',
+      });
       showProblemsPanel();
     });
 
@@ -254,7 +257,10 @@ export class ConversationHubService {
         this.invokeCallbacks('onError', error);
 
         // Report to problems panel (accumulate, don't clear)
-        reportError(`Server connection closed: ${error.message}`, { source: 'SignalR', code: 'SIGNALR_CLOSED' });
+        reportError(`Server connection closed: ${error.message}`, {
+          source: 'SignalR',
+          code: 'SIGNALR_CLOSED',
+        });
         showProblemsPanel();
       }
 
@@ -295,9 +301,11 @@ export class ConversationHubService {
    */
   async connect(): Promise<void> {
     // Already connected or connecting - skip
-    if (this.connection?.state === signalR.HubConnectionState.Connected ||
-        this.connection?.state === signalR.HubConnectionState.Connecting ||
-        this.connection?.state === signalR.HubConnectionState.Reconnecting) {
+    if (
+      this.connection?.state === signalR.HubConnectionState.Connected ||
+      this.connection?.state === signalR.HubConnectionState.Connecting ||
+      this.connection?.state === signalR.HubConnectionState.Reconnecting
+    ) {
       return;
     }
 
@@ -403,7 +411,11 @@ export class ConversationHubService {
   /**
    * Send conversation invitation to a user
    */
-  async sendInvitation(conversationId: string, targetUserId: string, conversationName: string): Promise<void> {
+  async sendInvitation(
+    conversationId: string,
+    targetUserId: string,
+    conversationName: string
+  ): Promise<void> {
     if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
       throw new Error('Not connected to hub');
     }
@@ -413,7 +425,11 @@ export class ConversationHubService {
   /**
    * Respond to a conversation invitation
    */
-  async respondToInvitation(conversationId: string, inviterUserId: string, accepted: boolean): Promise<void> {
+  async respondToInvitation(
+    conversationId: string,
+    inviterUserId: string,
+    accepted: boolean
+  ): Promise<void> {
     if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
       throw new Error('Not connected to hub');
     }

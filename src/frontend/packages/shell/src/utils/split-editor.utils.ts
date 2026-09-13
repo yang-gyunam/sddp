@@ -38,18 +38,14 @@ export function initializeSplitterPositions(groupCount: number): number[] {
 /**
  * Generates CSS grid template based on splitter positions
  */
-export function generateGridTemplate(
-  groupCount: number,
-  splitterPositions: number[]
-): string {
+export function generateGridTemplate(groupCount: number, splitterPositions: number[]): string {
   if (groupCount <= 1) return '1fr';
 
   const parts: string[] = [];
   let lastPos = 0;
 
   for (let i = 0; i < groupCount; i++) {
-    const currentPos =
-      i === groupCount - 1 ? 1 : (splitterPositions[i] ?? (i + 1) / groupCount);
+    const currentPos = i === groupCount - 1 ? 1 : (splitterPositions[i] ?? (i + 1) / groupCount);
     const size = currentPos - lastPos;
     parts.push(`${(size * 100).toFixed(2)}fr`);
     lastPos = currentPos;
@@ -102,18 +98,13 @@ export function constrainSplitterPosition(
   splitterPositions: number[],
   minGap: number = 0.1
 ): number {
-  const prevPos =
-    splitterIndex > 0 ? splitterPositions[splitterIndex - 1] : undefined;
+  const prevPos = splitterIndex > 0 ? splitterPositions[splitterIndex - 1] : undefined;
   const nextPos =
-    splitterIndex < splitterPositions.length - 1
-      ? splitterPositions[splitterIndex + 1]
-      : undefined;
+    splitterIndex < splitterPositions.length - 1 ? splitterPositions[splitterIndex + 1] : undefined;
 
   const minPos = splitterIndex === 0 ? minGap : (prevPos ?? 0) + minGap;
   const maxPos =
-    splitterIndex === splitterPositions.length - 1
-      ? 1 - minGap
-      : (nextPos ?? 1) - minGap;
+    splitterIndex === splitterPositions.length - 1 ? 1 - minGap : (nextPos ?? 1) - minGap;
 
   return Math.max(minPos, Math.min(maxPos, newPosition));
 }
@@ -136,10 +127,7 @@ export function calculateSplitterPositionFromPointer(
 /**
  * Generates full grid style string
  */
-export function generateGridStyle(
-  direction: LayoutDirection,
-  template: string
-): string {
+export function generateGridStyle(direction: LayoutDirection, template: string): string {
   if (direction === 'horizontal') {
     return `grid-template-columns: ${template}; grid-template-rows: 1fr;`;
   }
@@ -160,9 +148,7 @@ export function computePositionsFromSplitters(
   if (groups.length <= 1) return updates;
 
   const sorted = [...groups].sort((a, b) =>
-    direction === 'horizontal'
-      ? a.position.x - b.position.x
-      : a.position.y - b.position.y
+    direction === 'horizontal' ? a.position.x - b.position.x : a.position.y - b.position.y
   );
 
   for (let i = 0; i < sorted.length; i++) {

@@ -5,11 +5,7 @@
   import DetailField from '../../../../shared/components/idioms/DetailField.svelte';
   import WorkflowStepper from '../../../../workflow/components/idioms/WorkflowStepper.svelte';
   import WorkflowTransitionButton from '../../../../workflow/components/idioms/WorkflowTransitionButton.svelte';
-  import type {
-    SignOffSummary,
-    SignOffDecision,
-    SpecStatus,
-  } from '../../../types';
+  import type { SignOffSummary, SignOffDecision, SpecStatus } from '../../../types';
   import { SIGN_OFF_DECISION_STYLES } from '../../../types';
   import type { StepResult } from '../../../utils/spec-detail.utils';
 
@@ -84,7 +80,7 @@
       <div class="flex items-center justify-end gap-2">
         {#if onTransition}
           <WorkflowTransitionButton
-            currentStatus={currentStatus}
+            {currentStatus}
             {signOffComplete}
             {canSubmitForReview}
             {onGenerate}
@@ -94,7 +90,11 @@
         {:else}
           {#each availableActions as action (action.action)}
             <Button
-              variant={action.variant === 'primary' ? 'primary' : action.variant === 'danger' ? 'danger' : 'secondary'}
+              variant={action.variant === 'primary'
+                ? 'primary'
+                : action.variant === 'danger'
+                  ? 'danger'
+                  : 'secondary'}
               size="sm"
               onclick={() => onAction(action.action)}
             >
@@ -107,40 +107,53 @@
 
     <!-- Sign-off Section (inline, replaces modal) -->
     {#if showSignOffSection}
-      <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3">
+      <div
+        class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] p-4 space-y-3"
+      >
         <DetailField label="Review & Sign-offs">
           {#if signOffSummary && signOffSummary.totalCount > 0}
             <div class="text-xs text-[var(--color-text-muted)] mb-2">
-              {signOffSummary.approvedCount + signOffSummary.conditionalCount}/{signOffSummary.totalCount} completed
+              {signOffSummary.approvedCount +
+                signOffSummary.conditionalCount}/{signOffSummary.totalCount} completed
             </div>
           {/if}
         </DetailField>
 
         <!-- Reviewer list -->
         <div class="space-y-2">
-          {#each (signOffSummary?.signOffs ?? []) as signOff (signOff.id)}
+          {#each signOffSummary?.signOffs ?? [] as signOff (signOff.id)}
             {@const style = SIGN_OFF_DECISION_STYLES[signOff.decision]}
             {@const isCurrentUser = signOff.stakeholder.id === currentUserId}
-            <div class="flex items-center gap-3 px-3 py-2 rounded-lg border bg-[var(--color-surface-100)] {isCurrentUser
-              ? 'border-[var(--color-accent-primary)]/30'
-              : 'border-[var(--color-border-secondary)]'}">
+            <div
+              class="flex items-center gap-3 px-3 py-2 rounded-lg border bg-[var(--color-surface-100)] {isCurrentUser
+                ? 'border-[var(--color-accent-primary)]/30'
+                : 'border-[var(--color-border-secondary)]'}"
+            >
               <div class="flex-1 min-w-0 flex items-center gap-2">
                 <span class="text-sm font-medium text-[var(--color-text-primary)] truncate">
                   {signOff.stakeholder.name}
                 </span>
                 {#if isCurrentUser}
-                  <span class="text-[0.625rem] px-1 py-0.5 rounded bg-[var(--color-accent-primary)] text-white leading-none">You</span>
+                  <span
+                    class="text-[0.625rem] px-1 py-0.5 rounded bg-[var(--color-accent-primary)] text-white leading-none"
+                    >You</span
+                  >
                 {/if}
                 <span class="text-xs text-[var(--color-text-muted)]">{signOff.role}</span>
               </div>
-              <div class="flex items-center gap-1 px-2 py-0.5 rounded-full {style.bgColor} {style.textColor}">
+              <div
+                class="flex items-center gap-1 px-2 py-0.5 rounded-full {style.bgColor} {style.textColor}"
+              >
                 <Icon name={style.icon} size="xs" />
                 <span class="text-xs font-medium">{style.label}</span>
               </div>
             </div>
             {#if signOff.conditions}
-              <div class="ml-3 px-3 py-1.5 text-xs rounded bg-[var(--color-warning-100)] dark:bg-[var(--color-warning-900)]/20 text-[var(--color-text-secondary)]">
-                <span class="font-medium">Conditions:</span> {signOff.conditions}
+              <div
+                class="ml-3 px-3 py-1.5 text-xs rounded bg-[var(--color-warning-100)] dark:bg-[var(--color-warning-900)]/20 text-[var(--color-text-secondary)]"
+              >
+                <span class="font-medium">Conditions:</span>
+                {signOff.conditions}
               </div>
             {/if}
             {#if signOff.comments}
@@ -156,14 +169,14 @@
           <div class="pt-3 border-t border-[var(--color-border-secondary)] space-y-3">
             <DetailField label="Your Decision">
               <div class="flex flex-wrap gap-2">
-                {#each (['Approved', 'Conditional', 'Rejected'] as const) as d (d)}
+                {#each ['Approved', 'Conditional', 'Rejected'] as const as d (d)}
                   {@const ds = SIGN_OFF_DECISION_STYLES[d]}
                   <Button
                     variant="unstyled"
                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border-2 transition-colors
                       {signOffDecision === d
-                        ? `${ds.bgColor} ${ds.textColor} ${ds.borderColor}`
-                        : 'border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                      ? `${ds.bgColor} ${ds.textColor} ${ds.borderColor}`
+                      : 'border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
                     onclick={() => {
                       signOffDecision = d;
                       if (d !== 'Conditional') {
@@ -192,7 +205,9 @@
                   label="Comments"
                   required={signOffDecision === 'Rejected'}
                   bind:value={signOffComments}
-                  placeholder={signOffDecision === 'Rejected' ? 'Please explain the rejection...' : 'Additional comments...'}
+                  placeholder={signOffDecision === 'Rejected'
+                    ? 'Please explain the rejection...'
+                    : 'Additional comments...'}
                   rows={2}
                 />
                 <div class="flex justify-end">
@@ -200,11 +215,9 @@
                     variant="primary"
                     size="sm"
                     onclick={onSignOffSubmit}
-                    disabled={
-                      signOffLoading ||
+                    disabled={signOffLoading ||
                       (signOffDecision === 'Conditional' && !signOffConditions.trim()) ||
-                      (signOffDecision === 'Rejected' && !signOffComments.trim())
-                    }
+                      (signOffDecision === 'Rejected' && !signOffComments.trim())}
                   >
                     {#if signOffLoading}
                       <Spinner size="sm" />

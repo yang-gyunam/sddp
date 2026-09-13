@@ -62,9 +62,7 @@
 
   // Size classes
   const sizeConfig = $derived(
-    size === 'sm'
-      ? { width: 6, height: 16, gap: 2 }
-      : { width: 8, height: 20, gap: 3 }
+    size === 'sm' ? { width: 6, height: 16, gap: 2 } : { width: 8, height: 20, gap: 3 }
   );
 
   // Tooltip

@@ -37,13 +37,23 @@
       id: 'profile',
       label: 'Profile',
       icon: 'user-round',
-      tabConfig: { title: 'Profile', icon: 'user-round', path: '/settings/profile', menuId: 'settings-profile' },
+      tabConfig: {
+        title: 'Profile',
+        icon: 'user-round',
+        path: '/settings/profile',
+        menuId: 'settings-profile',
+      },
     },
     {
       id: 'preferences',
       label: 'Preferences',
       icon: 'sliders',
-      tabConfig: { title: 'Preferences', icon: 'sliders', path: '/settings/preferences', menuId: 'settings-preferences' },
+      tabConfig: {
+        title: 'Preferences',
+        icon: 'sliders',
+        path: '/settings/preferences',
+        menuId: 'settings-preferences',
+      },
     },
     // Hidden: no backend notification infrastructure yet (email server, Web Push, SignalR events)
     // {
@@ -59,32 +69,49 @@
       id: 'general',
       label: 'General',
       icon: 'file-text',
-      tabConfig: { title: 'General', icon: 'file-text', path: `/settings/project/${projectId}/general`, menuId: `settings-project-${projectId}-general` },
+      tabConfig: {
+        title: 'General',
+        icon: 'file-text',
+        path: `/settings/project/${projectId}/general`,
+        menuId: `settings-project-${projectId}-general`,
+      },
     },
     {
       id: 'members',
       label: 'Members',
       icon: 'circle-user-round',
-      tabConfig: { title: 'Members', icon: 'circle-user-round', path: `/settings/project/${projectId}/members`, menuId: `settings-project-${projectId}-members` },
+      tabConfig: {
+        title: 'Members',
+        icon: 'circle-user-round',
+        path: `/settings/project/${projectId}/members`,
+        menuId: `settings-project-${projectId}-members`,
+      },
     },
     {
       id: 'roles',
       label: 'Roles',
       icon: 'shield',
-      tabConfig: { title: 'Roles', icon: 'shield', path: `/settings/project/${projectId}/roles`, menuId: `settings-project-${projectId}-roles` },
+      tabConfig: {
+        title: 'Roles',
+        icon: 'shield',
+        path: `/settings/project/${projectId}/roles`,
+        menuId: `settings-project-${projectId}-roles`,
+      },
     },
     ...(projectIntegrationsEnabled
-      ? [{
-          id: 'integrations',
-          label: 'Integrations',
-          icon: 'link',
-          tabConfig: {
-            title: 'Integrations',
+      ? [
+          {
+            id: 'integrations',
+            label: 'Integrations',
             icon: 'link',
-            path: `/settings/project/${projectId}/integrations`,
-            menuId: `settings-project-${projectId}-integrations`,
+            tabConfig: {
+              title: 'Integrations',
+              icon: 'link',
+              path: `/settings/project/${projectId}/integrations`,
+              menuId: `settings-project-${projectId}-integrations`,
+            },
           },
-        }]
+        ]
       : []),
   ]);
 
@@ -93,44 +120,72 @@
       id: 'dashboard',
       label: 'Dashboard',
       icon: 'bar-chart',
-      tabConfig: { title: 'Dashboard', icon: 'bar-chart', path: '/settings/system/dashboard', menuId: 'settings-system-dashboard' },
+      tabConfig: {
+        title: 'Dashboard',
+        icon: 'bar-chart',
+        path: '/settings/system/dashboard',
+        menuId: 'settings-system-dashboard',
+      },
     },
     {
       id: 'users',
       label: 'Users',
       icon: 'user',
-      tabConfig: { title: 'Users', icon: 'user', path: '/settings/system/users', menuId: 'settings-system-users' },
+      tabConfig: {
+        title: 'Users',
+        icon: 'user',
+        path: '/settings/system/users',
+        menuId: 'settings-system-users',
+      },
     },
     {
       id: 'projects',
       label: 'Projects',
       icon: 'project',
-      tabConfig: { title: 'Projects', icon: 'project', path: '/settings/system/projects', menuId: 'settings-system-projects' },
+      tabConfig: {
+        title: 'Projects',
+        icon: 'project',
+        path: '/settings/system/projects',
+        menuId: 'settings-system-projects',
+      },
     },
     {
       id: 'config',
       label: 'Config',
       icon: 'settings',
-      tabConfig: { title: 'Config', icon: 'settings', path: '/settings/system/config', menuId: 'settings-system-config' },
+      tabConfig: {
+        title: 'Config',
+        icon: 'settings',
+        path: '/settings/system/config',
+        menuId: 'settings-system-config',
+      },
     },
     {
       id: 'audit',
       label: 'Audit Logs',
       icon: 'file-text',
-      tabConfig: { title: 'Audit Logs', icon: 'file-text', path: '/settings/system/audit', menuId: 'settings-system-audit' },
+      tabConfig: {
+        title: 'Audit Logs',
+        icon: 'file-text',
+        path: '/settings/system/audit',
+        menuId: 'settings-system-audit',
+      },
     },
     {
       id: 'health',
       label: 'Health',
       icon: 'heart',
-      tabConfig: { title: 'Health', icon: 'heart', path: '/settings/system/health', menuId: 'settings-system-health' },
+      tabConfig: {
+        title: 'Health',
+        icon: 'heart',
+        path: '/settings/system/health',
+        menuId: 'settings-system-health',
+      },
     },
   ];
 
   const nodes = $derived(
-    panelType === 'user' ? userNodes :
-    panelType === 'project' ? projectNodes :
-    systemNodes
+    panelType === 'user' ? userNodes : panelType === 'project' ? projectNodes : systemNodes
   );
 
   function handleNodeClick(node: SettingsTreeNode) {
@@ -145,14 +200,14 @@
       variant="unstyled"
       class="flex items-center gap-2 w-full text-left px-2 py-1.5 cursor-pointer border rounded transition-colors
         {isSelected
-          ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-          : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+        ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+        : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
       onclick={() => handleNodeClick(node)}
     >
       <Icon
         name={node.icon}
         size="sm"
-        class={isSelected ? 'text-[var(--color-accent-primary)]' : 'text-[var(--color-text-tertiary)]'}
+        class={isSelected ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-text-tertiary)]'}
       />
       <span class="flex-1 text-sm truncate">{node.label}</span>
     </Button>

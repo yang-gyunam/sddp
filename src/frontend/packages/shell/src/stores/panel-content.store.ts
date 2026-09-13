@@ -239,11 +239,15 @@ function recalculateCounts(entries: ProblemEntry[]) {
   return {
     errorCount: entries.filter((entry) => entry.severity === 'error').length,
     warningCount: entries.filter((entry) => entry.severity === 'warning').length,
-    infoCount: entries.filter((entry) => entry.severity === 'info' || entry.severity === 'hint').length,
+    infoCount: entries.filter((entry) => entry.severity === 'info' || entry.severity === 'hint')
+      .length,
   };
 }
 
-function isDuplicate(entries: ProblemEntry[], problem: Omit<ProblemEntry, 'id' | 'timestamp'>): boolean {
+function isDuplicate(
+  entries: ProblemEntry[],
+  problem: Omit<ProblemEntry, 'id' | 'timestamp'>
+): boolean {
   if (problem.source === 'Toast' || problem.source === 'SignalR') {
     return false;
   }
@@ -259,7 +263,9 @@ function isDuplicate(entries: ProblemEntry[], problem: Omit<ProblemEntry, 'id' |
 }
 
 function createWritableTerminalStore(options: TerminalStoreOptions = {}): TerminalStoreLike {
-  const { subscribe, set, update } = writable<TerminalState>(cloneTerminalState(initialTerminalState));
+  const { subscribe, set, update } = writable<TerminalState>(
+    cloneTerminalState(initialTerminalState)
+  );
   const now = options.now ?? Date.now;
   let idCounter = 0;
   const idFactory = options.idFactory ?? (() => `term-${now()}-${++idCounter}`);
@@ -305,7 +311,9 @@ function createWritableProblemsStore(
   effects: ProblemsEffects,
   options: ProblemsStoreOptions = {}
 ): ProblemsStoreLike {
-  const { subscribe, set, update } = writable<ProblemsState>(cloneProblemsState(initialProblemsState));
+  const { subscribe, set, update } = writable<ProblemsState>(
+    cloneProblemsState(initialProblemsState)
+  );
   const now = options.now ?? Date.now;
   let idCounter = 0;
   const idFactory = options.idFactory ?? (() => `prob-${now()}-${++idCounter}`);
@@ -737,27 +745,41 @@ function createStores(): {
 
   const writableTerminalStore = createWritableTerminalStore({
     now,
-    idFactory: enableRunesPanelContentStore ? terminalIdFactories.shadow : terminalIdFactories.primary,
+    idFactory: enableRunesPanelContentStore
+      ? terminalIdFactories.shadow
+      : terminalIdFactories.primary,
   });
   const runesTerminalStore = createRunesTerminalStore({
     initialState: initialTerminalState,
     now,
-    idFactory: enableRunesPanelContentStore ? terminalIdFactories.primary : terminalIdFactories.shadow,
+    idFactory: enableRunesPanelContentStore
+      ? terminalIdFactories.primary
+      : terminalIdFactories.shadow,
   });
 
   const writableProblemsStore = createWritableProblemsStore(
-    createRecordingProblemsEffects(enableRunesPanelContentStore ? 'shadow' : 'active', enableRunesPanelContentStore ? shadowProblemEffectsLog : primaryProblemEffectsLog),
+    createRecordingProblemsEffects(
+      enableRunesPanelContentStore ? 'shadow' : 'active',
+      enableRunesPanelContentStore ? shadowProblemEffectsLog : primaryProblemEffectsLog
+    ),
     {
       now,
-      idFactory: enableRunesPanelContentStore ? problemsIdFactories.shadow : problemsIdFactories.primary,
+      idFactory: enableRunesPanelContentStore
+        ? problemsIdFactories.shadow
+        : problemsIdFactories.primary,
     }
   );
   const runesProblemsStore = createRunesProblemsStore(
-    createRecordingProblemsEffects(enableRunesPanelContentStore ? 'active' : 'shadow', enableRunesPanelContentStore ? primaryProblemEffectsLog : shadowProblemEffectsLog),
+    createRecordingProblemsEffects(
+      enableRunesPanelContentStore ? 'active' : 'shadow',
+      enableRunesPanelContentStore ? primaryProblemEffectsLog : shadowProblemEffectsLog
+    ),
     {
       initialState: initialProblemsState,
       now,
-      idFactory: enableRunesPanelContentStore ? problemsIdFactories.primary : problemsIdFactories.shadow,
+      idFactory: enableRunesPanelContentStore
+        ? problemsIdFactories.primary
+        : problemsIdFactories.shadow,
     }
   );
 
@@ -771,10 +793,18 @@ function createStores(): {
     idFactory: enableRunesPanelContentStore ? outputIdFactories.primary : outputIdFactories.shadow,
   });
 
-  const primaryTerminalStore = enableRunesPanelContentStore ? runesTerminalStore : writableTerminalStore;
-  const shadowTerminalStore = enableRunesPanelContentStore ? writableTerminalStore : runesTerminalStore;
-  const primaryProblemsStore = enableRunesPanelContentStore ? runesProblemsStore : writableProblemsStore;
-  const shadowProblemsStore = enableRunesPanelContentStore ? writableProblemsStore : runesProblemsStore;
+  const primaryTerminalStore = enableRunesPanelContentStore
+    ? runesTerminalStore
+    : writableTerminalStore;
+  const shadowTerminalStore = enableRunesPanelContentStore
+    ? writableTerminalStore
+    : runesTerminalStore;
+  const primaryProblemsStore = enableRunesPanelContentStore
+    ? runesProblemsStore
+    : writableProblemsStore;
+  const shadowProblemsStore = enableRunesPanelContentStore
+    ? writableProblemsStore
+    : runesProblemsStore;
   const primaryOutputStore = enableRunesPanelContentStore ? runesOutputStore : writableOutputStore;
   const shadowOutputStore = enableRunesPanelContentStore ? writableOutputStore : runesOutputStore;
 

@@ -96,7 +96,9 @@ function createWritableSidePanelStore(
     minWidth: panelConfig?.minWidth || MIN_WIDTH,
     maxWidth: panelConfig?.maxWidth || MAX_WIDTH,
   };
-  const { subscribe, set, update } = writable<SidePanelState>(cloneSidePanelState(configuredInitialState));
+  const { subscribe, set, update } = writable<SidePanelState>(
+    cloneSidePanelState(configuredInitialState)
+  );
 
   let currentState = cloneSidePanelState(configuredInitialState);
   subscribe((state) => {
@@ -336,13 +338,17 @@ function createStore(): SidePanelStoreLike {
     return primaryStore;
   }
 
-  const comparedStore = createParityAwareSidePanelStore(primaryStore, shadowStore, ({ action, primaryState, shadowState }) => {
-    console.error('[side-panel.store parity mismatch]', {
-      action,
-      primaryState: normalizeSidePanelState(primaryState),
-      shadowState: normalizeSidePanelState(shadowState),
-    });
-  });
+  const comparedStore = createParityAwareSidePanelStore(
+    primaryStore,
+    shadowStore,
+    ({ action, primaryState, shadowState }) => {
+      console.error('[side-panel.store parity mismatch]', {
+        action,
+        primaryState: normalizeSidePanelState(primaryState),
+        shadowState: normalizeSidePanelState(shadowState),
+      });
+    }
+  );
 
   handleScheduledParity = () => {
     const primaryState = primaryStore.get();

@@ -42,8 +42,17 @@
   }
 
   const hasContent = $derived(
-    !!ownerName || !!createdByName || !!updatedByName || !!definedByName || !!approvedByName
-    || !!version || !!createdAt || !!updatedAt || !!validFrom || !!validTo || !!lockedAt
+    !!ownerName ||
+      !!createdByName ||
+      !!updatedByName ||
+      !!definedByName ||
+      !!approvedByName ||
+      !!version ||
+      !!createdAt ||
+      !!updatedAt ||
+      !!validFrom ||
+      !!validTo ||
+      !!lockedAt
   );
 </script>
 

@@ -43,10 +43,7 @@
   $effect(() => {
     viewMode = getConversationViewMode(viewContext);
     const unsubscribe = subscribeConversationView((state) => {
-      viewMode =
-        viewContext === 'chat'
-          ? state.chatMode
-          : state.topicMode;
+      viewMode = viewContext === 'chat' ? state.chatMode : state.topicMode;
     });
     return unsubscribe;
   });
@@ -149,7 +146,7 @@
           <Button
             variant="unstyled"
             onclick={onLoadMore}
-            class="text-sm text-[var(--color-accent-primary)] hover:underline"
+            class="text-sm text-[var(--color-accent-text)] hover:underline"
           >
             Load older messages
           </Button>
@@ -159,7 +156,7 @@
 
     <!-- Message groups by date -->
     {#each messageGroups as group (group.date)}
-      <div class="{groupSpacing}">
+      <div class={groupSpacing}>
         <!-- Date header -->
         <div class="flex items-center gap-4">
           <div class="flex-1 h-px bg-[var(--color-border-secondary)]"></div>
@@ -171,10 +168,12 @@
 
         <!-- Messages -->
         {#each group.messages as message, msgIndex (message.id)}
-          {@const isLastMessage = messageGroups.indexOf(group) === messageGroups.length - 1 && msgIndex === group.messages.length - 1}
+          {@const isLastMessage =
+            messageGroups.indexOf(group) === messageGroups.length - 1 &&
+            msgIndex === group.messages.length - 1}
           <MessageBubble
             {message}
-            viewMode={viewMode}
+            {viewMode}
             {projectId}
             isOwn={message.sender?.id === currentUserId}
             isLast={isLastMessage}

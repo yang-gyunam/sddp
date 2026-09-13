@@ -67,11 +67,15 @@ function recalculateCounts(entries: ProblemEntry[]) {
   return {
     errorCount: entries.filter((entry) => entry.severity === 'error').length,
     warningCount: entries.filter((entry) => entry.severity === 'warning').length,
-    infoCount: entries.filter((entry) => entry.severity === 'info' || entry.severity === 'hint').length,
+    infoCount: entries.filter((entry) => entry.severity === 'info' || entry.severity === 'hint')
+      .length,
   };
 }
 
-function isDuplicate(entries: ProblemEntry[], problem: Omit<ProblemEntry, 'id' | 'timestamp'>): boolean {
+function isDuplicate(
+  entries: ProblemEntry[],
+  problem: Omit<ProblemEntry, 'id' | 'timestamp'>
+): boolean {
   if (problem.source === 'Toast' || problem.source === 'SignalR') {
     return false;
   }
@@ -86,9 +90,11 @@ function isDuplicate(entries: ProblemEntry[], problem: Omit<ProblemEntry, 'id' |
   );
 }
 
-export function createRunesTerminalStore(options: {
-  initialState: TerminalState;
-} & TerminalStoreOptions): TerminalStoreLike {
+export function createRunesTerminalStore(
+  options: {
+    initialState: TerminalState;
+  } & TerminalStoreOptions
+): TerminalStoreLike {
   let state = cloneTerminalState(options.initialState);
   const now = options.now ?? Date.now;
   let idCounter = 0;
@@ -255,9 +261,11 @@ export function createRunesProblemsStore(
   };
 }
 
-export function createRunesOutputStore(options: {
-  initialState: OutputState;
-} & OutputStoreOptions): OutputStoreLike {
+export function createRunesOutputStore(
+  options: {
+    initialState: OutputState;
+  } & OutputStoreOptions
+): OutputStoreLike {
   let state = cloneOutputState(options.initialState);
   const now = options.now ?? Date.now;
   let idCounter = 0;

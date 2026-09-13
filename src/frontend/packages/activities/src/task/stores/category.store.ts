@@ -49,10 +49,7 @@ export async function loadCategories(tenantId: string): Promise<TaskCategory[]> 
 /**
  * Add a new category via API
  */
-export async function addCategory(
-  tenantId: string,
-  name: string
-): Promise<TaskCategory | null> {
+export async function addCategory(tenantId: string, name: string): Promise<TaskCategory | null> {
   try {
     const category = await createCategory(tenantId, name);
     categoryStore.update((state) => ({
@@ -114,8 +111,6 @@ export function getCategoryState(): CategoryState {
 /**
  * Subscribe to category state changes
  */
-export function subscribeCategoryStore(
-  callback: (state: CategoryState) => void
-): () => void {
+export function subscribeCategoryStore(callback: (state: CategoryState) => void): () => void {
   return categoryStore.subscribe(callback);
 }

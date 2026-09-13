@@ -9,12 +9,16 @@
   import { Icon, Input, IconButton, Textarea } from '@sddp/ui';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import type { Project, ProjectDetail } from '../../../projects/types/project.types';
-  import { getProjectService } from '../../../projects/services/ProjectService';
-  import type { CreateProjectParams, UpdateProjectParams } from '../../../projects/services/ProjectService';
+  import { createProjectService } from '../../../projects/services/ProjectService';
+  import type {
+    CreateProjectParams,
+    UpdateProjectParams,
+  } from '../../../projects/services/ProjectService';
 
   type PanelMode = 'view' | 'edit' | 'create';
 
   interface Props {
+    tenantId: string;
     mode: PanelMode;
     project: ProjectDetail | null;
     onClose: () => void;
@@ -23,9 +27,9 @@
     onSaved?: (project: ProjectDetail) => void;
   }
 
-  let { mode, project, onClose, onEdit, onCreated, onSaved }: Props = $props();
+  let { tenantId, mode, project, onClose, onEdit, onCreated, onSaved }: Props = $props();
 
-  const projectService = getProjectService();
+  let projectService = $derived(createProjectService(tenantId));
 
   let loading = $state(false);
   let errors = $state<Record<string, string>>({});
@@ -135,7 +139,10 @@
     }
   }
 
-  async function handleLifecycleAction(action: 'initialize' | 'conclude' | 'reopen' | 'archive', label: string) {
+  async function handleLifecycleAction(
+    action: 'initialize' | 'conclude' | 'reopen' | 'archive',
+    label: string
+  ) {
     if (!project) return;
     if (!confirm(`Are you sure you want to ${label.toLowerCase()} "${project.name}"?`)) return;
 
@@ -143,15 +150,24 @@
     try {
       let updated;
       switch (action) {
-        case 'initialize': updated = await projectService.initializeProject(project.id); break;
-        case 'conclude': updated = await projectService.concludeProject(project.id); break;
-        case 'reopen': updated = await projectService.reopenProject(project.id); break;
-        case 'archive': updated = await projectService.archiveProject(project.id); break;
+        case 'initialize':
+          updated = await projectService.initializeProject(project.id);
+          break;
+        case 'conclude':
+          updated = await projectService.concludeProject(project.id);
+          break;
+        case 'reopen':
+          updated = await projectService.reopenProject(project.id);
+          break;
+        case 'archive':
+          updated = await projectService.archiveProject(project.id);
+          break;
       }
       toast.success(`Project "${updated.name}" ${label.toLowerCase()}d successfully`);
       onSaved?.(updated);
     } catch (err) {
-      const message = err instanceof Error ? err.message : `Failed to ${label.toLowerCase()} project`;
+      const message =
+        err instanceof Error ? err.message : `Failed to ${label.toLowerCase()} project`;
       toast.error(message);
     } finally {
       loading = false;
@@ -168,7 +184,7 @@
   {#if mode === 'view' && project}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="project" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="project" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Project Details</span>
       {#snippet actions()}
@@ -176,12 +192,36 @@
           <IconButton icon="edit" onclick={onEdit} title="Edit project" />
         {/if}
         {#if project.status === 'planning'}
-          <IconButton icon="play" variant="success" onclick={() => handleLifecycleAction('initialize', 'Initialize')} disabled={loading} title="Initialize project" />
+          <IconButton
+            icon="play"
+            variant="success"
+            onclick={() => handleLifecycleAction('initialize', 'Initialize')}
+            disabled={loading}
+            title="Initialize project"
+          />
         {:else if project.status === 'active'}
-          <IconButton icon="pause" variant="warn" onclick={() => handleLifecycleAction('conclude', 'Conclude')} disabled={loading} title="Conclude project" />
+          <IconButton
+            icon="pause"
+            variant="warn"
+            onclick={() => handleLifecycleAction('conclude', 'Conclude')}
+            disabled={loading}
+            title="Conclude project"
+          />
         {:else if project.status === 'concluded'}
-          <IconButton icon="play" variant="success" onclick={() => handleLifecycleAction('reopen', 'Reopen')} disabled={loading} title="Reopen project" />
-          <IconButton icon="archive" variant="danger" onclick={() => handleLifecycleAction('archive', 'Archive')} disabled={loading} title="Archive project" />
+          <IconButton
+            icon="play"
+            variant="success"
+            onclick={() => handleLifecycleAction('reopen', 'Reopen')}
+            disabled={loading}
+            title="Reopen project"
+          />
+          <IconButton
+            icon="archive"
+            variant="danger"
+            onclick={() => handleLifecycleAction('archive', 'Archive')}
+            disabled={loading}
+            title="Archive project"
+          />
         {/if}
         <IconButton icon="x" onclick={onClose} title="Close" />
       {/snippet}
@@ -189,22 +229,34 @@
   {:else if mode === 'edit'}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="edit" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="edit" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Edit Project</span>
       {#snippet actions()}
-        <IconButton icon="check" variant="success" onclick={handleSave} disabled={loading} title="Save changes" />
+        <IconButton
+          icon="check"
+          variant="success"
+          onclick={handleSave}
+          disabled={loading}
+          title="Save changes"
+        />
         <IconButton icon="x" onclick={onClose} title="Cancel" />
       {/snippet}
     </DetailHeader>
   {:else if mode === 'create'}
     <DetailHeader>
       {#snippet leading()}
-        <Icon name="folder-plus" size="md" class="text-[var(--color-accent-primary)]" />
+        <Icon name="folder-plus" size="md" class="text-[var(--color-accent-text)]" />
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Create Project</span>
       {#snippet actions()}
-        <IconButton icon="check" variant="success" onclick={handleCreate} disabled={loading} title="Create project" />
+        <IconButton
+          icon="check"
+          variant="success"
+          onclick={handleCreate}
+          disabled={loading}
+          title="Create project"
+        />
         <IconButton icon="x" onclick={onClose} title="Cancel" />
       {/snippet}
     </DetailHeader>
@@ -246,7 +298,6 @@
           {/if}
         </div>
       </div>
-
     {:else if mode === 'edit' && project}
       <!-- Edit Mode -->
       <div class="form-section">
@@ -273,7 +324,6 @@
           {/if}
         </div>
       </div>
-
     {:else if mode === 'view' && project}
       <!-- View Mode -->
       <div class="project-header">
@@ -284,7 +334,13 @@
           <h4 class="project-name">{project.name}</h4>
           <p class="project-code">{project.code}</p>
         </div>
-        <span class="status-badge" class:planning={project.status === 'planning'} class:active={project.status === 'active'} class:concluded={project.status === 'concluded'} class:archived={project.status === 'archived'}>
+        <span
+          class="status-badge"
+          class:planning={project.status === 'planning'}
+          class:active={project.status === 'active'}
+          class:concluded={project.status === 'concluded'}
+          class:archived={project.status === 'archived'}
+        >
           {project.status}
         </span>
       </div>
@@ -355,7 +411,6 @@
           <p class="empty-text">No members</p>
         </div>
       {/if}
-
     {/if}
   </div>
 </div>

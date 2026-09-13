@@ -7,6 +7,7 @@
 
   import { Button, Select } from '@sddp/ui';
   import type { SearchResult, SearchSort, SearchResultItem } from '../../types';
+  import { createSearchSnippetSegments } from '../../utils';
   import { searchQueryStore, setSearchSort } from '../../stores/searchQuery.store';
   import { formatRelativeTime } from '@sddp/shell';
 
@@ -29,9 +30,7 @@
   }: Props = $props();
 
   let sortBy = $state<SearchSort>('relevance');
-  const hasMore = $derived(
-    hasMoreProp || (!!results && results.results.length < results.total)
-  );
+  const hasMore = $derived(hasMoreProp || (!!results && results.results.length < results.total));
 
   $effect(() => {
     const unsubscribe = searchQueryStore.subscribe((state) => {
@@ -119,8 +118,9 @@
             <h3 class="result-title">{item.title}</h3>
 
             <div class="result-snippet">
-              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-              {@html item.snippet}
+              {#each createSearchSnippetSegments(item.snippet, item.highlights) as segment, segmentIndex (segmentIndex)}
+                {#if segment.highlighted}<mark>{segment.text}</mark>{:else}{segment.text}{/if}
+              {/each}
             </div>
 
             <div class="result-footer">

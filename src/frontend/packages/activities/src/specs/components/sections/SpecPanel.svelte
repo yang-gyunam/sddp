@@ -9,8 +9,32 @@
   import SpecVersionHistory from '../idioms/SpecVersionHistory.svelte';
   import SpecForm from '../idioms/SpecForm.svelte';
   import RequirementPanel from '../../../requirements/components/sections/RequirementPanel.svelte';
-  import {
-    subscribeSpec,
+  import { createSpecStoreScope } from '../../stores';
+  import type {
+    Spec,
+    SpecState,
+    SpecStatus,
+    CreateSpecRequest,
+    UpdateSpecRequest,
+  } from '../../types';
+  import { createSpecService } from '../../services';
+  import { createRequirementService } from '../../../requirements/services/RequirementService';
+  import { createConversationService } from '../../../conversations/services/ConversationService';
+
+  interface Props {
+    tenantId: string;
+    projectId: string;
+    specId?: string;
+    tabId?: string;
+    class?: string;
+  }
+
+  let { tenantId, projectId, specId, tabId = '', class: className = '' }: Props = $props();
+
+  // State and service are owned by this tab instance.
+  let storeState: SpecState | null = $state(null);
+  const storeScope = createSpecStoreScope();
+  const {
     setSpecsPage,
     setSpecsLoading,
     setSpecsError,
@@ -26,40 +50,12 @@
     addSpec,
     removeSpec,
     setPage,
-  } from '../../stores';
-  import type {
-    Spec,
-    SpecState,
-    SpecStatus,
-    CreateSpecRequest,
-    UpdateSpecRequest,
-  } from '../../types';
-  import { getSpecService } from '../../services';
-  import { getRequirementService } from '../../../requirements/services/RequirementService';
-  import { getConversationService } from '../../../conversations/services/ConversationService';
-
-  interface Props {
-    tenantId: string;
-    projectId: string;
-    specId?: string;
-    tabId?: string;
-    class?: string;
-  }
-
-  let { tenantId, projectId, specId, tabId = '', class: className = '' }: Props = $props();
-
-  // State from store
-  let storeState: SpecState | null = $state(null);
+  } = storeScope;
 
   // Form states (inline instead of modal)
   let formMode = $state<'create' | 'edit' | null>(null);
   let formLoading = $state(false);
-  // Get service
-  const specService = getSpecService();
-
-  function ensureSpecContext(): void {
-    specService.setContext(tenantId, projectId);
-  }
+  const specService = $derived(createSpecService(tenantId, projectId));
 
   // Reference search state (Combobox)
   let requirementCandidates = $state<ComboboxOption[]>([]);
@@ -99,9 +95,7 @@
 
   // Subscribe to spec state
   $effect(() => {
-    ensureSpecContext();
-
-    const unsubscribe = subscribeSpec((newState: SpecState) => {
+    const unsubscribe = storeScope.subscribe((newState: SpecState) => {
       storeState = newState;
     });
 
@@ -117,7 +111,6 @@
   $effect(() => {
     if (!specId || specId === lastSpecId) return;
     lastSpecId = specId;
-    ensureSpecContext();
     untrack(() => loadSpecById(specId));
   });
 
@@ -127,9 +120,7 @@
       const { statusFilter, page, pageSize } = storeState;
 
       // Only reload if filters or page actually changed
-      const filtersChanged =
-        statusFilter !== prevStatusFilter ||
-        page !== prevPage;
+      const filtersChanged = statusFilter !== prevStatusFilter || page !== prevPage;
 
       if (filtersChanged && storeState.specs.length > 0) {
         prevStatusFilter = statusFilter;
@@ -391,10 +382,12 @@
 
     // Pre-populate requirement option
     if (current?.requirementId && (current?.requirementTitle || current?.requirementCode)) {
-      requirementCandidates = [{
-        value: current.requirementId,
-        label: `${current.requirementCode ?? ''}  ${current.requirementTitle ?? ''}`.trim(),
-      }];
+      requirementCandidates = [
+        {
+          value: current.requirementId,
+          label: `${current.requirementCode ?? ''}  ${current.requirementTitle ?? ''}`.trim(),
+        },
+      ];
     } else {
       requirementCandidates = [];
     }
@@ -402,11 +395,16 @@
     // Pre-populate conversation option
     if (current?.bornFromConversationId && current?.bornFromConversationName) {
       const prefix = current.bornFromConversationType === 'Channel' ? '#' : '';
-      conversationCandidates = [{
-        value: current.bornFromConversationId,
-        label: `${prefix}${current.bornFromConversationName}`,
-        description: current.bornFromConversationDescription ?? current.bornFromConversationType ?? undefined,
-      }];
+      conversationCandidates = [
+        {
+          value: current.bornFromConversationId,
+          label: `${prefix}${current.bornFromConversationName}`,
+          description:
+            current.bornFromConversationDescription ??
+            current.bornFromConversationType ??
+            undefined,
+        },
+      ];
     } else {
       conversationCandidates = [];
     }
@@ -427,8 +425,7 @@
     requirementSearchTimer = setTimeout(async () => {
       requirementSearchLoading = true;
       try {
-        const svc = getRequirementService();
-        svc.setContext(tenantId, projectId);
+        const svc = createRequirementService(tenantId, projectId);
         const results = await svc.searchRequirements(query, 15);
         requirementCandidates = results.map((r) => ({
           value: r.id,
@@ -452,8 +449,7 @@
     conversationSearchTimer = setTimeout(async () => {
       conversationSearchLoading = true;
       try {
-        const svc = getConversationService();
-        svc.setContext(tenantId, projectId);
+        const svc = createConversationService(tenantId, projectId);
         const results = await svc.searchConversations(query, 15);
         conversationCandidates = results.map((c) => ({
           value: c.id,
@@ -471,7 +467,9 @@
 
 <div class="flex h-full bg-[var(--color-surface-100)] {className}">
   <!-- Spec List (Left sidebar) -->
-  <div class="w-80 flex-shrink-0 border-r border-[var(--color-border-primary)] bg-[var(--color-surface-50)] flex flex-col">
+  <div
+    class="w-80 flex-shrink-0 border-r border-[var(--color-border-primary)] bg-[var(--color-surface-50)] flex flex-col"
+  >
     <SpecList
       specs={storeState?.specs || []}
       selectedId={storeState?.currentSpec?.id}
@@ -485,7 +483,9 @@
 
     <!-- Pagination -->
     {#if storeState && storeState.totalPages > 1}
-      <div class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border-secondary)]">
+      <div
+        class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border-secondary)]"
+      >
         <span class="text-xs text-[var(--color-text-muted)]">
           Page {storeState.page} of {storeState.totalPages}
         </span>
@@ -515,14 +515,30 @@
   <div class="flex-1 flex flex-col min-w-0">
     {#if formMode === 'create'}
       <!-- Inline Create Form -->
-      <div class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]">
+      <div
+        class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]"
+      >
         <div class="flex items-center gap-2">
           <Icon name="file-text" size="sm" class="text-[var(--color-text-tertiary)]" />
           <span class="text-sm font-medium text-[var(--color-text-primary)]">New Spec</span>
         </div>
         <div class="flex items-center gap-1">
-          <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-          <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={() => (formMode = null)} />
+          <IconButton
+            icon="check"
+            variant="success"
+            size="sm"
+            title="Create"
+            onclick={() =>
+              (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()}
+            disabled={formLoading}
+          />
+          <IconButton
+            icon="x"
+            variant="ghost"
+            size="sm"
+            title="Cancel"
+            onclick={() => (formMode = null)}
+          />
         </div>
       </div>
       <div class="flex-1 overflow-y-auto p-4">
@@ -542,14 +558,30 @@
       </div>
     {:else if formMode === 'edit' && storeState?.currentSpec}
       <!-- Inline Edit Form -->
-      <div class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]">
+      <div
+        class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-section)]"
+      >
         <div class="flex items-center gap-2">
           <Icon name="file-text" size="sm" class="text-[var(--color-text-tertiary)]" />
           <span class="text-sm font-medium text-[var(--color-text-primary)]">Edit Spec</span>
         </div>
         <div class="flex items-center gap-1">
-          <IconButton icon="check" variant="success" size="sm" title="Save" onclick={() => (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-          <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={() => (formMode = null)} />
+          <IconButton
+            icon="check"
+            variant="success"
+            size="sm"
+            title="Save"
+            onclick={() =>
+              (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()}
+            disabled={formLoading}
+          />
+          <IconButton
+            icon="x"
+            variant="ghost"
+            size="sm"
+            title="Cancel"
+            onclick={() => (formMode = null)}
+          />
         </div>
       </div>
       <div class="flex-1 overflow-y-auto p-4">
@@ -603,7 +635,9 @@
         </div>
 
         <!-- Version History (Right sidebar) -->
-        <div class="w-64 flex-shrink-0 border-l border-[var(--color-border-primary)] bg-[var(--color-surface-50)]">
+        <div
+          class="w-64 flex-shrink-0 border-l border-[var(--color-border-primary)] bg-[var(--color-surface-50)]"
+        >
           <SpecVersionHistory
             versions={storeState.specVersions}
             currentId={storeState.currentSpec?.id}
@@ -616,7 +650,11 @@
       <!-- Empty state -->
       <div class="flex-1 flex items-center justify-center">
         <div class="text-center">
-          <Icon name="file-code" size="xl" class="mx-auto mb-4 text-[var(--color-text-muted)] opacity-50" />
+          <Icon
+            name="file-code"
+            size="xl"
+            class="mx-auto mb-4 text-[var(--color-text-muted)] opacity-50"
+          />
           <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a spec</p>
           <p class="text-xs text-[var(--color-text-secondary)] mt-1">
             Choose a spec from the sidebar to view details.
@@ -630,4 +668,3 @@
     {/if}
   </div>
 </div>
-

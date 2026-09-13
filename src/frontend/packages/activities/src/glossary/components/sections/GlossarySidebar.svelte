@@ -64,7 +64,9 @@
 
 <div class="flex flex-col h-full bg-[var(--color-bg-primary)] {className}">
   <!-- Search + Action Buttons (follows SpecsSidebar pattern) -->
-  <div class="sidebar-header flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+  <div
+    class="sidebar-header flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+  >
     <div class="flex items-center gap-1 w-full">
       <!-- Search Input -->
       <div class="relative flex-1">
@@ -91,8 +93,16 @@
 
       <!-- Filter Dropdown -->
       <Dropdown position="bottom-right">
-        {#snippet trigger()}
-          <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+        {#snippet trigger({ toggle, open })}
+          <IconButton
+            onclick={toggle}
+            ariaHasPopup
+            ariaExpanded={open}
+            icon="more-vertical"
+            size="sm"
+            variant="ghost"
+            title="Filter options"
+          />
         {/snippet}
         <div class="py-1 min-w-[180px]">
           <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
@@ -108,7 +118,7 @@
               <Icon name={option.icon} size="sm" class="text-[var(--color-text-tertiary)]" />
               <span class="flex-1">{option.label}</span>
               {#if filterType === option.value}
-                <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
               {/if}
             </Button>
           {/each}
@@ -124,7 +134,7 @@
         {group}
         {selectedTermId}
         onToggle={() => onToggleCategory?.(group.category)}
-        onSelectTerm={onSelectTerm}
+        {onSelectTerm}
       />
     {/each}
 

@@ -17,7 +17,12 @@
   import SystemAuditLogsPage from '../pages/SystemAuditLogsPage.svelte';
   import SystemHealthPage from '../pages/SystemHealthPage.svelte';
   import { SystemDashboardPage } from '../../../dashboard/components/pages';
-  import { settingsNavigationStore, loadSettingsNavigation, setActiveProjectCategory, setActiveCategory } from '../../stores/settingsNavigation.store';
+  import {
+    settingsNavigationStore,
+    loadSettingsNavigation,
+    setActiveProjectCategory,
+    setActiveCategory,
+  } from '../../stores/settingsNavigation.store';
 
   let activeCategory = $state('profile');
   let selectedProjectId = $state<string | null>(null);

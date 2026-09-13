@@ -4,21 +4,57 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { Icon, IconButton, Button, CardGrid, Checkbox, Spinner, ResizeHandle } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, SidebarDetailLayout, SIDEBAR_DETAIL_LAYOUT, SurfaceCard, getTabState, setTabState, toast, Dropdown } from '@sddp/shell';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    SidebarDetailLayout,
+    SIDEBAR_DETAIL_LAYOUT,
+    SurfaceCard,
+    getTabState,
+    setTabState,
+    toast,
+    Dropdown,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../../shared/components/idioms';
   import { consumePendingEntityId } from '../../stores';
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail } from '../../types';
-  import { getProjectService } from '../../services/ProjectService';
+  import { createProjectService } from '../../services/ProjectService';
   import GlossarySidebar from '../../../glossary/components/sections/GlossarySidebar.svelte';
   import GlossaryForm from '../../../glossary/components/idioms/GlossaryForm.svelte';
+  import GlossaryCategoryIcon from '../../../glossary/components/idioms/GlossaryCategoryIcon.svelte';
   import GlossaryDetail from '../../../glossary/components/sections/GlossaryDetail.svelte';
   import GlossaryVersionDetail from '../../../glossary/components/idioms/GlossaryVersionDetail.svelte';
-  import type { GlossaryTerm, GlossaryTermDetail, GlossaryTermVersion, TermCategory, GlossaryTermStatus, CreateGlossaryTermRequest, UpdateGlossaryTermRequest, GlossaryConflictResult, CategoryTermGroup, GlossaryFilterType, TermSummaryItem } from '../../../glossary/types';
-  import { TERM_CATEGORY_STYLES, TERM_STATUS_STYLES, TERM_CATEGORIES } from '../../../glossary/types';
-  import { createTerm, updateTerm, approveTerm, deprecateTerm, getTermById, detectConflicts, getTermVersionHistory } from '../../../glossary/services';
+  import type {
+    GlossaryTerm,
+    GlossaryTermDetail,
+    GlossaryTermVersion,
+    TermCategory,
+    GlossaryTermStatus,
+    CreateGlossaryTermRequest,
+    UpdateGlossaryTermRequest,
+    GlossaryConflictResult,
+    CategoryTermGroup,
+    GlossaryFilterType,
+    TermSummaryItem,
+  } from '../../../glossary/types';
+  import {
+    TERM_CATEGORY_STYLES,
+    TERM_STATUS_STYLES,
+    TERM_CATEGORIES,
+  } from '../../../glossary/types';
+  import {
+    createTerm,
+    updateTerm,
+    approveTerm,
+    deprecateTerm,
+    getTermById,
+    detectConflicts,
+    getTermVersionHistory,
+  } from '../../../glossary/services';
   import { searchSpecs } from '../../../specs/services/SpecService';
   import { searchConversations } from '../../../conversations/services/ConversationService';
   import { searchRequirements } from '../../../requirements/services/RequirementService';
@@ -149,9 +185,7 @@
   });
 
   // Selected term (derived)
-  const selectedTerm = $derived(
-    allTerms.find((t) => t.id === selectedTermId) ?? null
-  );
+  const selectedTerm = $derived(allTerms.find((t) => t.id === selectedTermId) ?? null);
 
   // Filtered terms
   const filteredTerms = $derived.by(() => {
@@ -222,12 +256,8 @@
   });
 
   // Version history (exclude current version)
-  const pastVersions = $derived(
-    versionHistory.filter((v) => v.id !== selectedTerm?.id)
-  );
-  const selectedVersionList = $derived(
-    pastVersions.filter((v) => selectedVersionIds.has(v.id))
-  );
+  const pastVersions = $derived(versionHistory.filter((v) => v.id !== selectedTerm?.id));
+  const selectedVersionList = $derived(pastVersions.filter((v) => selectedVersionIds.has(v.id)));
   const activeVersion = $derived(
     selectedVersionList.find((v) => v.id === activeVersionTabId) ?? selectedVersionList[0] ?? null
   );
@@ -273,8 +303,7 @@
       if (!tenantId) {
         throw new Error('User not authenticated or missing tenant');
       }
-      const service = getProjectService();
-      service.setTenantId(tenantId);
+      const service = createProjectService(tenantId, projectId);
 
       const response = await service.getProjectGlossaryTerms(
         projectId,
@@ -419,7 +448,10 @@
   function handleResizePointerMove(e: PointerEvent) {
     if (!isResizingVersionPanel) return;
     const delta = resizeStartY - e.clientY;
-    versionPanelHeight = Math.min(VERSION_PANEL_MAX, Math.max(VERSION_PANEL_MIN, resizeStartHeight + delta));
+    versionPanelHeight = Math.min(
+      VERSION_PANEL_MAX,
+      Math.max(VERSION_PANEL_MIN, resizeStartHeight + delta)
+    );
   }
 
   function handleResizePointerUp() {
@@ -434,7 +466,6 @@
     const d = new Date(dateStr);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
-
 
   function handleCloseTerm() {
     selectedTermId = null;
@@ -471,11 +502,13 @@
 
     // Pre-populate spec candidates for Combobox
     if (selectedTermDetail?.sourceSpecId && selectedTermDetail?.sourceSpecCode) {
-      specCandidates = [{
-        value: selectedTermDetail.sourceSpecId,
-        label: selectedTermDetail.sourceSpecTitle ?? selectedTermDetail.sourceSpecCode,
-        description: selectedTermDetail.sourceSpecCode,
-      }];
+      specCandidates = [
+        {
+          value: selectedTermDetail.sourceSpecId,
+          label: selectedTermDetail.sourceSpecTitle ?? selectedTermDetail.sourceSpecCode,
+          description: selectedTermDetail.sourceSpecCode,
+        },
+      ];
     } else {
       specCandidates = [];
     }
@@ -483,22 +516,30 @@
     // Pre-populate conversation candidates
     if (selectedTermDetail?.sourceConversationId && selectedTermDetail?.sourceConversationName) {
       const prefix = selectedTermDetail.sourceConversationType === 'Channel' ? '#' : '';
-      conversationCandidates = [{
-        value: selectedTermDetail.sourceConversationId,
-        label: `${prefix}${selectedTermDetail.sourceConversationName}`,
-        description: selectedTermDetail.sourceConversationType ?? undefined,
-      }];
+      conversationCandidates = [
+        {
+          value: selectedTermDetail.sourceConversationId,
+          label: `${prefix}${selectedTermDetail.sourceConversationName}`,
+          description: selectedTermDetail.sourceConversationType ?? undefined,
+        },
+      ];
     } else {
       conversationCandidates = [];
     }
 
     // Pre-populate requirement candidates
-    if (selectedTermDetail?.sourceRequirementId && (selectedTermDetail?.sourceRequirementCode || selectedTermDetail?.sourceRequirementTitle)) {
-      requirementCandidates = [{
-        value: selectedTermDetail.sourceRequirementId,
-        label: `${selectedTermDetail.sourceRequirementCode ?? ''}  ${selectedTermDetail.sourceRequirementTitle ?? ''}`.trim(),
-        description: selectedTermDetail.sourceRequirementCode ?? undefined,
-      }];
+    if (
+      selectedTermDetail?.sourceRequirementId &&
+      (selectedTermDetail?.sourceRequirementCode || selectedTermDetail?.sourceRequirementTitle)
+    ) {
+      requirementCandidates = [
+        {
+          value: selectedTermDetail.sourceRequirementId,
+          label:
+            `${selectedTermDetail.sourceRequirementCode ?? ''}  ${selectedTermDetail.sourceRequirementTitle ?? ''}`.trim(),
+          description: selectedTermDetail.sourceRequirementCode ?? undefined,
+        },
+      ];
     } else {
       requirementCandidates = [];
     }
@@ -581,7 +622,9 @@
     conflictResult = null;
   }
 
-  async function handleCreateTermSubmit(data: CreateGlossaryTermRequest | UpdateGlossaryTermRequest): Promise<void> {
+  async function handleCreateTermSubmit(
+    data: CreateGlossaryTermRequest | UpdateGlossaryTermRequest
+  ): Promise<void> {
     formLoading = true;
     try {
       const authState = getAuthState();
@@ -601,7 +644,9 @@
     }
   }
 
-  async function handleUpdateTermSubmit(data: CreateGlossaryTermRequest | UpdateGlossaryTermRequest): Promise<void> {
+  async function handleUpdateTermSubmit(
+    data: CreateGlossaryTermRequest | UpdateGlossaryTermRequest
+  ): Promise<void> {
     if (!selectedTerm) return;
     formLoading = true;
     const previousTermId = selectedTerm.id;
@@ -636,7 +681,7 @@
       conflictResult = await detectConflicts(tenantId, projectId, {
         term,
         definition,
-        excludeTermId: viewMode === 'edit' ? selectedTermId ?? undefined : undefined,
+        excludeTermId: viewMode === 'edit' ? (selectedTermId ?? undefined) : undefined,
       });
       if (conflictResult && !conflictResult.hasConflict) {
         toast.info('No conflicts found');
@@ -771,8 +816,6 @@
       updatedAt: detail.updatedAt,
     };
   }
-
-
 </script>
 
 <PageShell class={className}>
@@ -827,7 +870,7 @@
             onToggleCategory={handleToggleCategory}
             onSelectTerm={handleSelectTermById}
             hasMore={hasMoreTerms}
-            loadingMore={loadingMore}
+            {loadingMore}
             onLoadMore={handleLoadMoreTerms}
             class="h-full"
           />
@@ -846,7 +889,9 @@
               {#snippet revisionHistory()}
                 <div class="px-4 pt-1 pb-3">
                   {#if versionHistoryLoading}
-                    <div class="flex items-center gap-2 py-2 text-sm text-[var(--color-text-muted)]">
+                    <div
+                      class="flex items-center gap-2 py-2 text-sm text-[var(--color-text-muted)]"
+                    >
                       <Spinner size="sm" />
                       <span>Loading...</span>
                     </div>
@@ -856,8 +901,8 @@
                         <label
                           class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors
                                  {selectedVersionIds.has(ver.id)
-                                   ? 'bg-[var(--color-accent-primary)]/10'
-                                   : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                            ? 'bg-[var(--color-accent-primary)]/10'
+                            : 'hover:bg-[var(--color-bg-tertiary)]'}"
                         >
                           <Checkbox
                             unstyled
@@ -865,13 +910,20 @@
                             onchange={() => handleVersionToggle(ver.id)}
                             class="w-3.5 h-3.5 rounded border-[var(--color-border-secondary)] accent-[var(--color-accent-primary)]"
                           />
-                          <span class="font-mono text-sm text-[var(--color-accent-primary)] flex-shrink-0">
+                          <span
+                            class="font-mono text-sm text-[var(--color-accent-text)] flex-shrink-0"
+                          >
                             v{ver.version}
                           </span>
-                          <span class="text-xs font-medium flex-shrink-0 {TERM_STATUS_STYLES[ver.status].color}">
+                          <span
+                            class="text-xs font-medium flex-shrink-0 {TERM_STATUS_STYLES[ver.status]
+                              .color}"
+                          >
                             {ver.status}
                           </span>
-                          <span class="ml-auto text-xs text-[var(--color-text-muted)] flex-shrink-0">
+                          <span
+                            class="ml-auto text-xs text-[var(--color-text-muted)] flex-shrink-0"
+                          >
                             {formatShortDate(ver.validFrom)}
                           </span>
                         </label>
@@ -893,33 +945,79 @@
             <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">New Term</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('glossary-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Create"
+                  onclick={() =>
+                    (
+                      document.getElementById('glossary-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if viewMode === 'edit' && selectedTerm}
             <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">Edit Term</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Save" onclick={() => (document.getElementById('glossary-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Save"
+                  onclick={() =>
+                    (
+                      document.getElementById('glossary-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if selectedTerm}
-            {@const catStyle = TERM_CATEGORY_STYLES[selectedTerm.category]}
-            <DetailHeader style="--detail-header-padding: 0.25rem 1rem;">
+            <DetailHeader>
               {#snippet leading()}
-                <div class="flex items-center justify-center w-8 h-8 rounded-lg {catStyle.bgColor} {catStyle.borderColor} border">
-                  <Icon name={catStyle.icon} size="sm" class={catStyle.color} />
-                </div>
+                <GlossaryCategoryIcon category={selectedTerm.category} size={20} />
               {/snippet}
-              <DetailTitle title={selectedTerm.term} code={selectedTerm.abbreviation || undefined} />
+              <DetailTitle
+                title={selectedTerm.term}
+                code={selectedTerm.abbreviation || undefined}
+              />
               {#snippet actions()}
-                <IconButton icon="edit" variant="ghost" size="sm" title="Edit" onclick={handleEditTerm} />
+                <IconButton
+                  icon="edit"
+                  variant="ghost"
+                  size="sm"
+                  title="Edit"
+                  onclick={handleEditTerm}
+                />
                 {#if selectedTerm.status === 'Draft' || selectedTerm.status === 'Active'}
                   <Dropdown position="bottom-right">
-                    {#snippet trigger()}
-                      <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+                    {#snippet trigger({ toggle, open })}
+                      <IconButton
+                        onclick={toggle}
+                        ariaHasPopup
+                        ariaExpanded={open}
+                        icon="more-vertical"
+                        variant="ghost"
+                        size="sm"
+                        title="More actions"
+                      />
                     {/snippet}
                     <div class="py-1 min-w-[160px]">
                       {#if selectedTerm.status === 'Draft'}
@@ -943,7 +1041,13 @@
                     </div>
                   </Dropdown>
                 {/if}
-                <IconButton icon="x" variant="ghost" size="sm" title="Close" onclick={handleCloseTerm} />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Close"
+                  onclick={handleCloseTerm}
+                />
               {/snippet}
             </DetailHeader>
           {:else}
@@ -956,44 +1060,44 @@
         <!-- Main Content: Term Detail -->
         {#if viewMode === 'create'}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
-              <GlossaryForm
-                loading={formLoading}
-                {conflictLoading}
-                conflictResult={conflictResult}
-                onCheckConflict={handleCheckConflict}
-                onSubmit={handleCreateTermSubmit}
-                {specCandidates}
-                {specSearchLoading}
-                {memberCandidates}
-                {conversationCandidates}
-                {conversationSearchLoading}
-                {requirementCandidates}
-                {requirementSearchLoading}
-                onSearchSpec={handleSearchSpec}
-                onSearchConversation={handleSearchConversation}
-                onSearchRequirement={handleSearchRequirement}
-              />
+            <GlossaryForm
+              loading={formLoading}
+              {conflictLoading}
+              {conflictResult}
+              onCheckConflict={handleCheckConflict}
+              onSubmit={handleCreateTermSubmit}
+              {specCandidates}
+              {specSearchLoading}
+              {memberCandidates}
+              {conversationCandidates}
+              {conversationSearchLoading}
+              {requirementCandidates}
+              {requirementSearchLoading}
+              onSearchSpec={handleSearchSpec}
+              onSearchConversation={handleSearchConversation}
+              onSearchRequirement={handleSearchRequirement}
+            />
           </div>
         {:else if viewMode === 'edit' && selectedTerm}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
-              <GlossaryForm
-                term={editingTerm ?? buildGlossaryDetail(selectedTerm)}
-                loading={formLoading}
-                {conflictLoading}
-                conflictResult={conflictResult}
-                onCheckConflict={handleCheckConflict}
-                onSubmit={handleUpdateTermSubmit}
-                {specCandidates}
-                {specSearchLoading}
-                {memberCandidates}
-                {conversationCandidates}
-                {conversationSearchLoading}
-                {requirementCandidates}
-                {requirementSearchLoading}
-                onSearchSpec={handleSearchSpec}
-                onSearchConversation={handleSearchConversation}
-                onSearchRequirement={handleSearchRequirement}
-              />
+            <GlossaryForm
+              term={editingTerm ?? buildGlossaryDetail(selectedTerm)}
+              loading={formLoading}
+              {conflictLoading}
+              {conflictResult}
+              onCheckConflict={handleCheckConflict}
+              onSubmit={handleUpdateTermSubmit}
+              {specCandidates}
+              {specSearchLoading}
+              {memberCandidates}
+              {conversationCandidates}
+              {conversationSearchLoading}
+              {requirementCandidates}
+              {requirementSearchLoading}
+              onSearchSpec={handleSearchSpec}
+              onSearchConversation={handleSearchConversation}
+              onSearchRequirement={handleSearchRequirement}
+            />
           </div>
         {:else if selectedTerm && selectedTermDetail}
           <div class="flex flex-col flex-1 min-h-0">
@@ -1009,28 +1113,44 @@
             {#if selectedVersionList.length > 0}
               <div class="flex-shrink-0 flex flex-col" style="height: {versionPanelHeight}px">
                 <!-- Resize handle -->
-                <ResizeHandle orientation="horizontal" onpointerdown={handleResizePointerDown} isResizing={isResizingVersionPanel} ariaLabel="Resize version panel" />
+                <ResizeHandle
+                  orientation="horizontal"
+                  onpointerdown={handleResizePointerDown}
+                  isResizing={isResizingVersionPanel}
+                  ariaLabel="Resize version panel"
+                />
                 <!-- Label + Tab bar -->
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-secondary)] flex-shrink-0">
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-secondary)] flex-shrink-0"
+                >
                   <Icon name="history" size="xs" class="text-[var(--color-text-tertiary)]" />
-                  <span class="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">Revision Compare</span>
+                  <span
+                    class="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]"
+                    >Revision Compare</span
+                  >
                 </div>
-                <div class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-1 flex-shrink-0">
+                <div
+                  class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-1 flex-shrink-0"
+                >
                   {#each selectedVersionList as ver (ver.id)}
                     <Button
                       variant="unstyled"
                       onclick={() => (activeVersionTabId = ver.id)}
                       class="group flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors border-b-2
-                             {activeVersionTabId === ver.id || (!activeVersionTabId && ver.id === selectedVersionList[0]?.id)
-                               ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
-                               : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
+                             {activeVersionTabId === ver.id ||
+                      (!activeVersionTabId && ver.id === selectedVersionList[0]?.id)
+                        ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
+                        : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
                     >
                       <span class="font-mono">v{ver.version}</span>
                       <Button
                         variant="unstyled"
                         tabindex={-1}
                         aria-label="Close version tab"
-                        onclick={(e: MouseEvent) => { e.stopPropagation(); handleRemoveVersionTab(ver.id); }}
+                        onclick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          handleRemoveVersionTab(ver.id);
+                        }}
                         class="ml-1 w-4 h-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--color-surface-200)] transition-opacity text-[var(--color-text-muted)] cursor-pointer"
                         title="Close tab"
                       >
@@ -1051,74 +1171,114 @@
         {:else}
           <!-- Empty state: Summary dashboard -->
           <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-              <!-- Summary Cards -->
-              <CardGrid cols={4} gap="md">
-                <StatCard title="Total Terms" value={statusCounts.all} icon="book-open" iconColor="blue-500" />
-                <StatCard title="Draft" value={statusCounts.draft} icon="file-text" iconColor="gray-500" />
-                <StatCard title="Active" value={statusCounts.active} icon="check-circle" iconColor="green-500" />
-                <StatCard title="Deprecated" value={statusCounts.deprecated} icon="x-circle" iconColor="red-500" />
-              </CardGrid>
+            <!-- Summary Cards -->
+            <CardGrid cols={4} gap="md">
+              <StatCard
+                title="Total Terms"
+                value={statusCounts.all}
+                icon="book-open"
+                iconColor="blue-500"
+              />
+              <StatCard
+                title="Draft"
+                value={statusCounts.draft}
+                icon="file-text"
+                iconColor="gray-500"
+              />
+              <StatCard
+                title="Active"
+                value={statusCounts.active}
+                icon="check-circle"
+                iconColor="green-500"
+              />
+              <StatCard
+                title="Deprecated"
+                value={statusCounts.deprecated}
+                icon="x-circle"
+                iconColor="red-500"
+              />
+            </CardGrid>
 
-              <!-- Quick Guide -->
-              <SurfaceCard padding="lg">
-                <h3 class="text-sm font-semibold text-[var(--color-text-primary)] mb-3">About Glossary</h3>
-                <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
-                  <p>
-                    The glossary defines standard terms and definitions for your project.
-                    Consistent terminology helps team members communicate effectively.
-                  </p>
-                  <div class="flex items-start gap-2 mt-3">
-                    <Icon name="file-text" size="sm" class="text-gray-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Draft</strong> - Term under review, not yet approved</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="check-circle" size="sm" class="text-green-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Active</strong> - Approved term, use in specs and requirements</span>
-                  </div>
-                  <div class="flex items-start gap-2">
-                    <Icon name="x-circle" size="sm" class="text-red-500 mt-0.5 flex-shrink-0" />
-                    <span><strong>Deprecated</strong> - Outdated term, avoid using</span>
-                  </div>
+            <!-- Quick Guide -->
+            <SurfaceCard padding="lg">
+              <h3 class="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+                About Glossary
+              </h3>
+              <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <p>
+                  The glossary defines standard terms and definitions for your project. Consistent
+                  terminology helps team members communicate effectively.
+                </p>
+                <div class="flex items-start gap-2 mt-3">
+                  <Icon name="file-text" size="sm" class="text-gray-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Draft</strong> - Term under review, not yet approved</span>
                 </div>
-              </SurfaceCard>
+                <div class="flex items-start gap-2">
+                  <Icon name="check-circle" size="sm" class="text-green-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Active</strong> - Approved term, use in specs and requirements</span
+                  >
+                </div>
+                <div class="flex items-start gap-2">
+                  <Icon name="x-circle" size="sm" class="text-red-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Deprecated</strong> - Outdated term, avoid using</span>
+                </div>
+              </div>
+            </SurfaceCard>
 
-              <!-- Category Distribution -->
-              <SurfaceCard padding="lg">
-                <h3 class="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Categories</h3>
-                <div class="flex flex-wrap gap-2">
-                  {#each TERM_CATEGORIES as category (category)}
-                    {@const catStyle = TERM_CATEGORY_STYLES[category]}
-                    {@const count = allTerms.filter(t => t.category === category).length}
-                    <div class="px-3 py-1.5 rounded-full text-xs {catStyle.bgColor} {catStyle.color} border {catStyle.borderColor} {count === 0 ? 'opacity-40' : ''}">
-                      <Icon name={catStyle.icon} size="xs" class="inline mr-1" />
-                      {catStyle.label}: {count}
-                    </div>
-                  {/each}
-                </div>
-              </SurfaceCard>
+            <!-- Category Distribution -->
+            <SurfaceCard padding="lg">
+              <h3 class="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+                Categories
+              </h3>
+              <div class="flex flex-wrap gap-2">
+                {#each TERM_CATEGORIES as category (category)}
+                  {@const catStyle = TERM_CATEGORY_STYLES[category]}
+                  {@const count = allTerms.filter((t) => t.category === category).length}
+                  <div
+                    class="px-3 py-1.5 rounded-full text-xs {catStyle.bgColor} {catStyle.color} border {catStyle.borderColor} {count ===
+                    0
+                      ? 'opacity-40'
+                      : ''}"
+                  >
+                    <GlossaryCategoryIcon {category} size={12} class="inline mr-1" />
+                    {catStyle.label}: {count}
+                  </div>
+                {/each}
+              </div>
+            </SurfaceCard>
 
-              <!-- Empty state message -->
-              {#if allTerms.length === 0}
-                <div class="text-center py-8">
-                  <Icon name="book-open" size="xl" class="mx-auto mb-4 text-[var(--color-text-tertiary)] opacity-50" />
-                  <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-2">No terms yet</h3>
-                  <p class="text-sm text-[var(--color-text-secondary)] mb-4">
-                    Start building your project glossary by adding terms.
-                  </p>
-                  <Button variant="primary" size="md" onclick={handleCreateTerm}>
-                    <Icon name="plus" size="sm" />
-                    Add First Term
-                  </Button>
-                </div>
-              {:else}
-                <div class="text-center py-6">
-                  <Icon name="mouse-pointer" size="lg" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70" />
-                  <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a term</p>
-                  <p class="text-xs text-[var(--color-text-secondary)] mt-1">
-                    Choose a term from the sidebar to view details.
-                  </p>
-                </div>
-              {/if}
+            <!-- Empty state message -->
+            {#if allTerms.length === 0}
+              <div class="text-center py-8">
+                <Icon
+                  name="book-open"
+                  size="xl"
+                  class="mx-auto mb-4 text-[var(--color-text-tertiary)] opacity-50"
+                />
+                <h3 class="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+                  No terms yet
+                </h3>
+                <p class="text-sm text-[var(--color-text-secondary)] mb-4">
+                  Start building your project glossary by adding terms.
+                </p>
+                <Button variant="primary" size="md" onclick={handleCreateTerm}>
+                  <Icon name="plus" size="sm" />
+                  Add First Term
+                </Button>
+              </div>
+            {:else}
+              <div class="text-center py-6">
+                <Icon
+                  name="mouse-pointer"
+                  size="lg"
+                  class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70"
+                />
+                <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a term</p>
+                <p class="text-xs text-[var(--color-text-secondary)] mt-1">
+                  Choose a term from the sidebar to view details.
+                </p>
+              </div>
+            {/if}
           </div>
         {/if}
       </SidebarDetailLayout>

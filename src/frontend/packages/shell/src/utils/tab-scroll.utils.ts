@@ -35,20 +35,14 @@ export function calculateOverflow(
 /**
  * Clamp scroll position within valid bounds
  */
-export function clampScrollPosition(
-  position: number,
-  maxScrollPosition: number
-): number {
+export function clampScrollPosition(position: number, maxScrollPosition: number): number {
   return Math.max(0, Math.min(maxScrollPosition, position));
 }
 
 /**
  * Calculate new scroll position when scrolling left
  */
-export function scrollLeftPosition(
-  currentPosition: number,
-  config?: ScrollConfig
-): number {
+export function scrollLeftPosition(currentPosition: number, config?: ScrollConfig): number {
   const step = config?.step ?? DEFAULT_CONFIG.step;
   return Math.max(0, currentPosition - step);
 }
@@ -113,9 +107,6 @@ export function canScrollLeft(scrollPosition: number): boolean {
 /**
  * Check if can scroll right
  */
-export function canScrollRight(
-  scrollPosition: number,
-  maxScrollPosition: number
-): boolean {
+export function canScrollRight(scrollPosition: number, maxScrollPosition: number): boolean {
   return scrollPosition < maxScrollPosition;
 }

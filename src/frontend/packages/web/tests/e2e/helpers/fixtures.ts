@@ -78,6 +78,7 @@ export const test = base.extend<{
         await page.screenshot({ path: tempPath, timeout: 2000 });
         fs.renameSync(tempPath, screenshotPath);
       } catch {
+        // The page may already be closed during fixture teardown.
       }
     },
     { auto: true },

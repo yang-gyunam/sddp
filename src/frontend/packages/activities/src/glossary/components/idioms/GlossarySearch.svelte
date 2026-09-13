@@ -113,7 +113,9 @@
 
     <!-- Suggestions Dropdown -->
     {#if showSuggestions && (suggestions.length > 0 || loadingSuggestions)}
-      <div class="absolute z-50 w-full mt-1 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+      <div
+        class="absolute z-50 w-full mt-1 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+      >
         {#if loadingSuggestions}
           <div class="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
             <Spinner size="sm" />
@@ -142,7 +144,9 @@
                   {suggestion.definition}
                 </p>
               </div>
-              <span class="flex-shrink-0 px-1.5 py-0.5 text-xs rounded {style.bgColor} {style.color}">
+              <span
+                class="flex-shrink-0 px-1.5 py-0.5 text-xs rounded {style.bgColor} {style.color}"
+              >
                 {style.label}
               </span>
             </Button>
@@ -166,7 +170,7 @@
         class="text-sm px-2 py-1 border border-gray-200 dark:border-gray-700 rounded
           bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
         onchange={(value) => {
-          onCategoryChange?.(value ? value as TermCategory : null);
+          onCategoryChange?.(value ? (value as TermCategory) : null);
         }}
       >
         <option value="">All</option>
@@ -190,7 +194,7 @@
         class="text-sm px-2 py-1 border border-gray-200 dark:border-gray-700 rounded
           bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
         onchange={(value) => {
-          onStatusChange?.(value ? value as GlossaryTermStatus : null);
+          onStatusChange?.(value ? (value as GlossaryTermStatus) : null);
         }}
       >
         <option value="">All</option>

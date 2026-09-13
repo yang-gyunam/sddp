@@ -25,18 +25,13 @@ function createMessage<T>(
   fromTabId: string,
   type: string,
   payload: T,
-  toTabId?: string,
+  toTabId?: string
 ): TabMessage<T> {
   return { fromTabId, toTabId, type, payload, timestamp: Date.now() };
 }
 
 /** Send a message to a specific tab */
-export function sendToTab<T>(
-  toTabId: string,
-  type: string,
-  payload: T,
-  fromTabId: string,
-): void {
+export function sendToTab<T>(toTabId: string, type: string, payload: T, fromTabId: string): void {
   const bus = EventBus.getInstance();
   const message = createMessage(fromTabId, type, payload, toTabId);
   bus.emit(tabEvent(toTabId), message);
@@ -47,7 +42,7 @@ export function broadcastToTabs<T>(
   type: string,
   payload: T,
   fromTabId: string,
-  excludeSelf = false,
+  excludeSelf = false
 ): void {
   const bus = EventBus.getInstance();
   const message = createMessage(fromTabId, type, payload);
@@ -61,7 +56,7 @@ export function broadcastToTabs<T>(
 export function onTabMessage<T>(
   tabId: string,
   type: string,
-  handler: TabMessageHandler<T>,
+  handler: TabMessageHandler<T>
 ): UnsubscribeFn {
   const bus = EventBus.getInstance();
   return bus.on<TabMessage<T>>(tabEvent(tabId), (message) => {
@@ -75,7 +70,7 @@ export function onTabMessage<T>(
 export function onBroadcast<T>(
   type: string,
   handler: TabMessageHandler<T>,
-  listenerId?: string,
+  listenerId?: string
 ): UnsubscribeFn {
   const bus = EventBus.getInstance();
   return bus.on<TabMessage<T> & { _excludeTabId?: string }>(TAB_BROADCAST, (message) => {

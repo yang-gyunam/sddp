@@ -150,10 +150,7 @@ export function closeSidebar(): void {
  */
 export function setSidebarWidth(width: number): void {
   layoutStore.update((state) => {
-    const clampedWidth = Math.max(
-      state.sidebar.minWidth,
-      Math.min(state.sidebar.maxWidth, width)
-    );
+    const clampedWidth = Math.max(state.sidebar.minWidth, Math.min(state.sidebar.maxWidth, width));
 
     // Auto-close if below minimum threshold
     const isOpen = clampedWidth > state.sidebar.minWidth * 0.5;

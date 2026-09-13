@@ -293,24 +293,28 @@ export async function navigateToSettingsUserItem(
   return sidebar;
 }
 
+/** Allocate clickable space instead of forcing a click through another panel header. */
+export async function focusSidebarPanel(sidebar: Locator, header: Locator): Promise<void> {
+  await expect(header).toBeVisible({ timeout: 5000 });
+  const expanded = sidebar.getByRole('button', { expanded: true });
+  while (await expanded.count() > 0) await expanded.first().click();
+  await header.click();
+  await expect(header).toHaveAttribute('aria-expanded', 'true');
+}
+
 export async function navigateToSettingsSystemItem(
   page: Page,
   itemLabel: string
 ): Promise<Locator> {
   const sidebar = await waitForSettingsSidebar(page);
   const systemPanel = sidebar.getByRole('button', { name: /^System$/i }).first();
-  await systemPanel.scrollIntoViewIfNeeded().catch(() => {});
-  await expect(systemPanel).toBeVisible({ timeout: 5000 });
-  const isExpanded = (await systemPanel.getAttribute('aria-expanded').catch(() => null)) === 'true';
-  if (!isExpanded) {
-    await slowClick(systemPanel);
-  }
+  await focusSidebarPanel(sidebar, systemPanel);
 
   const item = sidebar.getByRole('button', { name: itemLabel, exact: true }).first();
   await item.scrollIntoViewIfNeeded().catch(() => {});
   await expect(item).toBeVisible({ timeout: 5000 });
 
-  await slowClick(item);
+  await item.click();
   await waitForSettingsEditorContent(page);
 
   return sidebar;
@@ -430,15 +434,11 @@ export async function navigateToProjectNode(
     .getByRole('region', { name: new RegExp(`^${escapeRegex(selectedProjectName)} panel$`, 'i') })
     .first();
 
-  const isExpanded = await panelHeader.getAttribute('aria-expanded');
-  if (isExpanded !== 'true') {
-    await slowClick(panelHeader);
-    await expect(panelHeader).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
-  }
+  await focusSidebarPanel(sidebar, panelHeader);
 
   const treeNode = projectRegion.getByRole('button', { name: nodeName, exact: true }).first();
   await expect(treeNode).toBeVisible({ timeout: 5000 });
-  await slowClick(treeNode);
+  await treeNode.click();
 
   await sceneDelay(page);
 }
@@ -466,7 +466,10 @@ export function specItems(page: Page): Locator {
 
 export async function openSpecFilters(page: Page): Promise<Locator> {
   const tabPanel = await openSpecsTab(page);
-  const filterTrigger = tabPanel.getByRole('button', { name: 'Toggle dropdown', exact: true }).first();
+  // Dropdown no longer wraps the trigger in a button of its own, so the accessible name is
+  // the call site's own — "Filter options" here rather than the generic "Toggle dropdown"
+  // every dropdown in the app used to share.
+  const filterTrigger = tabPanel.getByRole('button', { name: 'Filter options', exact: true }).first();
 
   await expect(filterTrigger).toBeVisible({ timeout: 5000 });
   await slowClick(filterTrigger);
@@ -552,19 +555,35 @@ const CHANNEL_BUTTON = 'aside button[type="button"]:has(span.truncate)';
  *
  * @returns Number of available channels
  */
+function unwrapList(payload: unknown): unknown[] {
+  const data = (payload as { data?: unknown })?.data ?? payload;
+  if (Array.isArray(data)) return data;
+  const items = (data as { items?: unknown })?.items;
+  if (Array.isArray(items)) return items;
+  throw new Error(
+    `Expected a list in the response envelope, got ${JSON.stringify(data)?.slice(0, 200)}`
+  );
+}
+
 async function ensureTestChannels(page: Page, count: number): Promise<number> {
-  // 1. Login to get access token + tenantId
+  // Every failure below throws. A caller that cannot tell "the product has no channels" from
+  // "this helper could not ask" has no basis for skipping, and skipping is what hid the envelope
+  // bug that made this return 0 on every run.
   const loginResp = await page.request.post(`${E2E_API_BASE}/auth/login`, {
     data: { username: TEST_USER.username, password: TEST_USER.password },
     failOnStatusCode: false,
   });
-  if (!loginResp.ok()) return 0;
+  if (!loginResp.ok()) {
+    throw new Error(`[ensureTestChannels] login failed: ${loginResp.status()}`);
+  }
 
   const loginData = await loginResp.json();
   const data = loginData.data || loginData;
   const accessToken = data.accessToken;
   const tenantId = data.user?.tenantId;
-  if (!accessToken || !tenantId) return 0;
+  if (!accessToken || !tenantId) {
+    throw new Error('[ensureTestChannels] login returned no access token or tenant');
+  }
 
   const baseHeaders = {
     Authorization: `Bearer ${accessToken}`,
@@ -576,14 +595,19 @@ async function ensureTestChannels(page: Page, count: number): Promise<number> {
     headers: baseHeaders,
     failOnStatusCode: false,
   });
-  if (!projectsResp.ok()) return 0;
+  if (!projectsResp.ok()) {
+    throw new Error(`[ensureTestChannels] project list failed: ${projectsResp.status()}`);
+  }
 
-  const projectsData = await projectsResp.json();
-  const projects = projectsData.data || projectsData || [];
-  if (!Array.isArray(projects) || projects.length === 0) return 0;
+  const projects = unwrapList(await projectsResp.json());
+  if (projects.length === 0) {
+    throw new Error('[ensureTestChannels] the tenant has no projects to attach a channel to');
+  }
 
-  const projectId = projects[0].id;
-  if (!projectId) return 0;
+  const projectId = (projects[0] as { id?: string }).id;
+  if (!projectId) {
+    throw new Error('[ensureTestChannels] the first project has no id');
+  }
 
   const headers = {
     ...baseHeaders,
@@ -597,11 +621,9 @@ async function ensureTestChannels(page: Page, count: number): Promise<number> {
     failOnStatusCode: false,
   });
   if (convResp.ok()) {
-    const convData = await convResp.json();
-    const conversations = convData.data || convData || [];
-    const channels = Array.isArray(conversations)
-      ? conversations.filter((c: { conversationType: string }) => c.conversationType === 'Channel')
-      : [];
+    const channels = unwrapList(await convResp.json()).filter(
+      (c) => (c as { conversationType?: string }).conversationType === 'Channel'
+    );
     existingCount = channels.length;
     if (existingCount >= count) return existingCount;
   }
@@ -620,7 +642,9 @@ async function ensureTestChannels(page: Page, count: number): Promise<number> {
       failOnStatusCode: false,
     });
     if (!resp.ok()) {
-      console.warn(`[ensureTestChannels] Failed to create channel (${resp.status()})`);
+      throw new Error(
+        `[ensureTestChannels] could not create a channel (${resp.status()}): ${await resp.text()}`
+      );
     }
   }
 
@@ -644,7 +668,9 @@ async function ensureTestChannels(page: Page, count: number): Promise<number> {
 export async function openEditorTabs(page: Page, count = 1): Promise<number> {
   // 1. Ensure project-scoped channels exist via API
   const available = await ensureTestChannels(page, count);
-  if (available === 0) return 0;
+  if (available === 0) {
+    throw new Error('[openEditorTabs] no channels are available after ensuring them');
+  }
 
   // 2. Reload page so App.svelte re-fetches projects + conversations
   await page.reload({ waitUntil: 'networkidle' }).catch(() => {
@@ -655,31 +681,18 @@ export async function openEditorTabs(page: Page, count = 1): Promise<number> {
   // 3. Navigate to Conversations (handles sidebar toggle)
   //    Some environments hide Conversations/Discussions in Activity Bar.
   //    In that case, return 0 so caller tests can skip with a clear precondition.
-  const navigatedToConversations = await navigateToActivity(page, 'Conversations')
-    .then(() => true)
-    .catch((error) => {
-      console.warn(
-        `[openEditorTabs] Unable to navigate to Conversations: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return false;
-    });
-  if (!navigatedToConversations) return 0;
-
-  await waitForSidebarContent(page).catch((error) => {
-    console.warn(
-      `[openEditorTabs] Sidebar content did not settle: ${error instanceof Error ? error.message : String(error)}`
-    );
-  });
+  // Conversations is a required activity. If it cannot be reached, that is the finding.
+  await navigateToActivity(page, 'Conversations');
+  await waitForSidebarContent(page);
 
   // 4. Wait for channel items to appear in sidebar
   //    App.svelte channelsPanel renders <button> with span.truncate
   const items = page.locator(CHANNEL_BUTTON);
-  await items
-    .first()
-    .waitFor({ state: 'visible', timeout: 10000 })
-    .catch(() => {});
+  await items.first().waitFor({ state: 'visible', timeout: 10000 });
   const itemCount = await items.count();
-  if (itemCount === 0) return 0;
+  if (itemCount === 0) {
+    throw new Error('[openEditorTabs] the Conversations sidebar rendered no channel buttons');
+  }
 
   // 5. Click channel items to create editor tabs
   let tabsCreated = 0;

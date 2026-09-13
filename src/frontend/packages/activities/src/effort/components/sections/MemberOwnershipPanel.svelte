@@ -2,8 +2,12 @@
 <script lang="ts">
   import { SurfaceCard, formatDate } from '@sddp/shell';
   import { Button, Input, IconButton, Icon, Select, Spinner } from '@sddp/ui';
-  import { navigateToGlossary, navigateToRequirement, navigateToSpec } from '@sddp/shell/core/services';
-  import { loadMemberOwnership } from '../../stores';
+  import {
+    navigateToGlossary,
+    navigateToRequirement,
+    navigateToSpec,
+  } from '@sddp/shell/core/services';
+  import { loadMemberOwnership, type MemberOwnershipOptions } from '../../stores';
   import type {
     MemberOwnershipPage,
     OwnershipFilter,
@@ -16,6 +20,7 @@
     userId: string;
     isLoading?: boolean;
     showHeader?: boolean;
+    onLoadOwnership?: (userId: string, options?: MemberOwnershipOptions) => Promise<void>;
     class?: string;
   }
 
@@ -24,6 +29,7 @@
     userId,
     isLoading = false,
     showHeader = true,
+    onLoadOwnership = loadMemberOwnership,
     class: className = '',
   }: Props = $props();
 
@@ -77,7 +83,7 @@
 
   function reloadOwnership(): void {
     if (!userId || isLoading) return;
-    loadMemberOwnership(userId, {
+    onLoadOwnership(userId, {
       type: filter,
       query: searchQuery.trim(),
       page,
@@ -108,7 +114,8 @@
     {#if showHeader}
       <div>
         <h4 class="ownership-panel__title surface-card__title">Owned Deliverables</h4>
-        <span class="ownership-panel__count surface-card__meta">{ownership.counts.total} items</span>
+        <span class="ownership-panel__count surface-card__meta">{ownership.counts.total} items</span
+        >
       </div>
     {/if}
     {#if isLoading}
@@ -120,7 +127,9 @@
     <div class="ownership-panel__filters">
       <Button
         variant="unstyled"
-        class="ownership-panel__filter-button {filter === 'all' ? 'ownership-panel__filter-button--active' : ''}"
+        class="ownership-panel__filter-button {filter === 'all'
+          ? 'ownership-panel__filter-button--active'
+          : ''}"
         onclick={() => setFilter('all')}
         disabled={isLoading}
       >
@@ -128,7 +137,9 @@
       </Button>
       <Button
         variant="unstyled"
-        class="ownership-panel__filter-button {filter === 'requirements' ? 'ownership-panel__filter-button--active' : ''}"
+        class="ownership-panel__filter-button {filter === 'requirements'
+          ? 'ownership-panel__filter-button--active'
+          : ''}"
         onclick={() => setFilter('requirements')}
         disabled={isLoading}
       >
@@ -136,7 +147,9 @@
       </Button>
       <Button
         variant="unstyled"
-        class="ownership-panel__filter-button {filter === 'specs' ? 'ownership-panel__filter-button--active' : ''}"
+        class="ownership-panel__filter-button {filter === 'specs'
+          ? 'ownership-panel__filter-button--active'
+          : ''}"
         onclick={() => setFilter('specs')}
         disabled={isLoading}
       >
@@ -144,7 +157,9 @@
       </Button>
       <Button
         variant="unstyled"
-        class="ownership-panel__filter-button {filter === 'glossary' ? 'ownership-panel__filter-button--active' : ''}"
+        class="ownership-panel__filter-button {filter === 'glossary'
+          ? 'ownership-panel__filter-button--active'
+          : ''}"
         onclick={() => setFilter('glossary')}
         disabled={isLoading}
       >
@@ -152,7 +167,9 @@
       </Button>
       <Button
         variant="unstyled"
-        class="ownership-panel__filter-button {filter === 'artifacts' ? 'ownership-panel__filter-button--active' : ''}"
+        class="ownership-panel__filter-button {filter === 'artifacts'
+          ? 'ownership-panel__filter-button--active'
+          : ''}"
         onclick={() => setFilter('artifacts')}
         disabled={isLoading}
       >
@@ -228,11 +245,7 @@
             <div class="ownership-item__meta">{formatDate(item.updatedAt)}</div>
           </div>
           {#if onOpen}
-            <Icon
-              name="external-link"
-              size="xs"
-              class="text-[var(--color-text-tertiary)]"
-            />
+            <Icon name="external-link" size="xs" class="text-[var(--color-text-tertiary)]" />
           {/if}
         </Button>
       {/each}
@@ -348,7 +361,9 @@
     padding: 0.5rem 0.75rem;
     text-align: left;
     width: 100%;
-    transition: background-color 150ms ease, border-color 150ms ease;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
   }
 
   :global(.ownership-item--clickable) {
@@ -396,7 +411,11 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

@@ -1,15 +1,18 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Domain.Entities;
 using Sddp.Application.Features.EntityMetadata.Commands;
 using Sddp.Application.Features.EntityMetadata.Queries;
 
 namespace Sddp.Api.Controllers;
 
-[Route("api/specs/{specId:guid}/entities")]
+[Route("api/specs/{specId}/entities")]
 [Authorize]
 public class EntityMetadataController : BaseApiController
 {
@@ -21,6 +24,7 @@ public class EntityMetadataController : BaseApiController
     }
 
     [HttpGet]
+    [ResourceScope<Spec>("specId")]
     public async Task<IActionResult> GetEntities(
         Guid specId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -52,6 +56,8 @@ public class EntityMetadataController : BaseApiController
     }
 
     [HttpPost]
+    [ResourceScope<Spec>("specId")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
     [Authorize]
     public async Task<IActionResult> CreateEntity(
         Guid specId,
@@ -84,7 +90,9 @@ public class EntityMetadataController : BaseApiController
         return Created($"/api/specs/{specId}/entities/{result.Id}", ApiResponse<EntityMetadataDto>.Ok(result));
     }
 
-    [HttpPut("{entityId:guid}")]
+    [HttpPut("{entityId}")]
+    [ResourceScope<Sddp.Domain.Entities.EntityMetadata>("entityId")]
+    [RequirePermission(PermissionCodes.GenerationExecute)]
     [Authorize]
     public async Task<IActionResult> UpdateEntity(
         Guid specId,
@@ -118,7 +126,9 @@ public class EntityMetadataController : BaseApiController
         return Ok(ApiResponse<EntityMetadataDto>.Ok(result));
     }
 
-    [HttpDelete("{entityId:guid}")]
+    [HttpDelete("{entityId}")]
+    [ResourceScope<Sddp.Domain.Entities.EntityMetadata>("entityId")]
+    [RequirePermission(PermissionCodes.GenerationRollback)]
     [Authorize]
     public async Task<IActionResult> DeleteEntity(
         Guid specId,

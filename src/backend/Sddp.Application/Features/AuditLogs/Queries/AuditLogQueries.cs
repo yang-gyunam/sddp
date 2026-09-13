@@ -8,11 +8,8 @@ using Sddp.Domain.Entities;
 
 namespace Sddp.Application.Features.AuditLogs.Queries;
 
-/// <summary>
-/// audit log get (+)
-/// </summary>
 public sealed record GetAuditLogsQuery(
-    GlobalUniqueId? TenantId,
+    GlobalUniqueId TenantId,
     GlobalUniqueId? ProjectId,
     GlobalUniqueId? ActorId,
     string? Action,
@@ -45,7 +42,7 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
         var hasExclusions = excludedTypes.Count > 0;
 
         var (pagedLogs, totalCount) = await (auditRepo.FindPagedAsync(
-            l => (!request.TenantId.HasValue || l.TenantId == request.TenantId)
+            l => l.TenantId == request.TenantId
                 && (!request.ProjectId.HasValue || l.ProjectId == request.ProjectId)
                 && (!request.ActorId.HasValue || l.ActorId == request.ActorId)
                 && (!hasAction || l.Action == action!)
@@ -193,12 +190,11 @@ public sealed class GetFieldAuthorsQueryHandler : IRequestHandler<GetFieldAuthor
     }
 }
 
-/// <summary>
-/// get
-/// </summary>
 public sealed record GetTimelineByResourceQuery(
     string ResourceType,
-    GlobalUniqueId ResourceId) : IQuery<IReadOnlyList<AuditLogEntry>>;
+    GlobalUniqueId ResourceId,
+    GlobalUniqueId TenantId,
+    GlobalUniqueId? ProjectId) : IQuery<IReadOnlyList<AuditLogEntry>>;
 
 public sealed class GetTimelineByResourceQueryHandler : IRequestHandler<GetTimelineByResourceQuery, IReadOnlyList<AuditLogEntry>>
 {
@@ -215,6 +211,8 @@ public sealed class GetTimelineByResourceQueryHandler : IRequestHandler<GetTimel
 
         var logs = await (repo.FindAsync(
             l => l.IsActive
+                && l.TenantId == request.TenantId
+                && (!request.ProjectId.HasValue || l.ProjectId == request.ProjectId)
                 && l.ResourceType == request.ResourceType
                 && l.ResourceId == request.ResourceId,
             cancellationToken)).ConfigureAwait(false);
@@ -230,7 +228,14 @@ public sealed class GetTimelineByResourceQueryHandler : IRequestHandler<GetTimel
 /// <summary>
 /// get
 /// </summary>
-public sealed record GetTimelineByActorQuery(GlobalUniqueId ActorId) : IQuery<IReadOnlyList<AuditLogEntry>>;
+/// <summary>
+/// Audit history for one actor, within the caller's tenant. Same defect as
+/// <see cref="GetTimelineByResourceQuery"/>: an actor id alone read across every tenant.
+/// </summary>
+public sealed record GetTimelineByActorQuery(
+    GlobalUniqueId ActorId,
+    GlobalUniqueId TenantId,
+    GlobalUniqueId? ProjectId) : IQuery<IReadOnlyList<AuditLogEntry>>;
 
 public sealed class GetTimelineByActorQueryHandler : IRequestHandler<GetTimelineByActorQuery, IReadOnlyList<AuditLogEntry>>
 {
@@ -246,7 +251,10 @@ public sealed class GetTimelineByActorQueryHandler : IRequestHandler<GetTimeline
         var repo = _unitOfWork.Repository<AuditLog>();
 
         var logs = await (repo.FindAsync(
-            l => l.IsActive && l.ActorId == request.ActorId,
+            l => l.IsActive
+                && l.TenantId == request.TenantId
+                && (!request.ProjectId.HasValue || l.ProjectId == request.ProjectId)
+                && l.ActorId == request.ActorId,
             cancellationToken)).ConfigureAwait(false);
 
         return logs

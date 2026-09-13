@@ -20,6 +20,7 @@ public class TenantContextMiddleware
     private const string TenantIdClaimType = "tenant_id";
     private const string ProjectIdClaimType = "project_id";
     private const string UserIdClaimType = "sub";
+    private const string ProjectIdRouteKey = "projectId";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -76,6 +77,35 @@ public class TenantContextMiddleware
             projectId = ExtractFromClaim(context.User, ProjectIdClaimType);
         }
 
+        // 5.1 Resolve the project scope against the routed resource. The route value is the
+        // authoritative scope: permission and membership checks must evaluate the project that
+        // actually owns the resource, not a project the caller nominates in a header.
+        var routeProjectId = ExtractFromRoute(context, ProjectIdRouteKey);
+        if (routeProjectId.HasValue)
+        {
+            if (projectId.HasValue && projectId.Value != routeProjectId.Value)
+            {
+                _logger.LogWarning(
+                    "Project scope mismatch: route={RouteProjectId}, requested={RequestedProjectId}",
+                    routeProjectId, projectId);
+
+                // 400 matches the established PROJECT_SCOPE_MISMATCH contract already exercised by
+                // the Knowledge controller: the request itself is inconsistent, not merely denied.
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(
+                    JsonSerializer.Serialize(new
+                    {
+                        success = false,
+                        errorCode = "PROJECT_SCOPE_MISMATCH",
+                        errorMessage = "Route projectId must match X-Project-Id."
+                    }, JsonOptions));
+                return;
+            }
+
+            projectId = routeProjectId;
+        }
+
         // 6. Extract user ID from the JWT sub claim.
         GlobalUniqueId? userId = null;
         if (isAuthenticated)
@@ -125,6 +155,21 @@ public class TenantContextMiddleware
         var claimValue = user.FindFirst(claimType)?.Value;
         if (!string.IsNullOrWhiteSpace(claimValue) &&
             GlobalUniqueId.TryParse(claimValue, out var id))
+        {
+            return id;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Reads a routed identifier. An unparsable value is ignored so that the action can return its
+    /// own validation error instead of a scope failure.
+    /// </summary>
+    private static GlobalUniqueId? ExtractFromRoute(HttpContext context, string routeKey)
+    {
+        if (context.Request.RouteValues.TryGetValue(routeKey, out var routeValue) &&
+            routeValue is not null &&
+            GlobalUniqueId.TryParse(routeValue.ToString(), out var id))
         {
             return id;
         }

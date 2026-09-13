@@ -18,13 +18,7 @@
     class?: string;
   }
 
-  let {
-    allocated,
-    spent,
-    maxHours = 8,
-    size = 'sm',
-    class: className = '',
-  }: Props = $props();
+  let { allocated, spent, maxHours = 8, size = 'sm', class: className = '' }: Props = $props();
 
   // Calculate percentages
   const allocatedPercent = $derived(Math.min((allocated / maxHours) * 100, 100));
@@ -49,18 +43,11 @@
   const tooltip = $derived(`Spent: ${spent}h, Allocated: ${allocated}h`);
 </script>
 
-<div
-  class="effort-bar {className}"
-  style="--bar-height: {height}"
-  title={tooltip}
->
+<div class="effort-bar {className}" style="--bar-height: {height}" title={tooltip}>
   <!-- Track (full width = maxHours) -->
   <div class="effort-bar__track">
     <!-- Allocated portion (light background) -->
-    <div
-      class="effort-bar__allocated"
-      style="width: {allocatedPercent}%"
-    ></div>
+    <div class="effort-bar__allocated" style="width: {allocatedPercent}%"></div>
     <!-- Spent portion (colored fill) -->
     <div
       class="effort-bar__spent"

@@ -2,7 +2,19 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import { PageShell, PageHeader, PageBody, toast, getAuthState, subscribeAuth, SidebarDetailLayout, SIDEBAR_DETAIL_LAYOUT, getTabState, setTabState, Avatar } from '@sddp/shell';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    toast,
+    getAuthState,
+    subscribeAuth,
+    SidebarDetailLayout,
+    SIDEBAR_DETAIL_LAYOUT,
+    getTabState,
+    setTabState,
+    Avatar,
+  } from '@sddp/shell';
   import { Icon, Input, IconButton, Spinner, CardGrid, Button } from '@sddp/ui';
   import { StatCard } from '../../../shared/components/idioms';
   import { getTenantMembers } from '../../../settings/services/UserManagementService';
@@ -14,7 +26,7 @@
     ConversationMember,
   } from '../../types';
   import {
-    getConversationService,
+    createConversationService,
     type ConversationSummaryDto,
   } from '../../services/ConversationService';
   import type { DirectMessageInfo } from '../../types';
@@ -30,9 +42,17 @@
     setActiveConversationContext,
     clearActiveConversationContext,
   } from '../../stores';
-  import { getConversationStoreState, subscribeConversation } from '../../stores/conversation.store';
+  import {
+    getConversationStoreState,
+    subscribeConversation,
+  } from '../../stores/conversation.store';
   import { getConversationHubService } from '../../services/ConversationHubService';
-  import { ConversationCreatePanel, ConversationSidebar, ForumView, ParticipantsPanel } from '../sections';
+  import {
+    ConversationCreatePanel,
+    ConversationSidebar,
+    ForumView,
+    ParticipantsPanel,
+  } from '../sections';
   import ChannelView from '../sections/ChannelView.svelte';
 
   interface Props {
@@ -43,7 +63,12 @@
     class?: string;
   }
 
-  let { tenantId: propTenantId = '', tabId = '', initialCreateMode = null, class: className = '' }: Props = $props();
+  let {
+    tenantId: propTenantId = '',
+    tabId = '',
+    initialCreateMode = null,
+    class: className = '',
+  }: Props = $props();
 
   // Auth state
   let authState = $state(getAuthState());
@@ -85,15 +110,13 @@
 
   const currentUserId = $derived(authState.user?.id || '');
 
-  const activeDmUsers = $derived(
-    dmUsers.filter(u => u.id !== currentUserId)
-  );
+  const activeDmUsers = $derived(dmUsers.filter((u) => u.id !== currentUserId));
 
   const filteredDmUsers = $derived.by(() => {
     const q = dmSearchQuery.toLowerCase().trim();
     if (!q) return activeDmUsers;
     return activeDmUsers.filter(
-      u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
     );
   });
 
@@ -171,7 +194,7 @@
   const selectedConversationKind = $derived.by(() => {
     if (!selectedConversation) return null;
     if (selectedConversation.type === 'dm') return 'dm' as const;
-    return isForumSelected ? 'forum' as const : 'channel' as const;
+    return isForumSelected ? ('forum' as const) : ('channel' as const);
   });
 
   $effect(() => {
@@ -195,9 +218,9 @@
   const dmCount = $derived(directMessages.length);
   const totalUnreadCount = $derived(
     channels.reduce((sum, s) => sum + (s.unreadCount ?? 0), 0) +
-    privateChannels.reduce((sum, s) => sum + (s.unreadCount ?? 0), 0) +
-    topics.reduce((sum, s) => sum + (s.unreadCount ?? 0), 0) +
-    directMessages.reduce((sum, dm) => sum + (dm.unreadCount ?? 0), 0)
+      privateChannels.reduce((sum, s) => sum + (s.unreadCount ?? 0), 0) +
+      topics.reduce((sum, s) => sum + (s.unreadCount ?? 0), 0) +
+      directMessages.reduce((sum, dm) => sum + (dm.unreadCount ?? 0), 0)
   );
 
   function mergeById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
@@ -215,11 +238,12 @@
     dto: ConversationSummaryDto,
     isStarred: boolean
   ): ConversationSummary {
-    const typeMap: Record<ConversationSummaryDto['conversationType'], 'public' | 'private' | 'dm'> = {
-      Channel: dto.visibility === 'Private' ? 'private' : 'public',
-      DirectMessage: 'dm',
-      Forum: 'public',
-    };
+    const typeMap: Record<ConversationSummaryDto['conversationType'], 'public' | 'private' | 'dm'> =
+      {
+        Channel: dto.visibility === 'Private' ? 'private' : 'public',
+        DirectMessage: 'dm',
+        Forum: 'public',
+      };
 
     return {
       id: dto.id,
@@ -265,7 +289,10 @@
     const starredConversations: ConversationSummary[] = [];
 
     for (const conversation of conversations) {
-      if (conversation.conversationType !== 'Channel' && conversation.conversationType !== 'Forum') {
+      if (
+        conversation.conversationType !== 'Channel' &&
+        conversation.conversationType !== 'Forum'
+      ) {
         continue;
       }
 
@@ -289,15 +316,16 @@
 
   async function loadConversationSidebarData(reset: boolean = true): Promise<void> {
     if (!tenantId) return;
-    if (!reset && (loading || loadingMore || (!hasMoreConversations && !hasMoreDirectMessages))) return;
+    if (!reset && (loading || loadingMore || (!hasMoreConversations && !hasMoreDirectMessages)))
+      return;
 
     const requestId = ++latestSidebarRequestId;
     const nextConversationPage = reset
       ? 1
-      : hasMoreConversations ? conversationPageNumber + 1 : conversationPageNumber;
-    const nextDmPage = reset
-      ? 1
-      : hasMoreDirectMessages ? dmPageNumber + 1 : dmPageNumber;
+      : hasMoreConversations
+        ? conversationPageNumber + 1
+        : conversationPageNumber;
+    const nextDmPage = reset ? 1 : hasMoreDirectMessages ? dmPageNumber + 1 : dmPageNumber;
 
     if (reset) {
       loading = true;
@@ -313,22 +341,23 @@
     }
 
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, '');
+      const service = createConversationService(tenantId);
 
-      const conversationPageRequest = reset || hasMoreConversations
-        ? service.getGlobalConversationsPage({
-            pageNumber: nextConversationPage,
-            pageSize: CONVERSATION_PAGE_SIZE,
-          })
-        : Promise.resolve(null);
+      const conversationPageRequest =
+        reset || hasMoreConversations
+          ? service.getGlobalConversationsPage({
+              pageNumber: nextConversationPage,
+              pageSize: CONVERSATION_PAGE_SIZE,
+            })
+          : Promise.resolve(null);
 
-      const dmPageRequest = reset || hasMoreDirectMessages
-        ? service.getDMChannelsPage({
-            pageNumber: nextDmPage,
-            pageSize: CONVERSATION_PAGE_SIZE,
-          })
-        : Promise.resolve(null);
+      const dmPageRequest =
+        reset || hasMoreDirectMessages
+          ? service.getDMChannelsPage({
+              pageNumber: nextDmPage,
+              pageSize: CONVERSATION_PAGE_SIZE,
+            })
+          : Promise.resolve(null);
 
       const starredRequest = reset
         ? service.getStarredConversations().catch(() => [])
@@ -346,10 +375,14 @@
 
       allConversationDtos = conversationPage
         ? mergeById(reset ? [] : allConversationDtos, conversationPage.items)
-        : (reset ? [] : allConversationDtos);
+        : reset
+          ? []
+          : allConversationDtos;
       allDmChannels = dmPage
         ? mergeById(reset ? [] : allDmChannels, dmPage.items)
-        : (reset ? [] : allDmChannels);
+        : reset
+          ? []
+          : allDmChannels;
       if (starredDtos) {
         starredConversationIds = new Set(starredDtos.map((conversation) => conversation.id));
       }
@@ -365,8 +398,8 @@
 
       if (conversationPage) {
         conversationPageNumber = conversationPage.pageNumber ?? nextConversationPage;
-        hasMoreConversations = conversationPage.hasNextPage
-          ?? allConversationDtos.length < conversationPage.totalCount;
+        hasMoreConversations =
+          conversationPage.hasNextPage ?? allConversationDtos.length < conversationPage.totalCount;
       } else if (reset) {
         conversationPageNumber = 1;
         hasMoreConversations = false;
@@ -374,8 +407,7 @@
 
       if (dmPage) {
         dmPageNumber = dmPage.pageNumber ?? nextDmPage;
-        hasMoreDirectMessages = dmPage.hasNextPage
-          ?? allDmChannels.length < dmPage.totalCount;
+        hasMoreDirectMessages = dmPage.hasNextPage ?? allDmChannels.length < dmPage.totalCount;
       } else if (reset) {
         dmPageNumber = 1;
         hasMoreDirectMessages = false;
@@ -410,11 +442,10 @@
       directMessages = state.directMessages;
       starredConversations = state.starredConversations;
       selectedConversationId = state.selectedConversationId;
-      selectedConversation = [
-        ...state.channels,
-        ...state.privateChannels,
-        ...state.topics,
-      ].find((conversation) => conversation.id === state.selectedConversationId) ?? null;
+      selectedConversation =
+        [...state.channels, ...state.privateChannels, ...state.topics].find(
+          (conversation) => conversation.id === state.selectedConversationId
+        ) ?? null;
       searchQuery = state.searchQuery;
     });
 
@@ -444,8 +475,10 @@
     if (!tenantId) return;
     loading = true;
 
-    const conversationService = getConversationService();
-    conversationService.setContext(tenantId, selectedConversation?.projectId || '');
+    const conversationService = createConversationService(
+      tenantId,
+      selectedConversation?.projectId || ''
+    );
 
     try {
       const members = await conversationService.getConversationMembers(conversationId);
@@ -486,7 +519,6 @@
     void loadConversationSidebarData(false);
   }
 
-
   // Create conversation handlers
   function handleCreateChannel() {
     resetCreateForm();
@@ -521,8 +553,7 @@
     isCreating = true;
     createError = null;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, '');
+      const service = createConversationService(tenantId);
       const result = await service.sendDMInvitation(targetUserId);
       if (result.sent) {
         toast.success('Invitation sent');
@@ -557,8 +588,7 @@
     isCreating = true;
     createError = null;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, '');
+      const service = createConversationService(tenantId);
       const created = await service.createGlobalConversation({
         name: createName.trim(),
         conversationType: createMode === 'forum' ? 'Forum' : 'Channel',
@@ -579,7 +609,11 @@
   async function handleSendInvitation(targetUserId: string, _displayName: string): Promise<void> {
     if (!selectedConversationId || !selectedConversation) return;
     const hubService = getConversationHubService();
-    await hubService.sendInvitation(selectedConversationId, targetUserId, selectedConversation.name);
+    await hubService.sendInvitation(
+      selectedConversationId,
+      targetUserId,
+      selectedConversation.name
+    );
   }
 
   // Listen for invitation responses dispatched by App.svelte to reload participants
@@ -597,8 +631,7 @@
   async function handleRemoveParticipant(participant: ConversationMember): Promise<void> {
     if (!selectedConversationId) return;
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, selectedConversation?.projectId || '');
+      const service = createConversationService(tenantId, selectedConversation?.projectId || '');
       await service.removeConversationMember(selectedConversationId, participant.user.id);
       toast.success(`${participant.user.name} removed`);
       await loadConversationParticipants(selectedConversationId);
@@ -625,17 +658,29 @@
     {#if createMode === 'dm'}
       <!-- DM creation is shown full-width without left panel -->
       <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
-        <div class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]">
+        <div
+          class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]"
+        >
           <div class="flex items-center">
             <Icon name="message-square" size="md" class="text-[var(--color-text-tertiary)] mr-2" />
-            <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">New Direct Message</h2>
+            <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">
+              New Direct Message
+            </h2>
           </div>
-          <IconButton icon="x" variant="ghost" onclick={cancelCreate} disabled={isCreating} title="Cancel" />
+          <IconButton
+            icon="x"
+            variant="ghost"
+            onclick={cancelCreate}
+            disabled={isCreating}
+            title="Cancel"
+          />
         </div>
         <div class="flex-1 overflow-auto p-6">
           <div class="max-w-xl mx-auto space-y-4">
             <div class="space-y-2">
-              <span class="block text-sm font-medium text-[var(--color-text-primary)]">Select Member</span>
+              <span class="block text-sm font-medium text-[var(--color-text-primary)]"
+                >Select Member</span
+              >
               <div class="relative">
                 <Icon
                   name="search"
@@ -652,7 +697,9 @@
                     focus:outline-none focus:border-[var(--color-accent-primary)]"
                 />
               </div>
-              <div class="max-h-80 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]">
+              <div
+                class="max-h-80 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
+              >
                 {#if dmUsersLoading}
                   <div class="flex items-center justify-center py-6">
                     <Spinner size="md" />
@@ -671,12 +718,11 @@
                       disabled={isCreating}
                     >
                       <div class="relative flex-shrink-0">
-                        <Avatar
-                          name={user.name ?? 'Unknown'}
-                          size="sm"
-                        />
+                        <Avatar name={user.name ?? 'Unknown'} size="sm" />
                         <span
-                          class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-primary)] {onlineUsers.has(user.id)
+                          class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-primary)] {onlineUsers.has(
+                            user.id
+                          )
                             ? 'bg-[var(--color-success-500)]'
                             : 'bg-[var(--color-neutral-400)]'}"
                         ></span>
@@ -738,7 +784,9 @@
             title={createMode === 'forum' ? 'New Forum' : 'New Channel'}
             bind:name={createName}
             bind:description={createDescription}
-            namePlaceholder={createMode === 'forum' ? 'e.g., API design discussions' : 'e.g., general'}
+            namePlaceholder={createMode === 'forum'
+              ? 'e.g., API design discussions'
+              : 'e.g., general'}
             descriptionPlaceholder="What is this conversation for?"
             loading={isCreating}
             error={createError}
@@ -757,7 +805,11 @@
           <ChannelView
             conversationId={selectedConversation.id}
             conversationName={selectedConversation.name}
-            headerIcon={selectedConversation.type === 'dm' ? 'message-circle' : selectedConversation.type === 'private' ? 'lock' : 'hash'}
+            headerIcon={selectedConversation.type === 'dm'
+              ? 'message-circle'
+              : selectedConversation.type === 'private'
+                ? 'lock'
+                : 'hash'}
             sourceType="conversation"
             conversationType={selectedConversation.type === 'dm' ? 'DirectMessage' : 'Channel'}
             tenantId={tenantId || undefined}
@@ -777,7 +829,9 @@
                 participants: members,
               };
             }}
-            onClose={() => { setSelectedConversation(null); }}
+            onClose={() => {
+              setSelectedConversation(null);
+            }}
             class="h-full"
           />
         {:else}

@@ -52,8 +52,8 @@
         class="h-9 px-3 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-px
           {sizeClasses[size]}
           {tab.id === activeTab
-            ? 'text-[var(--color-text-primary)] border-[var(--color-accent-primary)]'
-            : 'text-[var(--color-text-tertiary)] border-transparent hover:text-[var(--color-text-secondary)]'}
+          ? 'text-[var(--color-text-primary)] border-[var(--color-accent-primary)]'
+          : 'text-[var(--color-text-tertiary)] border-transparent hover:text-[var(--color-text-secondary)]'}
           {tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
       >
         {#if tab.icon}
@@ -81,8 +81,8 @@
         class="px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5
           {sizeClasses[size]}
           {tab.id === activeTab
-            ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm'
-            : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'}
+          ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-sm'
+          : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'}
           {tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
       >
         {#if tab.icon}

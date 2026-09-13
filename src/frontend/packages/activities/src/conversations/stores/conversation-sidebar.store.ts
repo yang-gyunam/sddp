@@ -44,7 +44,8 @@ const initialState: ConversationSidebarState = {
 };
 
 // Create the store
-const sidebarStore: Store<ConversationSidebarState> = createStore<ConversationSidebarState>(initialState);
+const sidebarStore: Store<ConversationSidebarState> =
+  createStore<ConversationSidebarState>(initialState);
 
 // ============================================
 // Project Groups Actions
@@ -180,11 +181,16 @@ export function setProjectExpanded(projectId: string, expanded: boolean): void {
 /**
  * Update conversation in project group
  */
-export function updateConversationInGroup(conversationId: string, updates: Partial<ConversationSummary>): void {
+export function updateConversationInGroup(
+  conversationId: string,
+  updates: Partial<ConversationSummary>
+): void {
   sidebarStore.update((state) => {
     const updatedGroups = state.projectGroups.map((group) => ({
       ...group,
-      conversations: group.conversations.map((c) => (c.id === conversationId ? { ...c, ...updates } : c)),
+      conversations: group.conversations.map((c) =>
+        c.id === conversationId ? { ...c, ...updates } : c
+      ),
     }));
     return {
       ...state,
@@ -227,7 +233,8 @@ export function removeConversation(conversationId: string): void {
     privateChannels: state.privateChannels.filter((c) => c.id !== conversationId),
     topics: state.topics.filter((c) => c.id !== conversationId),
     starredConversations: state.starredConversations.filter((c) => c.id !== conversationId),
-    selectedConversationId: state.selectedConversationId === conversationId ? null : state.selectedConversationId,
+    selectedConversationId:
+      state.selectedConversationId === conversationId ? null : state.selectedConversationId,
   }));
 }
 
@@ -238,7 +245,8 @@ export function removeDirectMessage(dmId: string): void {
   sidebarStore.update((state) => ({
     ...state,
     directMessages: state.directMessages.filter((dm) => dm.id !== dmId),
-    selectedConversationId: state.selectedConversationId === dmId ? null : state.selectedConversationId,
+    selectedConversationId:
+      state.selectedConversationId === dmId ? null : state.selectedConversationId,
   }));
 }
 
@@ -312,8 +320,9 @@ export function toggleConversationStarred(conversationId: string): void {
     if (isCurrentlyStarred) {
       updatedStarred = state.starredConversations.filter((c) => c.id !== conversationId);
     } else {
-      updatedStarred = [...state.starredConversations, { ...conversation, starred: true }]
-        .filter((c, index, self) => self.findIndex((item) => item.id === c.id) === index);
+      updatedStarred = [...state.starredConversations, { ...conversation, starred: true }].filter(
+        (c, index, self) => self.findIndex((item) => item.id === c.id) === index
+      );
     }
 
     return {
@@ -528,8 +537,7 @@ export function getFilteredProjectGroups(): ProjectConversationGroup[] {
         ...group,
         conversations: group.conversations.filter(
           (c) =>
-            c.name.toLowerCase().includes(query) ||
-            group.projectName.toLowerCase().includes(query)
+            c.name.toLowerCase().includes(query) || group.projectName.toLowerCase().includes(query)
         ),
       }))
       .filter((group) => group.conversations.length > 0);

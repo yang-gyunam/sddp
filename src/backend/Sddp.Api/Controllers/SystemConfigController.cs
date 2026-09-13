@@ -2,7 +2,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
+using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.SystemConfig.Commands;
 using Sddp.Application.Features.SystemConfig.Queries;
@@ -117,6 +119,7 @@ public class SystemConfigController : BaseApiController
     /// Lower scopes override higher-scope values.
     /// </remarks>
     [HttpGet]
+        [ResourceScopeExempt("Config is addressed by scope, not by a resource id; the header project is membership checked and UserManage is evaluated in that same scope.")]
     [Authorize(Policy = "CanManageUsers")]
     public async Task<IActionResult> GetConfig(CancellationToken cancellationToken = default)
     {
@@ -135,6 +138,7 @@ public class SystemConfigController : BaseApiController
     /// </summary>
     /// <param name="group">Configuration group (general, auth, storage, performance, aiAgent)</param>
     [HttpGet("groups/{group}")]
+        [ResourceScopeExempt("The route names a config group, not a database-owned id; the header project is membership checked and UserManage is evaluated in that scope.")]
     [Authorize(Policy = "CanManageUsers")]
     public async Task<IActionResult> GetConfigGroup(string group, CancellationToken cancellationToken = default)
     {
@@ -166,6 +170,7 @@ public class SystemConfigController : BaseApiController
     /// <param name="group">Configuration group</param>
     /// <param name="key">Configuration key</param>
     [HttpGet("groups/{group}/{key}")]
+        [ResourceScopeExempt("The route names a config group and key, not a database-owned id; the header project is membership checked and UserManage is evaluated in that scope.")]
     [Authorize(Policy = "CanManageUsers")]
     public async Task<IActionResult> GetConfigValue(string group, string key, CancellationToken cancellationToken = default)
     {
@@ -195,7 +200,10 @@ public class SystemConfigController : BaseApiController
     /// Saves the complete system configuration
     /// </summary>
     [HttpPut]
+        [ResourceScopeExempt("Write addressed by scope rather than by a resource id; the header project is membership checked and UserManage is required in that scope.")]
+    [RequirePermission(PermissionCodes.UserManage)]
     [Authorize(Policy = "CanManageUsers")]
+    [Authorize]
     public async Task<IActionResult> SaveConfig([FromBody] UpdateSystemConfigDto dto, CancellationToken cancellationToken = default)
     {
         if (dto.General?.SiteName is not null || dto.General?.SiteUrl is not null)
@@ -268,7 +276,10 @@ public class SystemConfigController : BaseApiController
     /// <param name="group">Configuration group (general, auth, storage, performance, aiAgent)</param>
     /// <param name="request">Dictionary of values in the group</param>
     [HttpPut("groups/{group}")]
+        [ResourceScopeExempt("The route names a config group, not a database-owned id; the header project is membership checked and UserManage is required in that scope.")]
+    [RequirePermission(PermissionCodes.UserManage)]
     [Authorize(Policy = "CanManageUsers")]
+    [Authorize]
     public async Task<IActionResult> SetConfigGroup(string group, [FromBody] SetConfigGroupRequest request, CancellationToken cancellationToken = default)
     {
         var validGroups = new[] { "general", "auth", "storage", "performance", "aiAgent" };
@@ -335,7 +346,10 @@ public class SystemConfigController : BaseApiController
     /// <param name="key">Configuration key</param>
     /// <param name="request">Configuration value</param>
     [HttpPut("groups/{group}/{key}")]
+        [ResourceScopeExempt("The route names a config group and key, not a database-owned id; the header project is membership checked and UserManage is required in that scope.")]
+    [RequirePermission(PermissionCodes.UserManage)]
     [Authorize(Policy = "CanManageUsers")]
+    [Authorize]
     public async Task<IActionResult> SetConfigValue(string group, string key, [FromBody] SetConfigValueRequest request, CancellationToken cancellationToken = default)
     {
         if (!IsConfigGroupEnabled(group))
@@ -388,7 +402,10 @@ public class SystemConfigController : BaseApiController
     /// <param name="group">Configuration group</param>
     /// <param name="key">Configuration key</param>
     [HttpDelete("groups/{group}/{key}")]
+        [ResourceScopeExempt("The route names a config group and key, not a database-owned id; the header project is membership checked and UserManage is required in that scope.")]
+    [RequirePermission(PermissionCodes.UserManage)]
     [Authorize(Policy = "CanManageUsers")]
+    [Authorize]
     public async Task<IActionResult> DeleteConfigValue(string group, string key, CancellationToken cancellationToken = default)
     {
         if (!IsConfigGroupEnabled(group))
@@ -417,7 +434,10 @@ public class SystemConfigController : BaseApiController
     /// Resets settings to defaults
     /// </summary>
     [HttpPost("reset")]
+        [ResourceScopeExempt("Scope-wide reset with no resource id in the route; the header project is membership checked and UserManage is required in that scope.")]
+    [RequirePermission(PermissionCodes.UserManage)]
     [Authorize(Policy = "CanManageUsers")]
+    [Authorize]
     public async Task<IActionResult> ResetToDefault(CancellationToken cancellationToken = default)
     {
         TryGetTenantId(out var tenantId);

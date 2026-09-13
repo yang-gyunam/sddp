@@ -23,7 +23,9 @@
   });
 
   const filteredEntries = $derived(
-    outputState.filter === 'all' ? outputState.entries : outputState.entries.filter((e) => e.level === outputState.filter)
+    outputState.filter === 'all'
+      ? outputState.entries
+      : outputState.entries.filter((e) => e.level === outputState.filter)
   );
 
   function formatTimestamp(date: Date): string {
@@ -119,12 +121,18 @@
     <!-- Output Entries -->
     <div class="flex-1 overflow-auto font-mono text-xs">
       {#each filteredEntries as entry (entry.id)}
-        <div class="flex gap-2 px-3 py-1.5 hover:bg-[var(--color-bg-hover)] border-b border-[var(--color-border-subtle)]">
+        <div
+          class="flex gap-2 px-3 py-1.5 hover:bg-[var(--color-bg-hover)] border-b border-[var(--color-border-subtle)]"
+        >
           <span class="text-[var(--color-text-muted)] shrink-0">
             [{formatTimestamp(entry.timestamp)}]
           </span>
-          <Icon name={getLevelIcon(entry.level)} size="xs" class="{getLevelColor(entry.level)} shrink-0 mt-0.5" />
-          <span class="text-[var(--color-accent-primary)] shrink-0">
+          <Icon
+            name={getLevelIcon(entry.level)}
+            size="xs"
+            class="{getLevelColor(entry.level)} shrink-0 mt-0.5"
+          />
+          <span class="text-[var(--color-accent-text)] shrink-0">
             [{entry.source}]
           </span>
           <div class="flex-1 min-w-0">
@@ -132,7 +140,8 @@
             {#if entry.data !== undefined}
               {@const formattedData = formatData(entry.data)}
               {#if formattedData}
-                <pre class="mt-1 text-[var(--color-text-muted)] whitespace-pre-wrap break-all bg-[var(--color-bg-tertiary)] p-1 rounded">{formattedData}</pre>
+                <pre
+                  class="mt-1 text-[var(--color-text-muted)] whitespace-pre-wrap break-all bg-[var(--color-bg-tertiary)] p-1 rounded">{formattedData}</pre>
               {/if}
             {/if}
           </div>

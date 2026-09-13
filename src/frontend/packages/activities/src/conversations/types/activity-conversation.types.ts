@@ -23,7 +23,7 @@ export interface ConversationSummary {
   id: string;
   name: string;
   type: ConversationCategory;
-  projectId?: string | null;      // null = tenant-wide (global) conversation
+  projectId?: string | null; // null = tenant-wide (global) conversation
   projectName?: string | null;
   channelStatus?: 'Active' | 'Concluded' | null;
   unreadCount: number;
@@ -78,14 +78,14 @@ export interface ConversationSidebarState {
   filterType: ConversationFilterType;
 
   // UI state
-  expandedSections: Set<string>;  // 'channels' | 'private' | 'topics' | 'dm' | 'starred'
-  expandedProjects: Set<string>;  // Legacy: for project-grouped view
+  expandedSections: Set<string>; // 'channels' | 'private' | 'topics' | 'dm' | 'starred'
+  expandedProjects: Set<string>; // Legacy: for project-grouped view
   selectedConversationId: string | null;
 
   // Data (flat structure for Conversations Activity)
-  channels: ConversationSummary[];        // public channels (type: 'public')
-  privateChannels: ConversationSummary[];    // private channels (type: 'private')
-  topics: ConversationSummary[];          // forum topics
+  channels: ConversationSummary[]; // public channels (type: 'public')
+  privateChannels: ConversationSummary[]; // private channels (type: 'private')
+  topics: ConversationSummary[]; // forum topics
   directMessages: DirectMessageSummary[];
   starredConversations: ConversationSummary[];
 

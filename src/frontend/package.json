@@ -8,9 +8,16 @@
   "scripts": {
     "dev": "npm run dev -w @sddp/web",
     "build:packages": "npm run build -w @sddp/ui && npm run build -w @sddp/shell && npm run build -w @sddp/activities",
-    "build": "npm run build:packages && npm run build -w @sddp/web",
+    "build:storybook": "npm run build-storybook -w @sddp/ui",
+    "verify:package-exports": "node scripts/verify-package-exports.mjs",
+    "build:web:dist": "npm run build -w @sddp/web -- --mode dist && npm run check:bundle",
+    "build:source": "npm run build -w @sddp/web -- --mode source && npm run check:bundle",
+    "build": "npm run build:packages && npm run verify:package-exports && npm run build:web:dist",
+    "check:workspace-deps": "node scripts/check-workspace-deps.mjs",
+    "check:lockfile": "node scripts/check-lockfile-complete.mjs",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "preview": "npm run preview -w @sddp/web",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run check:workspace-deps && npm run check:lockfile && npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @sddp/web",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
@@ -19,10 +26,15 @@
     "type-check": "npm run type-check --workspaces --if-present"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tailwindcss/node": "4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.3.1",
+    "@vitest/coverage-istanbul": "^4.1.10",
     "jsdom": "^28.1.0",
+    "lucide": "1.25.0",
     "prettier": "^3.8.0",
-    "prettier-plugin-svelte": "^3.4.1"
+    "prettier-plugin-svelte": "^3.4.1",
+    "vitest": "^4.1.10"
   }
 }

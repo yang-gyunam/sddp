@@ -17,7 +17,13 @@
     class?: string;
   }
 
-  let { type, size = 'md', showLabel = true, showIcon = true, class: className = '' }: Props = $props();
+  let {
+    type,
+    size = 'md',
+    showLabel = true,
+    showIcon = true,
+    class: className = '',
+  }: Props = $props();
 
   // Cast domain styles to BadgeStyleConfig (they are compatible)
   const styles = ENTITY_TYPE_STYLES as unknown as Record<EntityType, BadgeStyleConfig>;
@@ -28,11 +34,4 @@
   );
 </script>
 
-<EnumBadge
-  value={type}
-  {styles}
-  {size}
-  {displayMode}
-  shape="rounded-md"
-  class={className}
-/>
+<EnumBadge value={type} {styles} {size} {displayMode} shape="rounded-md" class={className} />

@@ -7,7 +7,11 @@
   import type { EditorGroupData } from '../../types/layout.types';
   import EditorGroup from './EditorGroup.svelte';
   import { tabActions } from '../../stores/tabs.store';
-  import { computePositionsFromSplitters, computePositionsFromMixedLines } from '../../utils/split-editor.utils';
+  import { requestCloseTab } from '../../stores/tab-close';
+  import {
+    computePositionsFromSplitters,
+    computePositionsFromMixedLines,
+  } from '../../utils/split-editor.utils';
 
   interface SplitEditorGroupProps {
     groups: EditorGroupData[];
@@ -29,7 +33,9 @@
   let isDragging = $state(false);
   let currentSplitter = $state<number | null>(null);
   let splitterPositions = $state<number[]>([]);
-  let mixedDragging = $state<{ orientation: 'horizontal' | 'vertical'; lineIndex: number } | null>(null);
+  let mixedDragging = $state<{ orientation: 'horizontal' | 'vertical'; lineIndex: number } | null>(
+    null
+  );
 
   // Container reference for position calculations
   let containerElement = $state<HTMLDivElement | undefined>();
@@ -109,7 +115,7 @@
 
   // Handle tab close
   function handleTabClose(tabId: string, groupId: string) {
-    tabActions.closeTab(tabId, groupId);
+    void requestCloseTab(tabId, groupId);
     onTabClose?.(tabId, groupId);
   }
 
@@ -158,7 +164,10 @@
 
     // Constrain position
     const prevPos = currentSplitter > 0 ? splitterPositions[currentSplitter - 1] : undefined;
-    const nextPos = currentSplitter < splitterPositions.length - 1 ? splitterPositions[currentSplitter + 1] : undefined;
+    const nextPos =
+      currentSplitter < splitterPositions.length - 1
+        ? splitterPositions[currentSplitter + 1]
+        : undefined;
     const minPos = currentSplitter === 0 ? 0.1 : (prevPos ?? 0) + 0.1;
     const maxPos = currentSplitter === splitterPositions.length - 1 ? 0.9 : (nextPos ?? 1) - 0.1;
 
@@ -193,7 +202,8 @@
     let lastPos = 0;
 
     for (let i = 0; i < groups.length; i++) {
-      const currentPos = i === groups.length - 1 ? 1 : (splitterPositions[i] ?? (i + 1) / groups.length);
+      const currentPos =
+        i === groups.length - 1 ? 1 : (splitterPositions[i] ?? (i + 1) / groups.length);
       const size = currentPos - lastPos;
       parts.push(`${(size * 100).toFixed(2)}fr`);
       lastPos = currentPos;
@@ -264,7 +274,9 @@
     // This prevents re-initializing grid lines when non-structural props
     // (like activeTab) change, which would overwrite user drag adjustments.
     const layoutKey = groups
-      .map((g) => `${g.id}:${g.position.x},${g.position.y},${g.position.width},${g.position.height}`)
+      .map(
+        (g) => `${g.id}:${g.position.x},${g.position.y},${g.position.width},${g.position.height}`
+      )
       .join('|');
 
     if (layoutKey === prevMixedLayoutKey) return;
@@ -452,7 +464,9 @@
           ? getGridArea(index)
           : `${index * 2 + 1} / 1 / ${index * 2 + 2} / 2`};"
       onclick={() => handleGroupFocus(group.id)}
-      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleGroupFocus(group.id); }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleGroupFocus(group.id);
+      }}
       role="group"
       tabindex="0"
       aria-label="Editor group {index + 1}"
@@ -473,7 +487,9 @@
         class="relative z-20 {layoutDirection === 'horizontal'
           ? 'cursor-col-resize hover:bg-[var(--color-accent-primary)]/30'
           : 'cursor-row-resize hover:bg-[var(--color-accent-primary)]/30'}
-          {isDragging && currentSplitter === index ? 'bg-[var(--color-accent-primary)]/50' : 'bg-[var(--color-border)]'}
+          {isDragging && currentSplitter === index
+          ? 'bg-[var(--color-accent-primary)]/50'
+          : 'bg-[var(--color-border)]'}
           transition-colors"
         style="grid-area: {layoutDirection === 'horizontal'
           ? getSplitterGridArea(index)
@@ -487,11 +503,11 @@
         onpointerdown={(e) => handleSplitterPointerDown(e, index)}
       >
         <!-- Splitter handle visual indicator -->
-        <div
-          class="absolute inset-0 flex items-center justify-center pointer-events-none"
-        >
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            class="{layoutDirection === 'horizontal' ? 'h-8 w-1' : 'w-8 h-1'} rounded bg-[var(--color-text-tertiary)]/30"
+            class="{layoutDirection === 'horizontal'
+              ? 'h-8 w-1'
+              : 'w-8 h-1'} rounded bg-[var(--color-text-tertiary)]/30"
           ></div>
         </div>
       </div>
@@ -505,13 +521,15 @@
         class="absolute z-20 {segment.orientation === 'vertical'
           ? 'cursor-col-resize'
           : 'cursor-row-resize'}
-          {mixedDragging && mixedDragging.lineIndex === segment.lineIndex && mixedDragging.orientation === segment.orientation
-            ? 'bg-[var(--color-accent-primary)]/50'
-            : 'bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)]/30'}
+          {mixedDragging &&
+        mixedDragging.lineIndex === segment.lineIndex &&
+        mixedDragging.orientation === segment.orientation
+          ? 'bg-[var(--color-accent-primary)]/50'
+          : 'bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)]/30'}
           transition-colors"
-        style="{segment.orientation === 'vertical'
+        style={segment.orientation === 'vertical'
           ? `left: ${(mixedXLines[segment.lineIndex - 1] ?? 0) * 100}%; top: ${(mixedYLines[segment.startIndex - 1] ?? 0) * 100}%; width: 4px; height: ${((mixedYLines[segment.endIndex - 1] ?? 0) - (mixedYLines[segment.startIndex - 1] ?? 0)) * 100}%; margin-left: -2px;`
-          : `top: ${(mixedYLines[segment.lineIndex - 1] ?? 0) * 100}%; left: ${(mixedXLines[segment.startIndex - 1] ?? 0) * 100}%; height: 4px; width: ${((mixedXLines[segment.endIndex - 1] ?? 0) - (mixedXLines[segment.startIndex - 1] ?? 0)) * 100}%; margin-top: -2px;`}"
+          : `top: ${(mixedYLines[segment.lineIndex - 1] ?? 0) * 100}%; left: ${(mixedXLines[segment.startIndex - 1] ?? 0) * 100}%; height: 4px; width: ${((mixedXLines[segment.endIndex - 1] ?? 0) - (mixedXLines[segment.startIndex - 1] ?? 0)) * 100}%; margin-top: -2px;`}
         role="separator"
         aria-orientation={segment.orientation === 'vertical' ? 'vertical' : 'horizontal'}
         aria-valuenow={50}
@@ -520,11 +538,11 @@
         tabindex="0"
         onpointerdown={(e) => handleMixedSplitterPointerDown(e, segment)}
       >
-        <div
-          class="absolute inset-0 flex items-center justify-center pointer-events-none"
-        >
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            class="{segment.orientation === 'vertical' ? 'h-8 w-1' : 'w-8 h-1'} rounded bg-[var(--color-text-tertiary)]/30"
+            class="{segment.orientation === 'vertical'
+              ? 'h-8 w-1'
+              : 'w-8 h-1'} rounded bg-[var(--color-text-tertiary)]/30"
           ></div>
         </div>
       </div>

@@ -43,6 +43,10 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(p => p.IsSystemPermission)
+            .HasColumnName("is_system")
+            .HasDefaultValue(false);
+
         builder.Property(p => p.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);

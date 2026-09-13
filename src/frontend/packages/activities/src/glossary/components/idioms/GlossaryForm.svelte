@@ -7,7 +7,10 @@
     GlossaryConflictResult,
   } from '../../types';
   import { TERM_CATEGORIES, TERM_CATEGORY_STYLES } from '../../types';
-  import { isFormValid as calcIsFormValid, buildCreateRequest } from '../../utils/glossary-form.utils';
+  import {
+    isFormValid as calcIsFormValid,
+    buildCreateRequest,
+  } from '../../utils/glossary-form.utils';
   import { Icon, Button, IconButton, Input, Textarea, Combobox } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
   import { CollapsibleGroup } from '@sddp/shell';
@@ -132,13 +135,21 @@
   const categories = TERM_CATEGORIES;
 </script>
 
-<form id={formId} novalidate class="flex flex-col gap-4 {className}" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+<form
+  id={formId}
+  novalidate
+  class="flex flex-col gap-4 {className}"
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSubmit();
+  }}
+>
   <!-- Basic Information -->
   <CollapsibleGroup
     title="Basic Information"
     variant="plain"
     expanded={basicExpanded}
-    onToggle={() => basicExpanded = !basicExpanded}
+    onToggle={() => (basicExpanded = !basicExpanded)}
   >
     <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
       <!-- Term Name -->
@@ -168,8 +179,12 @@
           {/if}
         </div>
         {#if conflictResult?.hasConflict}
-          <div class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 text-sm font-medium mb-1">
+          <div
+            class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+          >
+            <div
+              class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 text-sm font-medium mb-1"
+            >
               <Icon name="alert-triangle" size="sm" />
               Conflicts detected
             </div>
@@ -199,9 +214,7 @@
 
       <!-- Category -->
       <div>
-        <span class="block text-xs text-[var(--color-text-muted)] mb-1">
-          Category
-        </span>
+        <span class="block text-xs text-[var(--color-text-muted)] mb-1"> Category </span>
         <div class="flex flex-wrap gap-2">
           {#each categories as cat (cat)}
             {@const style = TERM_CATEGORY_STYLES[cat]}
@@ -213,7 +226,11 @@
                 ? `${style.bgColor} ${style.color} ${style.borderColor}`
                 : 'border-transparent'}"
             >
-              <Icon name={style.icon} size="sm" class="inline mr-1 {formData.category !== cat ? style.color : ''}" />
+              <Icon
+                name={style.icon}
+                size="sm"
+                class="inline mr-1 {formData.category !== cat ? style.color : ''}"
+              />
               {style.label}
             </Button>
           {/each}
@@ -227,11 +244,7 @@
           bind:value={formData.abbreviation}
           placeholder="e.g., API, SDK"
         />
-        <Input
-          label="Synonyms"
-          bind:value={formData.synonyms}
-          placeholder="comma separated"
-        />
+        <Input label="Synonyms" bind:value={formData.synonyms} placeholder="comma separated" />
       </div>
 
       <!-- Source -->
@@ -252,13 +265,13 @@
 
       <!-- Usage Examples -->
       <div>
-        <span class="block text-xs text-[var(--color-text-muted)] mb-1">
-          Usage Examples
-        </span>
+        <span class="block text-xs text-[var(--color-text-muted)] mb-1"> Usage Examples </span>
         <div class="space-y-2">
           {#each formData.usageExamples as example, i (i)}
             <div class="flex items-center gap-2">
-              <span class="flex-1 px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border-secondary)] rounded-lg text-[var(--color-text-primary)]">
+              <span
+                class="flex-1 px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border-secondary)] rounded-lg text-[var(--color-text-primary)]"
+              >
                 {example}
               </span>
               <IconButton
@@ -299,7 +312,7 @@
       variant="plain"
       allowOverflow
       expanded={referencesExpanded}
-      onToggle={() => referencesExpanded = !referencesExpanded}
+      onToggle={() => (referencesExpanded = !referencesExpanded)}
     >
       <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
         {#if onSearchConversation}
@@ -338,5 +351,4 @@
       </div>
     </CollapsibleGroup>
   {/if}
-
 </form>

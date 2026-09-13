@@ -327,10 +327,7 @@ export const VALID_STATUS_TRANSITIONS: Record<RequirementStatus, RequirementStat
 /**
  * Check if a status transition is valid
  */
-export function canTransitionTo(
-  current: RequirementStatus,
-  target: RequirementStatus
-): boolean {
+export function canTransitionTo(current: RequirementStatus, target: RequirementStatus): boolean {
   return VALID_STATUS_TRANSITIONS[current].includes(target);
 }
 
@@ -340,4 +337,3 @@ export function canTransitionTo(
 export function isEditable(status: RequirementStatus): boolean {
   return status === 'Draft';
 }
-

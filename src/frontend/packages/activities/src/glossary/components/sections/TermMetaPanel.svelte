@@ -11,12 +11,7 @@
     class?: string;
   }
 
-  let {
-    term,
-    usage = null,
-    loadingUsage = false,
-    class: className = '',
-  }: Props = $props();
+  let { term, usage = null, loadingUsage = false, class: className = '' }: Props = $props();
 
   const categoryStyle = $derived(term ? TERM_CATEGORY_STYLES[term.category] : null);
 </script>
@@ -29,7 +24,9 @@
   {:else}
     <!-- Quick Info -->
     <div class="p-3 border-b border-[var(--color-border-primary)]">
-      <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+      <h3
+        class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+      >
         Quick Info
       </h3>
       <div class="space-y-2">
@@ -59,7 +56,9 @@
 
     <!-- Usage Section -->
     <div class="flex-1 overflow-y-auto p-3">
-      <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+      <h3
+        class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+      >
         Usage in Specs
       </h3>
 
@@ -87,10 +86,14 @@
                 <span class="text-sm font-medium text-[var(--color-text-secondary)] truncate">
                   {item.entityTitle}
                 </span>
-                <span class="text-xs px-1.5 py-0.5 rounded
-                  {item.entityType === 'Spec' ? 'bg-[var(--color-info-500)]/10 text-[var(--color-info-500)]' :
-                   item.entityType === 'Requirement' ? 'bg-[var(--color-success-500)]/10 text-[var(--color-success-500)]' :
-                   'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}">
+                <span
+                  class="text-xs px-1.5 py-0.5 rounded
+                  {item.entityType === 'Spec'
+                    ? 'bg-[var(--color-info-500)]/10 text-[var(--color-info-500)]'
+                    : item.entityType === 'Requirement'
+                      ? 'bg-[var(--color-success-500)]/10 text-[var(--color-success-500)]'
+                      : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+                >
                   {item.entityType}
                 </span>
               </div>
@@ -106,7 +109,9 @@
           {/if}
         </div>
       {:else}
-        <div class="flex flex-col items-center justify-center py-6 text-[var(--color-text-tertiary)]">
+        <div
+          class="flex flex-col items-center justify-center py-6 text-[var(--color-text-tertiary)]"
+        >
           <Icon name="link" size="lg" class="mb-2 opacity-50" />
           <p class="text-xs">Not used yet</p>
         </div>
@@ -116,12 +121,16 @@
     <!-- Related Terms -->
     {#if term.relatedTermIds && term.relatedTermIds.length > 0}
       <div class="p-3 border-t border-[var(--color-border-primary)]">
-        <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+        <h3
+          class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+        >
           Related Terms
         </h3>
         <div class="flex flex-wrap gap-1">
           {#each term.relatedTermIds as relatedId (relatedId)}
-            <span class="text-xs px-2 py-1 bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] rounded">
+            <span
+              class="text-xs px-2 py-1 bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] rounded"
+            >
               {relatedId}
             </span>
           {/each}
@@ -132,13 +141,15 @@
     <!-- Replaced By (for deprecated terms) -->
     {#if term.status === 'Deprecated' && term.replacedByTermName}
       <div class="p-3 border-t border-[var(--color-border-primary)]">
-        <h3 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">
+        <h3
+          class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2"
+        >
           Replaced By
         </h3>
         <div class="p-2 bg-[var(--color-bg-primary)] rounded-lg">
           <div class="flex items-center gap-2 text-sm">
             <Icon name="arrow-right" size="sm" class="text-[var(--color-text-tertiary)]" />
-            <span class="text-[var(--color-accent-primary)]">{term.replacedByTermName}</span>
+            <span class="text-[var(--color-accent-text)]">{term.replacedByTermName}</span>
           </div>
         </div>
       </div>

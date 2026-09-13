@@ -3,18 +3,26 @@
   Trigger-based dropdown menu
 -->
 <script lang="ts">
-  import { Button } from '@sddp/ui';
+  /**
+   * The trigger snippet owns the control. Wrapping caller content in our own button nested a
+   * button inside a button wherever an IconButton was passed, which axe reports as
+   * nested-interactive and which gives screen readers two controls for one action.
+   */
+  interface TriggerContext {
+    /** Opens or closes the menu. Wire this to the trigger control's onclick. */
+    toggle: () => void;
+    /** Current menu state, for aria-expanded on the trigger control. */
+    open: boolean;
+  }
 
   interface Props {
     open?: boolean;
     position?: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
     class?: string;
-    triggerClass?: string;
     menuClass?: string;
     closeOnSelect?: boolean;
-    triggerLabel?: string;
     onOpenChange?: (open: boolean) => void;
-    trigger: import('svelte').Snippet;
+    trigger: import('svelte').Snippet<[TriggerContext]>;
     children?: import('svelte').Snippet;
   }
 
@@ -22,10 +30,8 @@
     open = $bindable(false),
     position = 'bottom-left',
     class: className = '',
-    triggerClass = '',
     menuClass = '',
     closeOnSelect = true,
-    triggerLabel,
     onOpenChange,
     trigger,
     children,
@@ -87,22 +93,15 @@
 </script>
 
 <div bind:this={containerRef} class="relative inline-block {className}">
-  <!-- Trigger -->
-  <Button
-    variant="unstyled"
-    class="dropdown-trigger {triggerClass}"
-    onclick={toggle}
-    aria-haspopup="true"
-    aria-expanded={open}
-    aria-label={triggerLabel ?? 'Toggle dropdown'}
-  >
-    {@render trigger()}
-  </Button>
+  <!-- Trigger: the caller's control, which carries onclick, aria-haspopup and aria-expanded -->
+  {@render trigger({ toggle, open })}
 
   <!-- Menu -->
   {#if open}
     <div
-      class="absolute z-50 min-w-40 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg py-1 {positionClasses[position]} {menuClass}"
+      class="absolute z-50 min-w-40 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg py-1 {positionClasses[
+        position
+      ]} {menuClass}"
       role="menu"
       tabindex="-1"
       aria-label="Dropdown menu"

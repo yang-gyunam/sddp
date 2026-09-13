@@ -17,17 +17,10 @@ export {
   subscribeProject,
 } from './stores/project.store';
 
-export {
-  setPendingEntityId,
-  consumePendingEntityId,
-} from './stores/projects.store';
+export { setPendingEntityId, consumePendingEntityId } from './stores/projects.store';
 
 // Timeline store
-export {
-  subscribeTimeline,
-  addTimelineEvent,
-  getTimelineEvents,
-} from './stores/timeline.store';
+export { subscribeTimeline, addTimelineEvent, getTimelineEvents } from './stores/timeline.store';
 
 // Timeline actions
 export { loadTimelineByProject, mapAuditLogDtoToTimelineEvent } from './actions';
@@ -39,6 +32,7 @@ export { resetTimelineStore } from './stores/timeline.store';
 
 // Services
 export {
+  createProjectService,
   getProjectService,
   ProjectService,
   getProjects,

@@ -5,6 +5,7 @@
 <script lang="ts">
   import type { Tab } from '../../types/layout.types';
   import { Icon, Spinner, Button } from '@sddp/ui';
+  import { resolveComponentAsync } from '../../utils/component-resolver';
 
   interface DynamicContentRendererProps {
     tab: Tab;
@@ -12,11 +13,7 @@
     class?: string;
   }
 
-  let {
-    tab,
-    groupId = '',
-    class: className = '',
-  }: DynamicContentRendererProps = $props();
+  let { tab, groupId = '', class: className = '' }: DynamicContentRendererProps = $props();
 
   // Loading and error states
   let isLoading = $state(true);
@@ -31,8 +28,8 @@
   $effect(() => {
     if (!tab) return;
 
-    // Skip if same tab and already loaded
-    if (currentTabId === tab.id && resolvedComponent) {
+    // Loading, loaded, and failed states only change through resolve/retry.
+    if (currentTabId === tab.id) {
       return;
     }
 
@@ -45,44 +42,15 @@
   });
 
   async function resolveComponent() {
-    try {
-      const component = tab.component;
+    const requestedTabId = tab.id;
+    const result = await resolveComponentAsync(tab.component);
+    if (currentTabId !== requestedTabId) return;
 
-      if (!component) {
-        // No component specified - show placeholder
-        isLoading = false;
-        return;
-      }
-
-      // If component is already a Svelte component (constructor)
-      if (typeof component === 'function') {
-        resolvedComponent = component;
-        isLoading = false;
-        return;
-      }
-
-      // If component is a promise (lazy import)
-      if (component instanceof Promise) {
-        const module = await component;
-        resolvedComponent = module.default || module;
-        isLoading = false;
-        return;
-      }
-
-      // If component is a module with default export
-      if (typeof component === 'object' && 'default' in component) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic module shape
-        resolvedComponent = (component as any).default;
-        isLoading = false;
-        return;
-      }
-
-      // Unknown component type - show placeholder
-      isLoading = false;
-    } catch (error) {
-      loadError = error as Error;
-      isLoading = false;
-      console.error('[DynamicContentRenderer] Failed to load component:', error);
+    resolvedComponent = result.component;
+    loadError = result.error;
+    isLoading = false;
+    if (result.error) {
+      console.error('[DynamicContentRenderer] Failed to load component:', result.error);
     }
   }
 
@@ -103,9 +71,7 @@
     <!-- Error State -->
     <div class="h-full flex items-center justify-center p-8" role="alert" aria-live="polite">
       <div class="text-center space-y-4 max-w-md">
-        <div
-          class="w-16 h-16 bg-red-500/20 rounded-lg flex items-center justify-center mx-auto"
-        >
+        <div class="w-16 h-16 bg-red-500/20 rounded-lg flex items-center justify-center mx-auto">
           <Icon name="alert-triangle" size="lg" class="text-red-400" />
         </div>
         <div>
@@ -128,25 +94,14 @@
             </div>
           </details>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onclick={handleRetry}
-        >
-          Try Again
-        </Button>
+        <Button variant="secondary" size="sm" onclick={handleRetry}>Try Again</Button>
       </div>
     </div>
   {:else if resolvedComponent}
     <!-- Dynamically Rendered Component -->
     {@const DynamicComponent = resolvedComponent}
     <div class="h-full tab-content-area">
-      <DynamicComponent
-        title={tab.title || ''}
-        tabId={tab.id}
-        {groupId}
-        {...tab.props}
-      />
+      <DynamicComponent title={tab.title || ''} tabId={tab.id} {groupId} {...tab.props} />
     </div>
   {:else}
     <!-- Default Placeholder (no component specified) -->
@@ -192,9 +147,7 @@
               </h4>
               <div class="text-xs text-[var(--color-text-secondary)] space-y-1">
                 <div>
-                  Tab ID: <code class="bg-[var(--color-bg-tertiary)] px-1 rounded"
-                    >{tab.id}</code
-                  >
+                  Tab ID: <code class="bg-[var(--color-bg-tertiary)] px-1 rounded">{tab.id}</code>
                 </div>
                 <div>
                   Component: <code class="bg-[var(--color-bg-tertiary)] px-1 rounded"

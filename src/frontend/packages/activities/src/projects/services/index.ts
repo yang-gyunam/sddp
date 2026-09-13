@@ -3,6 +3,7 @@ export {
   getTimelineByActor,
   getTimelineByProject,
   TimelineService,
+  createTimelineService,
   getTimelineService,
   resetTimelineService,
 } from './TimelineService';
@@ -20,6 +21,7 @@ export {
   resetProjectData,
   resetTenantData,
   ProjectService,
+  createProjectService,
   getProjectService,
   resetProjectService,
 } from './ProjectService';

@@ -52,7 +52,7 @@ export function getProjectState(): ProjectState {
 }
 
 export function setProjects(projects: ProjectWithBadges[]) {
-  projectStore.update(state => ({
+  projectStore.update((state) => ({
     ...state,
     projects,
     projectsError: null,
@@ -60,14 +60,14 @@ export function setProjects(projects: ProjectWithBadges[]) {
 }
 
 export function setProjectsLoading(loading: boolean) {
-  projectStore.update(state => ({
+  projectStore.update((state) => ({
     ...state,
     projectsLoading: loading,
   }));
 }
 
 export function setProjectsError(error: string | null) {
-  projectStore.update(state => ({
+  projectStore.update((state) => ({
     ...state,
     projectsError: error,
     projectsLoading: false,
@@ -75,7 +75,7 @@ export function setProjectsError(error: string | null) {
 }
 
 export function toggleProjectExpanded(projectId: string) {
-  projectStore.update(state => {
+  projectStore.update((state) => {
     const newExpanded = new Set(state.expandedProjectIds);
     if (newExpanded.has(projectId)) {
       newExpanded.delete(projectId);
@@ -91,7 +91,7 @@ export function toggleProjectExpanded(projectId: string) {
 }
 
 export function setProjectExpanded(projectId: string, expanded: boolean) {
-  projectStore.update(state => {
+  projectStore.update((state) => {
     const newExpanded = new Set(state.expandedProjectIds);
     if (expanded) {
       newExpanded.add(projectId);
@@ -107,14 +107,14 @@ export function setProjectExpanded(projectId: string, expanded: boolean) {
 }
 
 export function setSelectedProject(projectId: string | null) {
-  projectStore.update(state => ({
+  projectStore.update((state) => ({
     ...state,
     selectedProjectId: projectId,
   }));
 }
 
 export function setProjectDetail(projectId: string, detail: ProjectDetail) {
-  projectStore.update(state => {
+  projectStore.update((state) => {
     const newDetails = new Map(state.projectDetails);
     newDetails.set(projectId, detail);
     return {

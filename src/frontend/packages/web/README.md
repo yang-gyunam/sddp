@@ -21,6 +21,10 @@ npm run test
 npm run test:e2e -w @sddp/web
 ```
 
+Run the production build from `src/frontend`; it builds the library packages first and verifies
+that the web app consumes their `dist/` exports. A workspace-local `packages/web` build is only a
+source-wiring diagnostic and is not the release contract.
+
 ## Related Files
 
 - [../../../../docs/public-guide.md](../../../../docs/public-guide.md)

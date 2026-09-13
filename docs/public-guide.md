@@ -74,12 +74,16 @@ make demo-onbrick      # OnBrick showcase seed
 ## Validation
 
 ```bash
+make build
 make test
 make lint
 
 cd src/frontend
 npm run test:e2e
 ```
+
+`make build` runs the frontend from the workspace root so the `ui`, `shell`, and `activities`
+packages are generated first and the web production bundle consumes their `dist/` exports.
 
 In the public repository, `npm run test:e2e` runs the OnBrick showcase path only.
 
@@ -93,3 +97,21 @@ cd src/frontend/packages/web
 ## Contribution Model
 
 Issues and pull requests are reviewed on a best-effort basis.
+
+## Preserve files when upgrading
+
+Before replacing an existing API container, follow [API data preservation](deploy/api-data.md).
+The new `api_data` volume preserves descriptors and Git working directories; existing container files
+must be copied into it before recreation. Database-only backups do not include these files.
+
+## Artifact generation scope
+
+The Generation tab displays artifacts recorded on the server; selecting output types does not run a
+code generator. Generation tools and the internal CLI are not included in this public distribution.
+Contact your deployment operator for separately managed generation. The legacy regeneration endpoint
+returns HTTP 410; its `GENERATION_VIA_CLI` error code is retained for compatibility, not as an instruction
+to install a public CLI package.
+
+## Version 0.3.0 support scope
+
+The global Search UI and SLA policy management UI are not supported in 0.3.0. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its AI/Ollama dependencies are excluded from this public distribution. Existing project and entity-specific navigation is unchanged.

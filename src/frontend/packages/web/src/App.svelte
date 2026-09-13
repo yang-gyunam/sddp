@@ -7,6 +7,7 @@
     SidebarPanels,
     CommandPalette,
     QuickSwitcher,
+    TabClosePrompt,
     ToastContainer,
     GridOverlay,
     formatTime,
@@ -14,43 +15,38 @@
     truncate,
     showProblemsPanel,
   } from '@sddp/shell';
-  import {
-    tabActions,
-    editorGroups,
-    activeGroupId,
-    layoutStore,
-  } from '@sddp/shell/stores';
+  import { tabActions, editorGroups, activeGroupId, layoutStore } from '@sddp/shell/stores';
   import type { LayoutState, ActivityPanelMap, SidebarPanelConfig } from '@sddp/shell/types';
   // @sddp/ui - Design system
   import { Icon, IconButton, Spinner } from '@sddp/ui';
   // @sddp/auth - Authentication
   import { LoginScreen, ForcePasswordChangePage } from '@sddp/shell/auth/pages';
-  import { authStore, refreshToken, logout, hasSession, setLoading, clearRequirePasswordChange, getAuthState } from '@sddp/shell/auth/stores';
+  import {
+    authStore,
+    refreshToken,
+    logout,
+    clearRequirePasswordChange,
+    getAuthState,
+  } from '@sddp/shell/auth/stores';
   import type { AuthState } from '@sddp/shell/auth/types';
   import {
     conversationStoreInstance,
     getConversationStoreState,
     setChannels,
     setChannelsLoading,
-    getConversationService,
+    createConversationService,
     loadGlobalConversationsSidebar,
     setSelectedConversation,
     getSidebarState,
     type ConversationEntry,
-  } from '@sddp/activities/conversations';
+  } from '@sddp/activities/runtime';
   // Router & Navigation
   import { navigationService } from '@sddp/shell/core/services';
-  // Dashboard
-  import {
-    MyDashboardPanel,
-    type DashboardMenuItem,
-  } from '@sddp/activities/dashboard';
   // Settings activity
-  import { SettingsPanelContent } from '@sddp/activities/settings/components/sections';
-  import { canAccessSettingsProject, getVisibleSettingsProjects } from '@sddp/activities/settings/utils';
-  // Conversation sidebar (full featured)
-  import { ConversationSidebarPanel } from '@sddp/activities/conversations/components/sections';
-  import { ConversationCreatePage, GlobalConversationsPage } from '@sddp/activities/conversations/components/pages';
+  import {
+    canAccessSettingsProject,
+    getVisibleSettingsProjects,
+  } from '@sddp/activities/settings/utils';
   // Projects
   import {
     projectStore,
@@ -59,15 +55,14 @@
     setProjectsLoading,
     setProjectsError,
     setSelectedProject,
-    getProjectService,
+    createProjectService,
     subscribeTimeline,
     loadTimelineByProject,
     type ProjectTreeNode,
     type ProjectPageType,
     type TimelineEvent,
-  } from '@sddp/activities/projects';
-  import { ProjectPanelContent, TimelinePanel } from '@sddp/activities/projects/components/sections';
-  import { getProjectBadges } from '@sddp/activities/projects/types';
+  } from '@sddp/activities/runtime';
+  import { getProjectBadges, PROJECT_PAGE_CONFIG } from '@sddp/activities/projects/types';
   // Tasks
   import {
     subscribeTask,
@@ -79,32 +74,39 @@
   } from '@sddp/activities/task/stores';
   import { getMyTaskStats, getBacklogSummary } from '@sddp/activities/task/services/TaskService';
   import type { TaskCategory, TaskSidebarState } from '@sddp/activities/task/types';
-  import { TaskCategoriesPanel, TaskBacklogPanel } from '@sddp/activities/task/components/sections';
   // Shared utilities
   import { problems } from '@sddp/shell/stores';
   // Local
   import { toggleTheme, isDarkMode } from './stores/theme.store';
   import { resetAppState, resetAppStatePreserveLayout } from './lib/resetAppState';
   import type { TreeNode } from './types';
-  import {
-    activityItems,
-    activityBottomItems,
-    activityPanels,
-  } from './config/activity.config';
-  import {
-    resolveMenuComponent,
-    type MenuContext,
-  } from './config/menu-registry';
+  import { activityItems, activityBottomItems, activityPanels } from './config/activity.config';
+  import { activityComponents } from './config/activity-loaders';
+  import { resolveMenuComponent, type MenuContext } from './config/menu-registry';
+  import { appVersionLabel, appVersionTooltip } from './config/app-version';
+  import LazyActivityContent from './components/LazyActivityContent.svelte';
   // Hooks — orchestration composition
   import { useConversationToastRouting } from './hooks/useConversationToastRouting.svelte';
   import { useShellSelectionSync } from './hooks/useShellSelectionSync.svelte';
   import { useRealtimeBridge } from './hooks/useRealtimeBridge.svelte';
   import { useAppBootstrap } from './hooks/useAppBootstrap.svelte';
 
+  interface DashboardMenuItem {
+    id: string;
+    label: string;
+    icon: string;
+    section: string;
+  }
+
   // === State ===
 
   // Auth state
-  let authState = $state<AuthState>({ user: null, isAuthenticated: false, isLoading: true });
+  let authState = $state<AuthState>({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+    sessionStatus: 'checking',
+  });
   let authUnsubscribe: (() => void) | null = null;
 
   // App initialization state (prevents Welcome screen flicker during tab restoration)
@@ -139,7 +141,8 @@
     authState.user?.roles?.some((r: string) => r === 'Admin' || r === 'ADMIN') ?? false
   );
   const isProductOwner = $derived(
-    authState.user?.roles?.some((r: string) => r === 'ProductOwner' || r === 'PRODUCT_OWNER') ?? false
+    authState.user?.roles?.some((r: string) => r === 'ProductOwner' || r === 'PRODUCT_OWNER') ??
+      false
   );
   const visibleSettingsProjects = $derived(
     getVisibleSettingsProjects({
@@ -288,7 +291,6 @@
     void loadChannels(projectId);
   });
 
-
   // --- Task sidebar state ---
   let taskState = $state<TaskSidebarState>(getTaskState());
   let taskCategories = $state<TaskCategory[]>([]);
@@ -368,15 +370,10 @@
 
     // Try to refresh token on app load (for returning users with valid refresh token cookie)
     try {
-      let refreshed = false;
-      if (hasSession()) {
-        refreshed = await refreshToken();
-      } else {
-        setLoading(false);
-      }
+      const refreshed = (await refreshToken()) === 'authenticated';
       if (refreshed) {
         // Preserve layout (sidebar position) on reload; only reset domain data
-        resetAppStatePreserveLayout();
+        await resetAppStatePreserveLayout();
 
         cleanupBootstrap = bootstrap.initialize();
         cleanupToastRouting = toastRouting.start();
@@ -420,7 +417,7 @@
   // Handle successful login
   async function handleLoginSuccess() {
     // Ensure clean slate (in case of stale state from previous session)
-    resetAppState();
+    await resetAppState();
 
     cleanupBootstrap = bootstrap.initialize();
     cleanupToastRouting = toastRouting.start();
@@ -449,7 +446,7 @@
     realtimeBridge.disconnect();
 
     // Reset all application state (tabs, stores, services)
-    resetAppState();
+    await resetAppState();
 
     // Always navigate to root — previous user's path should not carry over
     window.history.replaceState(null, '', '/');
@@ -470,8 +467,7 @@
       return;
     }
 
-    const service = getConversationService();
-    service.setContext(user.tenantId, projectId);
+    const service = createConversationService(user.tenantId, projectId);
 
     setChannelsLoading(true);
     try {
@@ -487,8 +483,7 @@
     const user = authStore.get().user;
     if (!user?.tenantId) return;
 
-    const service = getProjectService();
-    service.setTenantId(user.tenantId);
+    const service = createProjectService(user.tenantId);
 
     setProjectsLoading(true);
     try {
@@ -577,7 +572,7 @@
     selectionSync.selectedCategoryId = null;
     selectionSync.selectedBacklogProjectId = projectId;
     setSelectedProject(projectId);
-    const project = taskState.backlogSummary?.projects.find(p => p.projectId === projectId);
+    const project = taskState.backlogSummary?.projects.find((p) => p.projectId === projectId);
     const projectName = project?.projectName ?? 'Backlog';
     openTabWithComponent(
       projectName,
@@ -662,7 +657,7 @@
       const targetProjectId = projectMatch[1];
 
       // Validate user has access to this project
-      const hasAccess = projectState.projects.some(p => p.id === targetProjectId);
+      const hasAccess = projectState.projects.some((p) => p.id === targetProjectId);
       if (!hasAccess) {
         openAccessDeniedTab(
           'Access Denied',
@@ -687,7 +682,7 @@
     const taskCategoryMatch = canonicalPath.match(/^\/tasks\/category\/(.+)$/);
     if (taskCategoryMatch && taskCategoryMatch[1]) {
       const catId = taskCategoryMatch[1];
-      const cat = taskCategories.find(c => c.id === catId);
+      const cat = taskCategories.find((c) => c.id === catId);
       const catName = cat?.name ?? 'Category';
       openTabWithComponent(catName, 'tag', canonicalPath, `tasks-category-${catId}`);
       return true;
@@ -696,9 +691,16 @@
     const taskBacklogMatch = canonicalPath.match(/^\/tasks\/backlog\/(.+)$/);
     if (taskBacklogMatch && taskBacklogMatch[1]) {
       const backlogProjectId = taskBacklogMatch[1];
-      const backlogProject = taskState.backlogSummary?.projects.find(p => p.projectId === backlogProjectId);
+      const backlogProject = taskState.backlogSummary?.projects.find(
+        (p) => p.projectId === backlogProjectId
+      );
       const backlogName = backlogProject?.projectName ?? 'Backlog';
-      openTabWithComponent(backlogName, 'folder', canonicalPath, `tasks-backlog-${backlogProjectId}`);
+      openTabWithComponent(
+        backlogName,
+        'folder',
+        canonicalPath,
+        `tasks-backlog-${backlogProjectId}`
+      );
       return true;
     }
 
@@ -711,8 +713,8 @@
         recent: { label: 'Recent Activity', icon: 'clock' },
         notifications: { label: 'Notifications', icon: 'bell' },
       };
-        const config = dashboardConfig[section];
-        if (config) {
+      const config = dashboardConfig[section];
+      if (config) {
         openTabWithComponent(config.label, config.icon, canonicalPath, `dashboard-${section}`);
         return true;
       }
@@ -778,7 +780,10 @@
         };
         const cfg = projectConfig[pageType];
         if (cfg) {
-          const canAccessProjectSettings = canAccessSettingsProject(visibleSettingsProjects, projId);
+          const canAccessProjectSettings = canAccessSettingsProject(
+            visibleSettingsProjects,
+            projId
+          );
           if (!canAccessProjectSettings) {
             openAccessDeniedTab(
               cfg.title,
@@ -789,7 +794,12 @@
             );
             return true;
           }
-          openTabWithComponent(cfg.title, cfg.icon, canonicalPath, `settings-project-${projId}-${pageType}`);
+          openTabWithComponent(
+            cfg.title,
+            cfg.icon,
+            canonicalPath,
+            `settings-project-${projId}-${pageType}`
+          );
           return true;
         }
       }
@@ -807,22 +817,37 @@
     // 1. sidebar store (tenant-wide conversations)
     // 2. conversationState.channels (project-scoped channels)
     const sidebarState = getSidebarState();
-    const convEntry = [...sidebarState.channels, ...sidebarState.privateChannels, ...sidebarState.topics]
-      .find(c => c.id === parsed.id);
-    const channelEntry = !convEntry ? conversationState.channels?.find(c => c.id === parsed.id) : null;
+    const convEntry = [
+      ...sidebarState.channels,
+      ...sidebarState.privateChannels,
+      ...sidebarState.topics,
+    ].find((c) => c.id === parsed.id);
+    const channelEntry = !convEntry
+      ? conversationState.channels?.find((c) => c.id === parsed.id)
+      : null;
     const convName = convEntry?.name || channelEntry?.topic;
     // All entity views from URL path are readonly
     const readonlyProps = { additionalProps: { readonly: true } };
 
     switch (parsed.type) {
       case 'spec':
-        openTabWithComponent(`Spec ${shortId} (view)`, 'file-signature', canonicalPath, `spec-${parsed.id}`, readonlyProps);
+        openTabWithComponent(
+          `Spec ${shortId} (view)`,
+          'file-signature',
+          canonicalPath,
+          `spec-${parsed.id}`,
+          readonlyProps
+        );
         return true;
       case 'conversation':
-      case 'space': { // legacy fallback
+      case 'space': {
+        // legacy fallback
         const convTitle = convName || shortId;
         openTabWithComponent(convTitle, 'hash', canonicalPath, `conversation-${parsed.id}`, {
-          additionalProps: { conversationType: 'Channel', channelStatus: convEntry?.channelStatus ?? null },
+          additionalProps: {
+            conversationType: 'Channel',
+            channelStatus: convEntry?.channelStatus ?? null,
+          },
         });
         return true;
       }
@@ -832,13 +857,31 @@
         return true;
       }
       case 'requirement':
-        openTabWithComponent(`Requirement ${shortId} (view)`, 'clipboard-list', canonicalPath, `requirement-${parsed.id}`, readonlyProps);
+        openTabWithComponent(
+          `Requirement ${shortId} (view)`,
+          'clipboard-list',
+          canonicalPath,
+          `requirement-${parsed.id}`,
+          readonlyProps
+        );
         return true;
       case 'glossary':
-        openTabWithComponent(`Term ${shortId} (view)`, 'book-open', canonicalPath, `glossary-${parsed.id}`, readonlyProps);
+        openTabWithComponent(
+          `Term ${shortId} (view)`,
+          'book-open',
+          canonicalPath,
+          `glossary-${parsed.id}`,
+          readonlyProps
+        );
         return true;
       case 'dm':
-        openTabWithComponent(`@${shortId}`, 'message-circle', canonicalPath, `dm-${parsed.id}`, undefined);
+        openTabWithComponent(
+          `@${shortId}`,
+          'message-circle',
+          canonicalPath,
+          `dm-${parsed.id}`,
+          undefined
+        );
         return true;
       default:
         return false;
@@ -853,7 +896,7 @@
       icon,
       dirty: false,
       closable: true,
-      component: ConversationCreatePage,
+      component: activityComponents.ConversationCreatePage,
       props: {
         createType: type,
         onCreated: async (id: string, convType: 'Channel' | 'Forum', name: string) => {
@@ -873,7 +916,7 @@
       icon: 'message-square',
       dirty: false,
       closable: true,
-      component: GlobalConversationsPage,
+      component: activityComponents.GlobalConversationsPage,
       props: {
         initialCreateMode: 'dm',
       },
@@ -891,7 +934,7 @@
       selectionSync.selectedProjectNodePath = `/${projectId}/${nodeType}`;
     }
 
-    const project = projectState.projects.find(p => p.id === projectId);
+    const project = projectState.projects.find((p) => p.id === projectId);
     const projectName = project?.name || '';
 
     const nodeConfig: Record<ProjectTreeNode['type'], { icon: string; label: string }> = {
@@ -901,6 +944,7 @@
       specs: { icon: 'file-code', label: 'Specs' },
       tasks: { icon: 'check-square', label: 'Tasks' },
       glossary: { icon: 'book-open', label: 'Glossary' },
+      knowledge: PROJECT_PAGE_CONFIG.knowledge,
       artifacts: { icon: 'package', label: 'Artifacts' },
       effort: { icon: 'clock', label: 'Effort' },
       traceability: { icon: 'type-hierarchy', label: 'Traceability' },
@@ -956,19 +1000,13 @@
     channelStatus?: 'Active' | 'Concluded' | null;
   }) {
     setSelectedConversation(item.id);
-    openTabWithComponent(
-      `@${item.name}`,
-      'message-circle',
-      `/dm/${item.id}`,
-      `dm-${item.id}`,
-      {
-        additionalProps: {
-          projectId: item.projectId ?? '',
-          channelStatus: item.channelStatus ?? null,
-          conversationType: 'DirectMessage',
-        },
-      }
-    );
+    openTabWithComponent(`@${item.name}`, 'message-circle', `/dm/${item.id}`, `dm-${item.id}`, {
+      additionalProps: {
+        projectId: item.projectId ?? '',
+        channelStatus: item.channelStatus ?? null,
+        conversationType: 'DirectMessage',
+      },
+    });
   }
 
   /**
@@ -976,12 +1014,7 @@
    */
   function handleDashboardItemSelect(item: DashboardMenuItem) {
     selectionSync.selectedDashboardItemId = item.id;
-    openTabWithComponent(
-      item.label,
-      item.icon,
-      `/dashboard/${item.section}`,
-      item.id
-    );
+    openTabWithComponent(item.label, item.icon, `/dashboard/${item.section}`, item.id);
   }
 
   const panelActions = {
@@ -990,7 +1023,9 @@
         id: 'new-category',
         icon: 'plus',
         label: 'New Category',
-        onClick: () => { showCategoryInput = true; },
+        onClick: () => {
+          showCategoryInput = true;
+        },
       },
     ],
   };
@@ -1005,10 +1040,10 @@
   let statusItems = $derived([
     {
       id: 'version',
-      text: 'v0.1.0',
+      text: appVersionLabel,
       icon: 'info',
       position: 'left' as const,
-      tooltip: 'SDDP v0.1.0',
+      tooltip: appVersionTooltip,
     },
     {
       id: 'user',
@@ -1042,14 +1077,18 @@
     //   onClick: showProblemsPanel,
     // },
     // Dev tool: Grid overlay toggle (only in development)
-    ...(import.meta.env.DEV ? [{
-      id: 'grid-overlay',
-      text: showGridOverlay ? 'Grid: ON' : 'Grid',
-      icon: 'grid',
-      position: 'right' as const,
-      tooltip: 'Toggle grid overlay for responsive design verification',
-      onClick: toggleGridOverlay,
-    }] : []),
+    ...(import.meta.env.DEV
+      ? [
+          {
+            id: 'grid-overlay',
+            text: showGridOverlay ? 'Grid: ON' : 'Grid',
+            icon: 'grid',
+            position: 'right' as const,
+            tooltip: 'Toggle grid overlay for responsive design verification',
+            onClick: toggleGridOverlay,
+          },
+        ]
+      : []),
     {
       id: 'theme',
       text: isDarkMode() ? 'Dark' : 'Light',
@@ -1109,91 +1148,121 @@
     <Spinner size="xl" />
   </div>
 
-<!-- Login Screen -->
+  <!-- Login Screen -->
 {:else if !authState.isAuthenticated}
-  <LoginScreen onLoginSuccess={handleLoginSuccess} />
+  <LoginScreen
+    onLoginSuccess={handleLoginSuccess}
+    sessionExpired={authState.sessionStatus === 'expired'}
+  />
 
-<!-- Force Password Change -->
+  <!-- Force Password Change -->
 {:else if authState.requirePasswordChange}
   <ForcePasswordChangePage onChanged={clearRequirePasswordChange} />
 
-<!-- Main Application -->
+  <!-- Main Application -->
 {:else}
   {#snippet dynamicPanelRenderer(panelId: string)}
     {#if panelId.startsWith('project-')}
       {@const projectId = panelId.replace('project-', '')}
-      {@const project = projectState.projects.find(p => p.id === projectId)}
+      {@const project = projectState.projects.find((p) => p.id === projectId)}
       {#if project}
-        <ProjectPanelContent
-          {project}
-          badges={getProjectBadges(project.id)}
-          selectedNodePath={selectionSync.selectedProjectNodePath}
-          onNodeSelect={handleProjectNodeSelect}
+        <LazyActivityContent
+          reference={activityComponents.ProjectPanelContent}
+          componentProps={{
+            project,
+            badges: getProjectBadges(project.id),
+            selectedNodePath: selectionSync.selectedProjectNodePath,
+            onNodeSelect: handleProjectNodeSelect,
+          }}
         />
       {/if}
     {:else if panelId === 'no-projects'}
       <div class="flex flex-col items-center justify-center py-8 text-center px-4">
         <Icon name="folder" size="lg" class="text-[var(--color-text-tertiary)] mb-2" />
-        <span class="text-sm text-[var(--color-text-tertiary)]">
-          No projects assigned
-        </span>
+        <span class="text-sm text-[var(--color-text-tertiary)]"> No projects assigned </span>
       </div>
     {:else if panelId === 'settings-user'}
-      <SettingsPanelContent
-        panelType="user"
-        selectedId={selectionSync.selectedSettingsItemId}
-        onOpenTab={(config) => openTabWithComponent(config.title, config.icon, config.path, config.menuId)}
+      <LazyActivityContent
+        reference={activityComponents.SettingsPanelContent}
+        componentProps={{
+          panelType: 'user',
+          selectedId: selectionSync.selectedSettingsItemId,
+          onOpenTab: (config: { title: string; icon: string; path: string; menuId: string }) =>
+            openTabWithComponent(config.title, config.icon, config.path, config.menuId),
+        }}
       />
     {:else if panelId.startsWith('settings-project-')}
       {@const settingsProjectId = panelId.replace('settings-project-', '')}
-      {@const settingsProject = visibleSettingsProjects.find(p => p.id === settingsProjectId)}
-      <SettingsPanelContent
-        panelType="project"
-        projectId={settingsProjectId}
-        projectName={settingsProject?.name ?? 'Project'}
-        selectedId={selectionSync.selectedSettingsItemId}
-        onOpenTab={(config) => openTabWithComponent(config.title, config.icon, config.path, config.menuId)}
+      {@const settingsProject = visibleSettingsProjects.find((p) => p.id === settingsProjectId)}
+      <LazyActivityContent
+        reference={activityComponents.SettingsPanelContent}
+        componentProps={{
+          panelType: 'project',
+          projectId: settingsProjectId,
+          projectName: settingsProject?.name ?? 'Project',
+          selectedId: selectionSync.selectedSettingsItemId,
+          onOpenTab: (config: { title: string; icon: string; path: string; menuId: string }) =>
+            openTabWithComponent(config.title, config.icon, config.path, config.menuId),
+        }}
       />
     {:else if panelId === 'settings-system'}
-      <SettingsPanelContent
-        panelType="system"
-        selectedId={selectionSync.selectedSettingsItemId}
-        onOpenTab={(config) => openTabWithComponent(config.title, config.icon, config.path, config.menuId)}
+      <LazyActivityContent
+        reference={activityComponents.SettingsPanelContent}
+        componentProps={{
+          panelType: 'system',
+          selectedId: selectionSync.selectedSettingsItemId,
+          onOpenTab: (config: { title: string; icon: string; path: string; menuId: string }) =>
+            openTabWithComponent(config.title, config.icon, config.path, config.menuId),
+        }}
       />
     {/if}
   {/snippet}
 
   {#snippet timelinePanelSnippet()}
-    <TimelinePanel events={timelineEvents} />
+    <LazyActivityContent
+      reference={activityComponents.TimelinePanel}
+      componentProps={{ events: timelineEvents }}
+    />
   {/snippet}
 
   {#snippet myTasksPanel()}
-    <TaskCategoriesPanel
-      categories={taskCategories}
-      selectedCategoryId={selectionSync.selectedCategoryId}
-      showInput={showCategoryInput}
-      onCategorySelect={handleCategorySelect}
-      onCategoryCreate={handleCategoryCreate}
-      onCancelInput={() => { showCategoryInput = false; }}
+    <LazyActivityContent
+      reference={activityComponents.TaskCategoriesPanel}
+      componentProps={{
+        categories: taskCategories,
+        selectedCategoryId: selectionSync.selectedCategoryId,
+        showInput: showCategoryInput,
+        onCategorySelect: handleCategorySelect,
+        onCategoryCreate: handleCategoryCreate,
+        onCancelInput: () => {
+          showCategoryInput = false;
+        },
+      }}
     />
   {/snippet}
 
   {#snippet backlogPanel()}
-    <TaskBacklogPanel
-      backlogSummary={taskState.backlogSummary}
-      selectedProjectId={selectionSync.selectedBacklogProjectId}
-      onProjectSelect={handleBacklogProjectSelect}
+    <LazyActivityContent
+      reference={activityComponents.TaskBacklogPanel}
+      componentProps={{
+        backlogSummary: taskState.backlogSummary,
+        selectedProjectId: selectionSync.selectedBacklogProjectId,
+        onProjectSelect: handleBacklogProjectSelect,
+      }}
     />
   {/snippet}
 
   {#snippet myDashboardPanel()}
-    <MyDashboardPanel
-      selectedId={selectionSync.selectedDashboardItemId}
-      onSelect={handleDashboardItemSelect}
+    <LazyActivityContent
+      reference={activityComponents.MyDashboardPanel}
+      componentProps={{
+        selectedId: selectionSync.selectedDashboardItemId,
+        onSelect: handleDashboardItemSelect,
+      }}
     />
   {/snippet}
 
- <!-- ConnectionBanner disabled: status Bottom Panel Problems warning/info -->
+  <!-- ConnectionBanner disabled: status Bottom Panel Problems warning/info -->
   <!-- <ConnectionBanner
     visible={showConnectionBanner}
     message={connectionBannerMessage}
@@ -1212,13 +1281,16 @@
 
     {#snippet sidebarContent()}
       {#if currentActivity === 'conversations'}
-        <ConversationSidebarPanel
-          tenantId={authState.user?.tenantId ?? ''}
-          onConversationSelect={handleConversationSelect}
-          onDirectMessageSelect={(dm) => handleDirectMessageSelect(dm)}
-          onCreateChannel={() => handleConversationCreate('channel')}
-          onCreateForum={() => handleConversationCreate('forum')}
-          onCreateDM={handleCreateDM}
+        <LazyActivityContent
+          reference={activityComponents.ConversationSidebarPanel}
+          componentProps={{
+            tenantId: authState.user?.tenantId ?? '',
+            onConversationSelect: handleConversationSelect,
+            onDirectMessageSelect: handleDirectMessageSelect,
+            onCreateChannel: () => handleConversationCreate('channel'),
+            onCreateForum: () => handleConversationCreate('forum'),
+            onCreateDM: handleCreateDM,
+          }}
         />
       {:else}
         <SidebarPanels
@@ -1231,8 +1303,8 @@
             backlog: backlogPanel,
           }}
           panelContentRenderer={dynamicPanelRenderer}
-          panelActions={panelActions}
-          panelLoading={panelLoading}
+          {panelActions}
+          {panelLoading}
           menus={menuItems}
           selectedMenuId={selectionSync.selectedMenuId}
           onMenuSelect={handleMenuSelect}
@@ -1241,11 +1313,7 @@
     {/snippet}
 
     {#snippet mainContent()}
-      <SplitEditorGroup
-        {groups}
-        activeGroupId={currentActiveGroupId}
-        class="h-full"
-      />
+      <SplitEditorGroup {groups} activeGroupId={currentActiveGroupId} class="h-full" />
     {/snippet}
   </AppLayout>
 
@@ -1254,6 +1322,9 @@
 
   <!-- Quick Switcher (Ctrl+Tab) -->
   <QuickSwitcher bind:visible={bootstrap.quickSwitcherVisible} />
+
+  <!-- Unsaved-changes prompt for tab closes -->
+  <TabClosePrompt />
 
   <!-- Toast Notifications -->
   <ToastContainer position="top-right" />

@@ -13,12 +13,21 @@
  */
 
 import { test, expect } from '../helpers/fixtures';
-import { test as baseTest, expect as baseExpect } from '@playwright/test';
+import { test as baseTest, expect as baseExpect, type Locator } from '@playwright/test';
 import { openEditorTabs } from '../helpers/page-object.helpers';
 
 // ── Selectors ──
 const ACTIVITY_BAR = '[role="tablist"][aria-label="Activity Bar"]';
 const EDITOR_TAB = '[role="tab"][data-tab-id]';
+
+/**
+ * The close control is a sibling of the tab, not a child: a tablist may own nothing but tabs, so
+ * the button was moved out of it and hidden from the accessibility tree. Searching inside the tab
+ * finds nothing, which is what these tests were doing before the skip stopped saying so.
+ */
+function closeControlFor(tab: Locator): Locator {
+  return tab.locator('xpath=..').locator('button[title^="Close"]');
+}
 const CONTEXT_MENU = '[role="menu"]';
 const MENU_ITEM = '[role="menuitem"]';
 
@@ -99,8 +108,7 @@ test.describe('App Shell - Layout Structure', () => {
 
   test('should have activity bar on the left', async ({ page }) => {
     const activityBar = page.locator(ACTIVITY_BAR).first();
-    const isVisible = await activityBar.isVisible().catch(() => false);
-    test.skip(!isVisible, 'Activity bar not visible');
+    await expect(activityBar).toBeVisible();
 
     const activityItems = activityBar.locator('[role="tab"]');
     const count = await activityItems.count();
@@ -130,8 +138,7 @@ test.describe('App Shell - Activity Bar Interaction', () => {
 
   test('should highlight active activity item', async ({ page }) => {
     const activityBar = page.locator(ACTIVITY_BAR).first();
-    const isVisible = await activityBar.isVisible().catch(() => false);
-    test.skip(!isVisible, 'Activity bar not visible');
+    await expect(activityBar).toBeVisible();
 
     const firstItem = activityBar.locator('[role="tab"]').first();
     await firstItem.click();
@@ -146,20 +153,15 @@ test.describe('App Shell - Tabs Functionality', () => {
   });
 
   test('should display tab bar when tabs are present', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const tabBar = page.locator('[role="tablist"]').filter({ has: page.locator(EDITOR_TAB) }).first();
     await expect(tabBar).toBeVisible({ timeout: 5000 });
   });
 
   test('should be able to click on tabs to switch', async ({ page }) => {
-    if ((await openEditorTabs(page, 2)) < 2) {
-      test.skip(true, 'Could not open at least two editor tabs');
-      return;
-    }
+    const opened = await openEditorTabs(page, 2);
+    expect(opened).toBeGreaterThanOrEqual(2);
 
     const editorTabs = page.locator(EDITOR_TAB);
     const secondTab = editorTabs.nth(1);
@@ -168,30 +170,19 @@ test.describe('App Shell - Tabs Functionality', () => {
   });
 
   test('should show close button on closable tabs', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
-    const firstTab = page.locator(EDITOR_TAB).first();
-    const closeButton = firstTab.locator('button[title^="Close"], button[aria-label^="Close "]');
-    const hasCloseButton = await closeButton.isVisible().catch(() => false);
-    expect(hasCloseButton).toBe(true);
+    await expect(closeControlFor(page.locator(EDITOR_TAB).first())).toBeVisible();
   });
 
   test('should close tab when clicking close button', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const editorTabs = page.locator(EDITOR_TAB);
     const initialCount = await editorTabs.count();
 
-    const firstTab = editorTabs.first();
-    const closeButton = firstTab.locator('button[title^="Close"], button[aria-label^="Close "]');
-    const hasCloseButton = await closeButton.isVisible().catch(() => false);
-    test.skip(!hasCloseButton, 'Close button not visible');
+    const closeButton = closeControlFor(editorTabs.first());
+    await expect(closeButton).toBeVisible();
 
     await closeButton.click();
     await expect.poll(
@@ -207,37 +198,25 @@ test.describe('App Shell - Tab Context Menu', () => {
   });
 
   test('should show context menu on right-click', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     // Editor →
     await page.locator(EDITOR_TAB).first().click({ button: 'right' });
 
     const menu = page.locator(CONTEXT_MENU);
-    if (!(await menu.isVisible({ timeout: 2000 }).catch(() => false))) {
-      test.skip(true, 'Context menu not visible after right-click');
-      return;
-    }
+    await expect(menu).toBeVisible();
 
     await expect(menu.locator(`${MENU_ITEM}:has-text("Close")`).first()).toBeVisible();
     await page.keyboard.press('Escape');
   });
 
   test('should close context menu when clicking outside', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     await page.locator(EDITOR_TAB).first().click({ button: 'right' });
 
     const menu = page.locator(CONTEXT_MENU);
-    if (!(await menu.isVisible({ timeout: 2000 }).catch(() => false))) {
-      test.skip(true, 'Context menu not visible after right-click');
-      return;
-    }
+    await expect(menu).toBeVisible();
 
     // tabpanel →
     await page
@@ -255,24 +234,22 @@ test.describe('App Shell - Sidebar Panels', () => {
 
   test('should have collapsible panels in sidebar', async ({ page }) => {
     const sidebar = page.locator('aside').first();
-    const isVisible = await sidebar.isVisible().catch(() => false);
-    test.skip(!isVisible, 'Sidebar not visible');
+    await expect(sidebar).toBeVisible();
 
-    const panelHeaders = sidebar.locator('button[class*="flex"], [class*="CollapsiblePanel"]');
-    const count = await panelHeaders.count().catch(() => 0);
-    test.skip(count === 0, 'No collapsible panels found');
-    expect(count).toBeGreaterThan(0);
+    // CollapsiblePanel and CollapsibleGroup both render a native <button> carrying aria-expanded.
+    // A CSS [role="button"] matches the attribute, not the implicit role, so it finds none of them.
+    const panelHeaders = sidebar.locator('button[aria-expanded]');
+    await expect(panelHeaders.first()).toBeVisible();
+    expect(await panelHeaders.count()).toBeGreaterThan(0);
   });
 
   test('should toggle panel collapse state', async ({ page }) => {
     const sidebar = page.locator('aside').first();
-    const isVisible = await sidebar.isVisible().catch(() => false);
-    test.skip(!isVisible, 'Sidebar not visible');
+    await expect(sidebar).toBeVisible();
 
     // Look for a collapsible panel header (has aria-expanded attribute)
-    const panelHeader = sidebar.locator('[role="button"][aria-expanded]').first();
-    const headerVisible = await panelHeader.isVisible({ timeout: 3000 }).catch(() => false);
-    test.skip(!headerVisible, 'No collapsible panel header found');
+    const panelHeader = sidebar.locator('button[aria-expanded]').first();
+    await expect(panelHeader).toBeVisible();
 
     const initialExpanded = await panelHeader.getAttribute('aria-expanded');
 
@@ -293,8 +270,7 @@ test.describe('App Shell - Keyboard Shortcuts', () => {
 
   test('should open command palette with Ctrl+Shift+P', async ({ page }) => {
     const activityBar = page.locator(ACTIVITY_BAR).first();
-    const isAuthenticated = await activityBar.isVisible().catch(() => false);
-    test.skip(!isAuthenticated, 'App shell not authenticated');
+    await expect(activityBar).toBeVisible();
 
     await page.keyboard.press('Control+Shift+P');
 
@@ -305,10 +281,7 @@ test.describe('App Shell - Keyboard Shortcuts', () => {
   });
 
   test('should close current tab with Ctrl+W', async ({ page }) => {
-    if ((await openEditorTabs(page)) === 0) {
-      test.skip(true, 'No editor tabs could be opened');
-      return;
-    }
+    await openEditorTabs(page);
 
     const editorTabs = page.locator(EDITOR_TAB);
     const initialCount = await editorTabs.count();
@@ -357,8 +330,7 @@ test.describe('App Shell - Theme Toggle', () => {
     const initialIsDark = initialClassAttr.includes('dark');
 
     const themeToggle = page.locator('button:has-text("Dark"), button:has-text("Light")').first();
-    const isVisible = await themeToggle.isVisible().catch(() => false);
-    test.skip(!isVisible, 'Theme toggle button not visible');
+    await expect(themeToggle).toBeVisible();
 
     await themeToggle.click();
 

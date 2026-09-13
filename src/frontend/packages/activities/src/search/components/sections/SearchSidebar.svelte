@@ -137,11 +137,7 @@
       </div>
       <div class="saved-searches">
         {#each savedSearches as search (search.id)}
-          <SavedSearchItem
-            {search}
-            onSelect={onSelectSavedSearch}
-            onDelete={onDeleteSavedSearch}
-          />
+          <SavedSearchItem {search} onSelect={onSelectSavedSearch} onDelete={onDeleteSavedSearch} />
         {/each}
       </div>
     </div>
@@ -253,5 +249,4 @@
     padding: 1rem;
     margin-top: auto;
   }
-
 </style>

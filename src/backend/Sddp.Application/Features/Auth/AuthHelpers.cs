@@ -14,7 +14,10 @@ internal static class AuthHelpers
         CancellationToken cancellationToken)
     {
         var userRoleRepo = unitOfWork.Repository<UserRole>();
-        return await (userRoleRepo.FindAsync(ur => ur.UserId == userId, cancellationToken)).ConfigureAwait(false);
+        var userRoles = await (userRoleRepo.FindAsync(
+            ur => ur.UserId == userId && ur.IsActive,
+            cancellationToken)).ConfigureAwait(false);
+        return userRoles.Where(ur => ur.IsActive).ToList();
     }
 
     internal static async Task<IReadOnlyList<string>> ResolveRoleNamesAsync(
@@ -23,43 +26,55 @@ internal static class AuthHelpers
         CancellationToken cancellationToken)
     {
         var roleRepo = unitOfWork.Repository<Role>();
-        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+        var roleIds = userRoles.Where(ur => ur.IsActive).Select(ur => ur.RoleId).ToHashSet();
         var roles = await (roleRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
-        return roles.Where(r => roleIds.Contains(r.Id)).Select(r => r.Type.ToString()).ToList();
+        return roles
+            .Where(r => r.IsActive && roleIds.Contains(r.Id))
+            .Select(r => r.Type.ToString())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     internal static async Task<IReadOnlyList<string>> GetUserPermissionsAsync(
         IUnitOfWork unitOfWork,
-        GlobalUniqueId userId,
+        IEnumerable<UserRole> userRoles,
         CancellationToken cancellationToken)
     {
-        var userRoleRepo = unitOfWork.Repository<UserRole>();
         var rolePermissionRepo = unitOfWork.Repository<RolePermission>();
         var permissionRepo = unitOfWork.Repository<Permission>();
 
-        var userRoles = await (userRoleRepo.FindAsync(ur => ur.UserId == userId, cancellationToken)).ConfigureAwait(false);
-        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+        var roleIds = userRoles.Where(ur => ur.IsActive).Select(ur => ur.RoleId).ToHashSet();
 
-        var rolePermissions = await (rolePermissionRepo.FindAsync(rp => roleIds.Contains(rp.RoleId), cancellationToken)).ConfigureAwait(false);
-        var permissionIds = rolePermissions.Select(rp => rp.PermissionId).ToList();
+        var rolePermissions = await (rolePermissionRepo.FindAsync(
+            rp => rp.IsActive && roleIds.Contains(rp.RoleId),
+            cancellationToken)).ConfigureAwait(false);
+        var permissionIds = rolePermissions
+            .Where(rp => rp.IsActive)
+            .Select(rp => rp.PermissionId)
+            .ToHashSet();
 
         var permissions = await (permissionRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
-        return permissions.Where(p => permissionIds.Contains(p.Id)).Select(p => p.Code).ToList();
+        return permissions
+            .Where(p => p.IsActive && permissionIds.Contains(p.Id))
+            .Select(p => p.Code)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
-    internal static GlobalUniqueId ResolveTenantId(IEnumerable<UserRole> userRoles)
+    internal static GlobalUniqueId ResolveTenantId(IEnumerable<UserRole> userRoles, string? requestedTenantId = null)
     {
-        var tenantId = userRoles
-            .Where(ur => ur.TenantId != null && ur.IsActive)
-            .Select(ur => ur.TenantId!.Value.ToGuid())
-            .FirstOrDefault();
-
-        if (tenantId == Guid.Empty)
+        var tenantIds = userRoles.Where(ur => ur.TenantId.HasValue && ur.IsActive)
+            .Select(ur => ur.TenantId!.Value).Where(id => id != GlobalUniqueId.Empty).Distinct().ToList();
+        if (requestedTenantId is not null)
         {
-            throw new UnauthorizedException("No tenant-scoped active role found for user.");
+            if (!GlobalUniqueId.TryParse(requestedTenantId, out var selected) || !tenantIds.Contains(selected))
+                throw new UnauthorizedException("Invalid tenant selection");
+            return selected;
         }
-
-        return GlobalUniqueId.FromGuid(tenantId);
+        if (tenantIds.Count == 0) throw new UnauthorizedException("No tenant-scoped active role found for user.");
+        if (tenantIds.Count > 1)
+            throw new TenantSelectionRequiredException(tenantIds.Select(id => id.ToString()).Order(StringComparer.Ordinal).ToList());
+        return tenantIds[0];
     }
 
     internal static UserInfo BuildUserInfo(

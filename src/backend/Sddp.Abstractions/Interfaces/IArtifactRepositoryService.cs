@@ -29,6 +29,15 @@ public interface IArtifactRepositoryService
         ArtifactRepositoryContext context,
         string artifactPath,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the artifact's actual contents for review. Returns null when the file is
+    /// absent or the path escapes the artifact root.
+    /// </summary>
+    Task<ArtifactFileContent?> GetArtifactContentAsync(
+        ArtifactRepositoryContext context,
+        string artifactPath,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -51,3 +60,11 @@ public record ArtifactFileInfo(
     bool Exists,
     string? Hash,
     string FullPath);
+
+public record ArtifactFileContent(
+    string? Content,
+    string? Hash,
+    long SizeBytes,
+    bool IsBinary,
+    bool TooLarge = false,
+    long MaxBytes = 0);

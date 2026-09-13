@@ -34,6 +34,16 @@
     onclick?: (e: MouseEvent) => void;
     onmousedown?: (e: MouseEvent) => void;
     class?: string;
+    /** Set when this button opens a menu, so it can own the popup semantics itself. */
+    ariaHasPopup?: boolean;
+    /** Menu open state, paired with ariaHasPopup. */
+    ariaExpanded?: boolean;
+    /**
+     * Marks the button a pointer-only affordance: hidden from assistive technology and out of
+     * the tab order. Only correct where the same action has a keyboard path elsewhere, such as
+     * a tab's own Delete handler.
+     */
+    decorative?: boolean;
   }
 
   let {
@@ -48,6 +58,9 @@
     onclick,
     onmousedown,
     class: className = '',
+    ariaHasPopup,
+    ariaExpanded,
+    decorative = false,
   }: Props = $props();
 
   const sizeConfig: Record<IconButtonSize, { button: string; icon: 'xs' | 'sm' | 'md' }> = {
@@ -58,11 +71,15 @@
   };
 
   const variantClasses: Record<IconButtonVariant, string> = {
-    ghost: 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]',
-    danger: 'text-[var(--color-text-tertiary)] hover:text-[var(--color-error-500)] hover:bg-[var(--color-error-500)]/10',
+    ghost:
+      'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]',
+    danger:
+      'text-[var(--color-text-tertiary)] hover:text-[var(--color-error-500)] hover:bg-[var(--color-error-500)]/10',
     warn: 'text-[var(--color-text-tertiary)] hover:text-[var(--color-warning-500)] hover:bg-[var(--color-warning-500)]/10',
-    success: 'text-[var(--color-text-tertiary)] hover:text-[var(--color-success-500)] hover:bg-[var(--color-success-500)]/10',
-    primary: 'text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary)]/10',
+    success:
+      'text-[var(--color-text-tertiary)] hover:text-[var(--color-success-500)] hover:bg-[var(--color-success-500)]/10',
+    primary:
+      'text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-text)] hover:bg-[var(--color-accent-primary)]/10',
   };
 
   const cfg = $derived(sizeConfig[size]);
@@ -80,10 +97,14 @@
 <button
   {type}
   {title}
-  aria-label={title ?? icon}
+  aria-label={decorative ? undefined : (title ?? icon)}
+  aria-hidden={decorative ? 'true' : undefined}
+  tabindex={decorative ? -1 : undefined}
+  aria-haspopup={ariaHasPopup ? 'true' : undefined}
+  aria-expanded={ariaHasPopup ? (ariaExpanded ?? false) : undefined}
   disabled={disabled || loading}
   onclick={handleClick}
-  onmousedown={onmousedown}
+  {onmousedown}
   class="inline-flex items-center justify-center rounded transition-colors cursor-pointer
     disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent
     {cfg.button} {variantCls} {className}"
@@ -95,7 +116,8 @@
       fill="none"
       viewBox="0 0 24 24"
     >
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+      ></circle>
       <path
         class="opacity-75"
         fill="currentColor"

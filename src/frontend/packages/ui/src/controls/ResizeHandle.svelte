@@ -67,16 +67,18 @@
 
   // --- Delegated mode: orientation-based classes ---
   const orientationClasses = $derived(
-    orientation === 'horizontal'
-      ? 'h-1 w-full cursor-row-resize'
-      : 'w-1 h-full cursor-col-resize'
+    orientation === 'horizontal' ? 'h-1 w-full cursor-row-resize' : 'w-1 h-full cursor-col-resize'
   );
 
   // Active highlight class
   const activeClass = $derived(
     isDelegated
-      ? (isResizing ? 'bg-[var(--color-accent-primary)]' : '')
-      : (isDragging ? 'bg-[var(--color-accent-primary)]' : '')
+      ? isResizing
+        ? 'bg-[var(--color-accent-primary)]'
+        : ''
+      : isDragging
+        ? 'bg-[var(--color-accent-primary)]'
+        : ''
   );
 
   // --- Self-contained drag handlers ---
@@ -179,7 +181,10 @@
     onpointerdown={externalPointerDown}
     onmousedown={externalMouseDown}
     onkeydown={externalKeyDown}
-    class="{orientationClasses} bg-transparent hover:bg-[var(--color-accent-primary)]/30 transition-colors {activeClass} {orientation === 'vertical' ? '-ml-1' : ''} {className}"
+    class="{orientationClasses} bg-transparent hover:bg-[var(--color-accent-primary)]/30 transition-colors {activeClass} {orientation ===
+    'vertical'
+      ? '-ml-1'
+      : ''} {className}"
     role="separator"
     aria-orientation={orientation}
     aria-valuenow={50}
@@ -187,8 +192,7 @@
     aria-valuemax={100}
     aria-label={ariaLabel ?? 'Resize panel'}
     tabindex="0"
-  >
-  </div>
+  ></div>
 {:else}
   <!-- Self-contained mode: built-in drag logic -->
   <div
@@ -198,8 +202,14 @@
     aria-valuemin={0}
     aria-valuemax={100}
     tabindex="0"
-    class="flex-shrink-0 bg-[var(--color-border)] transition-colors {directionClasses[effectiveDirection]} {activeClass} {className}"
-    style={effectiveDirection === 'horizontal' ? `width: ${size}px` : effectiveDirection === 'vertical' ? `height: ${size}px` : `width: ${size * 3}px; height: ${size * 3}px`}
+    class="flex-shrink-0 bg-[var(--color-border)] transition-colors {directionClasses[
+      effectiveDirection
+    ]} {activeClass} {className}"
+    style={effectiveDirection === 'horizontal'
+      ? `width: ${size}px`
+      : effectiveDirection === 'vertical'
+        ? `height: ${size}px`
+        : `width: ${size * 3}px; height: ${size * 3}px`}
     onmousedown={handleMouseDown}
     ontouchstart={handleTouchStart}
     ontouchmove={handleTouchMove}
@@ -207,7 +217,11 @@
     onkeydown={handleSelfKeyDown}
   >
     {#if effectiveDirection === 'both'}
-      <svg class="w-full h-full text-[var(--color-text-tertiary)]" viewBox="0 0 6 6" fill="currentColor">
+      <svg
+        class="w-full h-full text-[var(--color-text-tertiary)]"
+        viewBox="0 0 6 6"
+        fill="currentColor"
+      >
         <circle cx="1" cy="1" r="0.5" />
         <circle cx="3" cy="1" r="0.5" />
         <circle cx="1" cy="3" r="0.5" />

@@ -16,15 +16,13 @@
     class?: string;
   }
 
-  let {
-    status,
-    showIcon = true,
-    size = 'sm',
-    class: className = '',
-  }: Props = $props();
+  let { status, showIcon = true, size = 'sm', class: className = '' }: Props = $props();
 
   // Cast domain styles to BadgeStyleConfig (they are compatible)
-  const styles = REQUIREMENT_STATUS_STYLES as unknown as Record<RequirementStatus, BadgeStyleConfig>;
+  const styles = REQUIREMENT_STATUS_STYLES as unknown as Record<
+    RequirementStatus,
+    BadgeStyleConfig
+  >;
 </script>
 
 <EnumBadge

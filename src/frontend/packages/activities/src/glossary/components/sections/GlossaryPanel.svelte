@@ -145,7 +145,6 @@
     }
   }
 
-
   function handleApprove() {
     if (currentTerm) {
       onApprove?.(currentTerm as GlossaryTerm);
@@ -188,11 +187,7 @@
     </div>
 
     {#if viewMode === 'list'}
-      <Button
-        variant="primary"
-        size="sm"
-        onclick={handleCreateClick}
-      >
+      <Button variant="primary" size="sm" onclick={handleCreateClick}>
         <Icon name="plus" size="sm" />
         New Term
       </Button>

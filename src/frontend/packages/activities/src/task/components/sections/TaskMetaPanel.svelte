@@ -48,7 +48,9 @@
   }
 </script>
 
-<div class="flex flex-col h-full bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] {className}">
+<div
+  class="flex flex-col h-full bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] {className}"
+>
   {#if loading}
     <div class="flex-1 flex items-center justify-center">
       <Spinner size="lg" />
@@ -76,8 +78,16 @@
         {/if}
         {#if onDelete}
           <Dropdown position="bottom-right">
-            {#snippet trigger()}
-              <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+            {#snippet trigger({ toggle, open })}
+              <IconButton
+                onclick={toggle}
+                ariaHasPopup
+                ariaExpanded={open}
+                icon="more-vertical"
+                variant="ghost"
+                size="sm"
+                title="More actions"
+              />
             {/snippet}
             <div class="py-1 min-w-[160px]">
               <Button
@@ -102,7 +112,9 @@
           <div class="col-span-2">
             <span class="text-xs text-[var(--color-text-tertiary)]">Description</span>
             {#if task.description}
-              <p class="text-sm text-[var(--color-text-secondary)] whitespace-pre-wrap mt-0.5">{task.description}</p>
+              <p class="text-sm text-[var(--color-text-secondary)] whitespace-pre-wrap mt-0.5">
+                {task.description}
+              </p>
             {:else}
               <p class="text-xs text-[var(--color-text-tertiary)] italic mt-0.5">No description</p>
             {/if}
@@ -117,7 +129,9 @@
           </div>
           <div class="flex items-center justify-between">
             <span class="text-xs text-[var(--color-text-tertiary)]">Assignee</span>
-            <span class="text-sm text-[var(--color-text-secondary)]">@{task.assignee?.name || task.assignee?.id || 'Unassigned'}</span>
+            <span class="text-sm text-[var(--color-text-secondary)]"
+              >@{task.assignee?.name || task.assignee?.id || 'Unassigned'}</span
+            >
           </div>
           {#if categoryName}
             <div class="flex items-center justify-between">
@@ -132,19 +146,27 @@
           {/if}
           <div class="flex items-center justify-between">
             <span class="text-xs text-[var(--color-text-tertiary)]">Created by</span>
-            <span class="text-sm text-[var(--color-text-secondary)]">{task.createdBy?.name || '—'}</span>
+            <span class="text-sm text-[var(--color-text-secondary)]"
+              >{task.createdBy?.name || '—'}</span
+            >
           </div>
           <div class="flex items-center justify-between">
             <span class="text-xs text-[var(--color-text-tertiary)]">Created</span>
-            <span class="text-sm text-[var(--color-text-secondary)]">{formatDateStr(task.createdAt)}</span>
+            <span class="text-sm text-[var(--color-text-secondary)]"
+              >{formatDateStr(task.createdAt)}</span
+            >
           </div>
           <div class="flex items-center justify-between">
             <span class="text-xs text-[var(--color-text-tertiary)]">Updated by</span>
-            <span class="text-sm text-[var(--color-text-secondary)]">{task.updatedBy?.name || '—'}</span>
+            <span class="text-sm text-[var(--color-text-secondary)]"
+              >{task.updatedBy?.name || '—'}</span
+            >
           </div>
           <div class="flex items-center justify-between">
             <span class="text-xs text-[var(--color-text-tertiary)]">Updated</span>
-            <span class="text-sm text-[var(--color-text-secondary)]">{formatDateStr(task.updatedAt)}</span>
+            <span class="text-sm text-[var(--color-text-secondary)]"
+              >{formatDateStr(task.updatedAt)}</span
+            >
           </div>
         </div>
       </div>
@@ -152,12 +174,20 @@
       <!-- Effort Tracking -->
       <div class="p-4 border-b border-[var(--color-border-primary)]">
         <div class="flex items-center justify-between mb-3">
-          <h4 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider flex items-center gap-1">
+          <h4
+            class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider flex items-center gap-1"
+          >
             <Icon name="clock" size="sm" />
             Effort Tracking
           </h4>
           {#if onLogTime}
-            <IconButton icon="plus" variant="ghost" size="sm" title="Add Effort" onclick={onLogTime} />
+            <IconButton
+              icon="plus"
+              variant="ghost"
+              size="sm"
+              title="Add Effort"
+              onclick={onLogTime}
+            />
           {/if}
         </div>
 
@@ -172,12 +202,18 @@
             variant="unstyled"
             class="p-2 bg-[var(--color-bg-primary)] rounded-lg cursor-pointer hover:ring-1 hover:ring-[var(--color-accent-primary)] transition-all"
             title="Click to view time log details"
-            onclick={() => showTimeLogs = !showTimeLogs}
+            onclick={() => (showTimeLogs = !showTimeLogs)}
           >
-            <div class="text-lg font-bold {isOverdue ? 'text-red-500' : 'text-[var(--color-text-primary)]'}">
+            <div
+              class="text-lg font-bold {isOverdue
+                ? 'text-red-500'
+                : 'text-[var(--color-text-primary)]'}"
+            >
               {formatNumber(task.actualHours)}h
             </div>
-            <div class="text-xs text-[var(--color-text-tertiary)] flex items-center justify-center gap-1">
+            <div
+              class="text-xs text-[var(--color-text-tertiary)] flex items-center justify-center gap-1"
+            >
               Actual
               {#if task.timeLogs.length > 0}
                 <Icon name={showTimeLogs ? 'chevron-up' : 'chevron-down'} size="xs" />
@@ -196,7 +232,11 @@
         <div class="h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
           <div
             class="h-full transition-all duration-300
-              {isOverdue ? 'bg-red-500' : progress >= 100 ? 'bg-green-500' : 'bg-[var(--color-accent-primary)]'}"
+              {isOverdue
+              ? 'bg-red-500'
+              : progress >= 100
+                ? 'bg-green-500'
+                : 'bg-[var(--color-accent-primary)]'}"
             style="width: {Math.min(progress, 100)}%"
           ></div>
         </div>
@@ -207,18 +247,26 @@
         <!-- Time Log Details (toggle) -->
         {#if showTimeLogs && task.timeLogs.length > 0}
           <div class="mt-3 border border-[var(--color-border-primary)] rounded-lg overflow-hidden">
-            <div class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider px-3 py-2 bg-[var(--color-bg-tertiary)]">
+            <div
+              class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider px-3 py-2 bg-[var(--color-bg-tertiary)]"
+            >
               Time Logs ({task.timeLogs.length})
             </div>
             <div class="divide-y divide-[var(--color-border-primary)]">
               {#each task.timeLogs as log (log.id)}
                 <div class="px-3 py-2 text-sm">
                   <div class="flex items-center justify-between">
-                    <span class="font-medium text-[var(--color-text-primary)]">{formatNumber(log.hours)}h</span>
-                    <span class="text-xs text-[var(--color-text-tertiary)]">{formatDateStr(log.date)}</span>
+                    <span class="font-medium text-[var(--color-text-primary)]"
+                      >{formatNumber(log.hours)}h</span
+                    >
+                    <span class="text-xs text-[var(--color-text-tertiary)]"
+                      >{formatDateStr(log.date)}</span
+                    >
                   </div>
                   {#if log.description}
-                    <p class="text-xs text-[var(--color-text-secondary)] mt-0.5 line-clamp-2">{log.description}</p>
+                    <p class="text-xs text-[var(--color-text-secondary)] mt-0.5 line-clamp-2">
+                      {log.description}
+                    </p>
                   {/if}
                   {#if log.user?.name}
                     <span class="text-xs text-[var(--color-text-tertiary)]">@{log.user.name}</span>
@@ -233,7 +281,9 @@
       <!-- Acceptance Criteria -->
       {#if task.acceptanceCriteria.length > 0}
         <div class="p-4 border-b border-[var(--color-border-primary)]">
-          <h4 class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-3 flex items-center gap-1">
+          <h4
+            class="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-3 flex items-center gap-1"
+          >
             <Icon name="check-square" size="sm" />
             Acceptance Criteria
           </h4>
@@ -246,7 +296,11 @@
                   class="mt-0.5 rounded border-[var(--color-border-secondary)]"
                   disabled
                 />
-                <span class="text-[var(--color-text-secondary)] {criterion.completed ? 'line-through opacity-60' : ''}">
+                <span
+                  class="text-[var(--color-text-secondary)] {criterion.completed
+                    ? 'line-through opacity-60'
+                    : ''}"
+                >
                   {criterion.description}
                 </span>
               </label>

@@ -192,7 +192,10 @@
   function handleResetZoom() {
     if (!svgElement || !zoomBehavior) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (select(svgElement) as any).transition().duration(300).call(zoomBehavior.transform, zoomIdentity);
+    (select(svgElement) as any)
+      .transition()
+      .duration(300)
+      .call(zoomBehavior.transform, zoomIdentity);
   }
 
   // Edge path helpers
@@ -334,7 +337,10 @@
               height="16"
               class="pointer-events-none"
             >
-              <div class="w-4 h-4 flex items-center justify-center" style="color: {isHovered || isRoot ? 'white' : color}">
+              <div
+                class="w-4 h-4 flex items-center justify-center"
+                style="color: {isHovered || isRoot ? 'white' : color}"
+              >
                 <Icon name={ENTITY_TYPE_STYLES[node.entityType].icon} size="xs" />
               </div>
             </foreignObject>
@@ -388,9 +394,7 @@
         <div class="text-gray-500 dark:text-gray-400 mt-1">Status: {selectedNode.status}</div>
       {/if}
       <div class="mt-3 flex justify-end">
-        <Button variant="primary" size="sm" onclick={handleOpenNode}>
-          Open
-        </Button>
+        <Button variant="primary" size="sm" onclick={handleOpenNode}>Open</Button>
       </div>
     </div>
   {/if}

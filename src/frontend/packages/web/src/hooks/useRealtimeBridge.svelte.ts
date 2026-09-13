@@ -8,14 +8,14 @@ import { toast, startPollingFallback, stopPollingFallback, getConnectionMode } f
 import { tabActions, tabsStore } from '@sddp/shell/stores';
 import { authStore, getAuthState } from '@sddp/shell/auth/stores';
 import {
-  getConversationService,
+  createConversationService,
   getConversationHubService,
   removeConversation,
   loadGlobalConversationsSidebar,
   getSidebarState,
   removeDirectMessage,
   type ConversationEntry,
-} from '@sddp/activities/conversations';
+} from '@sddp/activities/runtime';
 import type {
   ConversationInvitationEvent,
   InvitationResponseEvent,
@@ -26,13 +26,13 @@ import {
   addTimelineEvent,
   type ProjectPageType,
   type AuditLogDto,
-} from '@sddp/activities/projects';
+} from '@sddp/activities/runtime';
 import {
   getDashboardHubService,
   addNotification as addNotificationToStore,
   getMyNotifications,
   setNotifications,
-} from '@sddp/activities/dashboard';
+} from '@sddp/activities/runtime';
 import { destroyPollingFallback } from '@sddp/shell';
 
 type ProjectConversationSelectDetail = {
@@ -201,8 +201,7 @@ export function useRealtimeBridge(params: RealtimeBridgeParams) {
 
     const projectId = (projectScopeId ?? '').trim();
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, projectId);
+      const service = createConversationService(tenantId, projectId);
       const dmConversation = await service.acceptDMInvitation(notificationId);
 
       toast.success('Direct message invitation accepted');
@@ -231,8 +230,7 @@ export function useRealtimeBridge(params: RealtimeBridgeParams) {
 
     const projectId = (projectScopeId ?? '').trim();
     try {
-      const service = getConversationService();
-      service.setContext(tenantId, projectId);
+      const service = createConversationService(tenantId, projectId);
       await service.rejectDMInvitation(notificationId);
       toast.info('Direct message invitation declined');
     } catch (error) {
@@ -473,7 +471,7 @@ export function useRealtimeBridge(params: RealtimeBridgeParams) {
         }
 
         if (event.createdByUserId !== getAuthState().user?.id) {
- toast.info(`#${event.channelName} channel create.`);
+          toast.info(`#${event.channelName} channel create.`);
         }
       },
       onConversationInvitation: (event: ConversationInvitationEvent) => {

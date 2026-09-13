@@ -57,7 +57,9 @@
             <div class="change-item">
               <span class="change-resource">{change.resourceType}</span>
               <span class="change-action">{change.action}</span>
-              <span class="change-time">{formatRelativeTime(change.timestamp, undefined, { locale: 'en' })}</span>
+              <span class="change-time"
+                >{formatRelativeTime(change.timestamp, undefined, { locale: 'en' })}</span
+              >
             </div>
           {/each}
         </div>

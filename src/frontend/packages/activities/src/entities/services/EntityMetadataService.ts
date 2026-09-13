@@ -62,6 +62,11 @@ export class EntityMetadataService {
   private tenantId: string = '';
   private projectId: string = '';
 
+  constructor(tenantId: string = '', projectId: string = '') {
+    this.tenantId = tenantId;
+    this.projectId = projectId;
+  }
+
   setContext(tenantId: string, projectId: string): void {
     this.tenantId = tenantId;
     this.projectId = projectId;
@@ -86,4 +91,11 @@ export class EntityMetadataService {
   async delete(specId: string, entityId: string): Promise<void> {
     return deleteEntityMetadata(this.tenantId, this.projectId, specId, entityId);
   }
+}
+
+export function createEntityMetadataService(
+  tenantId: string,
+  projectId: string
+): EntityMetadataService {
+  return new EntityMetadataService(tenantId, projectId);
 }

@@ -39,11 +39,7 @@
 >
   <div role="group" aria-label="{group.category} terms">
     {#each group.terms as term (term.id)}
-      <TermItem
-        {term}
-        selected={selectedTermId === term.id}
-        onSelect={onSelectTerm}
-      />
+      <TermItem {term} selected={selectedTermId === term.id} onSelect={onSelectTerm} />
     {/each}
 
     {#if group.terms.length === 0}

@@ -44,7 +44,7 @@
   }
 </script>
 
-<Modal {open} title={title} size="md" onClose={handleClose}>
+<Modal {open} {title} size="md" onClose={handleClose}>
   <div class="confirm-reset-content">
     <p class="confirm-description">{description}</p>
 
@@ -66,22 +66,12 @@
       <p class="confirm-instruction">
         Type <code class="confirm-code">{confirmationCode}</code> to confirm:
       </p>
-      <Input
-        bind:value={inputValue}
-        placeholder={confirmationCode}
-        disabled={loading}
-      />
+      <Input bind:value={inputValue} placeholder={confirmationCode} disabled={loading} />
     </div>
 
     <div class="confirm-actions">
-      <Button variant="ghost" onclick={handleClose} disabled={loading}>
-        Cancel
-      </Button>
-      <Button
-        variant="danger"
-        onclick={handleConfirm}
-        disabled={!isMatch || loading}
-      >
+      <Button variant="ghost" onclick={handleClose} disabled={loading}>Cancel</Button>
+      <Button variant="danger" onclick={handleConfirm} disabled={!isMatch || loading}>
         {loading ? 'Resetting...' : 'Reset Data'}
       </Button>
     </div>

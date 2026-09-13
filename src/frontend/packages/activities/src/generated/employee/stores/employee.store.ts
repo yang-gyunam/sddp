@@ -58,7 +58,10 @@ export function getState(): EmployeeState {
 
 // === Actions ===
 
-export function setItems(items: EmployeeDto[], pagination?: Partial<EmployeeState['pagination']>): void {
+export function setItems(
+  items: EmployeeDto[],
+  pagination?: Partial<EmployeeState['pagination']>
+): void {
   updateState((state) => ({
     ...state,
     items,
@@ -183,10 +186,7 @@ export async function createItem(dto: CreateEmployeeDto): Promise<EmployeeDetail
   }
 }
 
-export async function updateItem(
-  id: string,
-  dto: UpdateEmployeeDto
-): Promise<EmployeeDetailDto> {
+export async function updateItem(id: string, dto: UpdateEmployeeDto): Promise<EmployeeDetailDto> {
   setLoading(true);
   setError(null);
 
@@ -194,7 +194,9 @@ export async function updateItem(
     const updated = await service.update(id, dto);
     updateState((state) => ({
       ...state,
-      items: state.items.map((item) => item.id === id ? { ...item, ...updated } as EmployeeDto : item),
+      items: state.items.map((item) =>
+        item.id === id ? ({ ...item, ...updated } as EmployeeDto) : item
+      ),
       currentItem: updated,
       loading: false,
     }));

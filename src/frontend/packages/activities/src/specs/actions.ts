@@ -3,7 +3,7 @@
  * Mediates between Spec stores and SpecService
  */
 
-import { getSpecService } from './services';
+import { createSpecService } from './services';
 import { getSpecSidebarState, setProjectGroups } from './stores';
 import type { ProjectSpecGroup, SpecSummary } from './types';
 
@@ -68,8 +68,7 @@ export async function loadSpecsSidebar(
   options?: LoadSpecsSidebarOptions
 ): Promise<SpecsSidebarPageResult> {
   try {
-    const service = getSpecService();
-    service.setContext(tenantId, projectId);
+    const service = createSpecService(tenantId, projectId);
 
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 20;
@@ -106,9 +105,8 @@ export async function loadSpecsSidebar(
     const summaries = page.items.map(mapSpecSummary);
     const state = getSpecSidebarState();
     const existingGroup = state.projectGroups.find((group) => group.projectId === projectId);
-    const mergedSummaries = append && existingGroup
-      ? mergeSummaries(existingGroup.specs, summaries)
-      : summaries;
+    const mergedSummaries =
+      append && existingGroup ? mergeSummaries(existingGroup.specs, summaries) : summaries;
 
     setProjectGroups([buildGroup(projectId, mergedSummaries, page.totalCount)]);
 

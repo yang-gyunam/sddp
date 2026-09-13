@@ -7,11 +7,7 @@
     class?: string;
   }
 
-  let {
-    orientation = 'horizontal',
-    label,
-    class: className = '',
-  }: Props = $props();
+  let { orientation = 'horizontal', label, class: className = '' }: Props = $props();
 </script>
 
 {#if orientation === 'horizontal'}

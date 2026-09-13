@@ -75,7 +75,7 @@
 
 {#if unstyled}
   <textarea
-    id={id}
+    {id}
     {name}
     {placeholder}
     {disabled}
@@ -99,7 +99,7 @@
       <label for={textareaId} class="block text-xs text-[var(--color-text-muted)] mb-1">
         {label}
         {#if required}
-          <span class="text-red-500">*</span>
+          <span class="text-red-500" aria-hidden="true">*</span>
         {/if}
       </label>
     {/if}
@@ -120,7 +120,9 @@
       {onblur}
       {onkeydown}
       {oncontextmenu}
-      class="{baseClasses} {error ? errorClasses : normalClasses} {resizeClasses[resize]} {mono ? 'font-mono' : ''}"
+      class="{baseClasses} {error ? errorClasses : normalClasses} {resizeClasses[resize]} {mono
+        ? 'font-mono'
+        : ''}"
       {style}
       aria-required={required ? 'true' : undefined}
       aria-invalid={error ? 'true' : undefined}

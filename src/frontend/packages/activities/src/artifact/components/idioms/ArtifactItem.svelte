@@ -17,7 +17,9 @@
 
   let { artifact, selected = false, onSelect, class: className = '' }: Props = $props();
 
-  const statusStyle = $derived(ARTIFACT_STATUS_STYLES[artifact.status] ?? ARTIFACT_STATUS_STYLES.Unverified);
+  const statusStyle = $derived(
+    ARTIFACT_STATUS_STYLES[artifact.status] ?? ARTIFACT_STATUS_STYLES.Unverified
+  );
   const fileName = $derived(getFileName(artifact.artifactPath));
 
   function handleClick() {
@@ -25,8 +27,13 @@
   }
 </script>
 
-<ListItem {selected} onclick={handleClick} role="treeitem"
-  aria-selected={selected} class="group {className}">
+<ListItem
+  {selected}
+  onclick={handleClick}
+  role="treeitem"
+  aria-selected={selected}
+  class="group {className}"
+>
   <div class="flex items-center gap-2 w-full min-w-0">
     <Icon
       name={statusStyle.icon}

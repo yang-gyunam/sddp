@@ -41,8 +41,8 @@
     onclick={handleClick}
     class="w-full text-left flex items-center gap-2 px-3 py-1.5 transition-colors
       {selected
-        ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
-        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}"
+      ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-text-primary)]'
+      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}"
   >
     <span class="flex-shrink-0 w-4 h-4 flex items-center justify-center opacity-70">
       <Icon name={iconName} size="sm" />
@@ -60,8 +60,8 @@
         class="flex-shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-medium
           rounded-full
           {conversation.hasUnreadMentions
-            ? 'bg-[var(--color-error-500)] text-white'
-            : 'bg-[var(--color-accent-primary)] text-white'}"
+          ? 'bg-[var(--color-error-500)] text-white'
+          : 'bg-[var(--color-accent-primary)] text-white'}"
       >
         {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
       </span>
@@ -82,7 +82,9 @@
     <Icon
       name="star"
       size="xs"
-      class={conversation.starred ? 'fill-current text-[var(--color-warning-500)]' : 'text-[var(--color-text-tertiary)]'}
+      class={conversation.starred
+        ? 'fill-current text-[var(--color-warning-500)]'
+        : 'text-[var(--color-text-tertiary)]'}
     />
   </Button>
 </div>

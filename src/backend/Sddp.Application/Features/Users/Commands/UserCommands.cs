@@ -187,8 +187,11 @@ public sealed class UpdateNotificationSettingsCommandHandler : IRequestHandler<U
 /// </summary>
 public sealed record DeactivateUserCommand(
     GlobalUniqueId UserId,
-    GlobalUniqueId RequestUserId) : ICommand<bool>, IAuditableRequest<bool>
+    GlobalUniqueId RequestUserId,
+    GlobalUniqueId TenantId) : ICommand<bool>, IAuditableRequest<bool>, IChangesActiveUserStatus
 {
+    public bool IsActiveAfterCommit => false;
+
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(bool response) => AuditLog;
 }
@@ -196,10 +199,17 @@ public sealed record DeactivateUserCommand(
 public sealed class DeactivateUserCommandHandler : IRequestHandler<DeactivateUserCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IRefreshTokenStore _refreshTokenStore;
+    private readonly IActiveUserGate _activationCache;
 
-    public DeactivateUserCommandHandler(IUnitOfWork unitOfWork)
+    public DeactivateUserCommandHandler(
+        IUnitOfWork unitOfWork,
+        IRefreshTokenStore refreshTokenStore,
+        IActiveUserGate activationCache)
     {
         _unitOfWork = unitOfWork;
+        _refreshTokenStore = refreshTokenStore;
+        _activationCache = activationCache;
     }
 
     public async Task<bool> Handle(DeactivateUserCommand request, CancellationToken cancellationToken)
@@ -212,7 +222,17 @@ public sealed class DeactivateUserCommandHandler : IRequestHandler<DeactivateUse
             throw new NotFoundException("User", (Guid)request.UserId);
         }
 
+        if (!await TenantUserScope.IsMemberAsync(
+                _unitOfWork, request.UserId, request.TenantId, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            throw new NotFoundException("User", (Guid)request.UserId);
+        }
+
+        await (_refreshTokenStore.RevokeAllAsync(user.Id, cancellationToken)).ConfigureAwait(false);
         user.Deactivate();
+
+        _activationCache.MarkDeactivated(user.Id);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
         request.AuditLog = new AuditLogRequest(
@@ -233,8 +253,11 @@ public sealed class DeactivateUserCommandHandler : IRequestHandler<DeactivateUse
 /// </summary>
 public sealed record ActivateUserCommand(
     GlobalUniqueId UserId,
-    GlobalUniqueId RequestUserId) : ICommand<bool>, IAuditableRequest<bool>
+    GlobalUniqueId RequestUserId,
+    GlobalUniqueId TenantId) : ICommand<bool>, IAuditableRequest<bool>, IChangesActiveUserStatus
 {
+    public bool IsActiveAfterCommit => true;
+
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(bool response) => AuditLog;
 }
@@ -242,10 +265,12 @@ public sealed record ActivateUserCommand(
 public sealed class ActivateUserCommandHandler : IRequestHandler<ActivateUserCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IActiveUserGate _activationCache;
 
-    public ActivateUserCommandHandler(IUnitOfWork unitOfWork)
+    public ActivateUserCommandHandler(IUnitOfWork unitOfWork, IActiveUserGate activationCache)
     {
         _unitOfWork = unitOfWork;
+        _activationCache = activationCache;
     }
 
     public async Task<bool> Handle(ActivateUserCommand request, CancellationToken cancellationToken)
@@ -258,12 +283,21 @@ public sealed class ActivateUserCommandHandler : IRequestHandler<ActivateUserCom
             throw new NotFoundException("User", (Guid)request.UserId);
         }
 
+        if (!await TenantUserScope.IsMemberAsync(
+                _unitOfWork, request.UserId, request.TenantId, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            throw new NotFoundException("User", (Guid)request.UserId);
+        }
+
         if (user.IsActive)
         {
             throw new ValidationException("User is already active");
         }
 
         user.Activate();
+
+        _activationCache.Forget(user.Id);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
         request.AuditLog = new AuditLogRequest(
@@ -326,6 +360,14 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
             throw new ConflictException($"Email '{dto.Email}' already exists");
         }
 
+        if (request.TenantId.IsEmpty)
+            throw new ValidationException("TenantId is required.");
+
+        // Resolve prerequisites before tracking any Person/User writes.
+        var roles = await roleRepo.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        var developerRole = roles.FirstOrDefault(r => r.IsActive && r.Type == RoleType.Developer)
+            ?? throw new ConflictException("Active Developer role is required to create a user.");
+
         // 3. Generate the password hash
         var passwordHash = _passwordHasher.Hash(dto.Password);
 
@@ -338,16 +380,9 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
         var user = new User(dto.Username, dto.Email, passwordHash, dto.DisplayName, person.Id);
         await (userRepo.AddAsync(user, cancellationToken)).ConfigureAwait(false);
 
-        // 6. Assign the default role (DEVELOPER)
-        var roles = await (roleRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
-        var developerRole = roles.FirstOrDefault(r => r.Type == RoleType.Developer);
-
-        if (developerRole is not null)
-        {
-            var userRole = new UserRole(
-                user.Id, developerRole.Id, request.RequestUserId, request.TenantId);
-            await (userRoleRepo.AddAsync(userRole, cancellationToken)).ConfigureAwait(false);
-        }
+        // The default tenant membership commits together with the identity.
+        var userRole = new UserRole(user.Id, developerRole.Id, request.RequestUserId, request.TenantId);
+        await userRoleRepo.AddAsync(userRole, cancellationToken).ConfigureAwait(false);
 
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
@@ -411,6 +446,10 @@ public sealed class UpdateSystemUserCommandHandler : IRequestHandler<UpdateSyste
             throw new ValidationException("Built-in system users cannot be modified");
         }
 
+        if (request.TenantId.IsEmpty || !await TenantUserScope.IsMemberAsync(
+                _unitOfWork, request.UserId, request.TenantId, cancellationToken).ConfigureAwait(false))
+            throw new NotFoundException("User", (Guid)request.UserId);
+
         var dto = request.Dto;
 
         // 3. Check email uniqueness against other users
@@ -424,34 +463,40 @@ public sealed class UpdateSystemUserCommandHandler : IRequestHandler<UpdateSyste
             }
         }
 
-        // 4. Update the profile
-        user.UpdateProfile(dto.DisplayName, dto.Email);
-
-        // 5. Change the GlobalRole
+        // Validate the replacement before mutating either profile or membership.
         if (dto.GlobalRole is not null)
         {
-            var roles = await (roleRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
-            var existingUserRoles = await (userRoleRepo.FindAsync(
-                ur => ur.UserId == request.UserId, cancellationToken)).ConfigureAwait(false);
+            if (!Enum.TryParse<RoleType>(dto.GlobalRole, ignoreCase: true, out var targetRoleType)
+                || !Enum.IsDefined(targetRoleType))
+                throw new ValidationException("Invalid global role.");
 
-            // Remove existing roles
-            foreach (var existingRole in existingUserRoles)
+            var roles = await roleRepo.GetAllAsync(cancellationToken).ConfigureAwait(false);
+            var targetRole = roles.FirstOrDefault(r => r.IsActive && r.Type == targetRoleType)
+                ?? throw new ConflictException("The requested role is not active or is missing.");
+
+            // Include inactive rows: the database's NULL-safe unique index covers those too.
+            var existingUserRoles = await userRoleRepo.FindIncludingInactiveAsync(
+                ur => ur.UserId == request.UserId && ur.TenantId == request.TenantId
+                    && ur.ProjectId == null, cancellationToken).ConfigureAwait(false);
+            var replacement = existingUserRoles.FirstOrDefault(ur => ur.RoleId == targetRole.Id);
+            if (replacement is null)
             {
+                replacement = new UserRole(request.UserId, targetRole.Id, request.RequestUserId, request.TenantId);
+                await userRoleRepo.AddAsync(replacement, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                replacement.Activate();
+                // Persist true even when the snapshot was already active. Otherwise concurrent
+                // replacements can each deactivate the other's retained row without restoring theirs.
+                await userRoleRepo.UpdateAsync(replacement, cancellationToken).ConfigureAwait(false);
+            }
+
+            foreach (var existingRole in existingUserRoles.Where(ur => ur.IsActive && ur.Id != replacement.Id))
                 existingRole.Deactivate();
-            }
-
-            // Assign the new role
-            if (!Enum.TryParse<RoleType>(dto.GlobalRole, ignoreCase: true, out var targetRoleType))
-                targetRoleType = RoleType.Developer;
-
-            var targetRole = roles.FirstOrDefault(r => r.Type == targetRoleType);
-            if (targetRole is not null)
-            {
-                var newUserRole = new UserRole(
-                    request.UserId, targetRole.Id, request.RequestUserId, request.TenantId);
-                await (userRoleRepo.AddAsync(newUserRole, cancellationToken)).ConfigureAwait(false);
-            }
         }
+
+        user.UpdateProfile(dto.DisplayName, dto.Email);
 
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
@@ -468,7 +513,7 @@ public sealed class UpdateSystemUserCommandHandler : IRequestHandler<UpdateSyste
         // 7. Return the SystemUserDto
         var allRoles = await (roleRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
         var updatedUserRoles = await (userRoleRepo.FindAsync(
-            ur => ur.UserId == request.UserId, cancellationToken)).ConfigureAwait(false);
+            ur => ur.UserId == request.UserId && ur.TenantId == request.TenantId, cancellationToken)).ConfigureAwait(false);
         var roleMap = allRoles.ToDictionary(r => r.Id);
 
         return UserMapping.MapToSystemUserDto(user, updatedUserRoles, roleMap, []);
@@ -480,7 +525,8 @@ public sealed class UpdateSystemUserCommandHandler : IRequestHandler<UpdateSyste
 /// </summary>
 public sealed record AdminResetPasswordCommand(
     GlobalUniqueId UserId,
-    GlobalUniqueId RequestUserId) : ICommand<AdminResetPasswordResponse>, IAuditableRequest<AdminResetPasswordResponse>
+    GlobalUniqueId RequestUserId,
+    GlobalUniqueId TenantId) : ICommand<AdminResetPasswordResponse>, IAuditableRequest<AdminResetPasswordResponse>
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(AdminResetPasswordResponse response) => AuditLog;
@@ -508,6 +554,13 @@ public sealed class AdminResetPasswordCommandHandler : IRequestHandler<AdminRese
         var user = await (userRepo.GetByIdAsync(request.UserId, cancellationToken)).ConfigureAwait(false);
 
         if (user is null)
+        {
+            throw new NotFoundException("User", (Guid)request.UserId);
+        }
+
+        if (!await TenantUserScope.IsMemberAsync(
+                _unitOfWork, request.UserId, request.TenantId, cancellationToken)
+            .ConfigureAwait(false))
         {
             throw new NotFoundException("User", (Guid)request.UserId);
         }

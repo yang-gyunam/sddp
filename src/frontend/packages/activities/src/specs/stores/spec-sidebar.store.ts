@@ -4,12 +4,7 @@
  */
 
 import { createStore, type Store } from '@sddp/shell/core';
-import type {
-  SpecSidebarState,
-  SpecFilterType,
-  ProjectSpecGroup,
-  SpecSummary,
-} from '../types';
+import type { SpecSidebarState, SpecFilterType, ProjectSpecGroup, SpecSummary } from '../types';
 
 // ============================================
 // Initial State
@@ -24,8 +19,7 @@ const initialState: SpecSidebarState = {
 };
 
 // Create the store
-const specSidebarStore: Store<SpecSidebarState> =
-  createStore<SpecSidebarState>(initialState);
+const specSidebarStore: Store<SpecSidebarState> = createStore<SpecSidebarState>(initialState);
 
 // ============================================
 // Actions
@@ -133,8 +127,7 @@ export function getFilteredProjectGroups(): ProjectSpecGroup[] {
         const query = searchQuery.toLowerCase();
         filteredSpecs = filteredSpecs.filter(
           (spec) =>
-            spec.code.toLowerCase().includes(query) ||
-            spec.title.toLowerCase().includes(query)
+            spec.code.toLowerCase().includes(query) || spec.title.toLowerCase().includes(query)
         );
       }
 

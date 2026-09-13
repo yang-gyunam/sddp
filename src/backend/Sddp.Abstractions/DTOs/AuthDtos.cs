@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Sddp.Abstractions.DTOs;
 
 /// <summary>
@@ -7,18 +9,19 @@ public class LoginRequest
 {
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+    public string? TenantId { get; set; }
 }
 
-public record LoginResponse(string AccessToken, string RefreshToken, int ExpiresIn, UserInfo User, bool RequirePasswordChange);
-
-public class RefreshTokenRequest
-{
-    public string? RefreshToken { get; set; }
-}
+public record LoginResponse(
+    string AccessToken,
+    [property: JsonIgnore] string RefreshToken,
+    int ExpiresIn,
+    UserInfo User,
+    bool RequirePasswordChange);
 
 public record TokenResponse(
     string AccessToken,
-    string RefreshToken,
+    [property: JsonIgnore] string RefreshToken,
     int ExpiresIn,
     UserInfo? User = null,
     bool RequirePasswordChange = false);

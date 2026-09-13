@@ -73,7 +73,9 @@
   // Skip transition on initial mount to prevent flash
   let mounted = $state(false);
   onMount(() => {
-    requestAnimationFrame(() => { mounted = true; });
+    requestAnimationFrame(() => {
+      mounted = true;
+    });
   });
 
   function handleHeaderKeyDown(e: KeyboardEvent) {
@@ -93,8 +95,8 @@
     variant="unstyled"
     class="group-header flex items-center gap-1 h-[26px] cursor-pointer transition-colors w-full
            {variant === 'plain'
-             ? 'px-0 hover:bg-[var(--color-bg-tertiary)]/50'
-             : 'px-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border-primary)]'}"
+      ? 'px-0 hover:bg-[var(--color-bg-tertiary)]/50'
+      : 'px-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border-primary)]'}"
     aria-expanded={expanded}
     aria-label={title}
     onclick={handleHeaderClick}
@@ -105,11 +107,7 @@
       class="flex items-center justify-center w-4 h-4 transition-transform duration-200
         {expanded ? 'rotate-90' : ''}"
     >
-      <Icon
-        name="chevron-right"
-        size="xs"
-        class="text-[var(--color-text-secondary)] opacity-70"
-      />
+      <Icon name="chevron-right" size="xs" class="text-[var(--color-text-secondary)] opacity-70" />
     </div>
 
     <!-- Leading Icon -->
@@ -124,7 +122,9 @@
           {subtitle}
         </span>
       {/if}
-      <span class="truncate text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+      <span
+        class="truncate text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]"
+      >
         {title}
       </span>
     </div>
@@ -155,7 +155,12 @@
   </Button>
 
   <!-- Content: CSS grid for height + opacity for smoothness -->
-  <div class="group-content-wrapper" class:expanded class:animated={mounted} class:allow-overflow={allowOverflow}>
+  <div
+    class="group-content-wrapper"
+    class:expanded
+    class:animated={mounted}
+    class:allow-overflow={allowOverflow}
+  >
     <div class="group-content-inner">
       {#if children}
         {@render children()}
@@ -185,7 +190,9 @@
   }
 
   .group-content-wrapper.animated {
-    transition: grid-template-rows 300ms ease, opacity 200ms ease;
+    transition:
+      grid-template-rows 300ms ease,
+      opacity 200ms ease;
   }
 
   .group-content-wrapper.expanded {

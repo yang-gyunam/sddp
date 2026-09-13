@@ -13,7 +13,12 @@
   let { value, label, variant = 'default' }: Props = $props();
 </script>
 
-<div class="stat-badge" class:success={variant === 'success'} class:warning={variant === 'warning'} class:error={variant === 'error'}>
+<div
+  class="stat-badge"
+  class:success={variant === 'success'}
+  class:warning={variant === 'warning'}
+  class:error={variant === 'error'}
+>
   <span class="stat-value">{value}</span>
   <span class="stat-label">{label}</span>
 </div>

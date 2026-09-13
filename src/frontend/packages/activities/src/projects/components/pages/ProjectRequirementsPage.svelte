@@ -1,23 +1,59 @@
 <!-- Activity: Projects > Nav: Requirements (project-{id}-requirements) | Screen ID: PRJ-REQ-001 -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { Icon, Input, IconButton, Button, CardGrid, Checkbox, Spinner, ResizeHandle } from '@sddp/ui';
-  import { PageShell, PageHeader, PageBody, SidebarDetailLayout, Dropdown, RichListItem, SIDEBAR_DETAIL_LAYOUT, SurfaceCard, PriorityBadge, getTabState, setTabState, RouterService, toast, formatDateWithOptions } from '@sddp/shell';
+  import {
+    Icon,
+    Input,
+    IconButton,
+    Button,
+    CardGrid,
+    Checkbox,
+    Spinner,
+    ResizeHandle,
+  } from '@sddp/ui';
+  import {
+    PageShell,
+    PageHeader,
+    PageBody,
+    SidebarDetailLayout,
+    Dropdown,
+    RichListItem,
+    SIDEBAR_DETAIL_LAYOUT,
+    SurfaceCard,
+    PriorityBadge,
+    getTabState,
+    setTabState,
+    RouterService,
+    toast,
+    formatDateWithOptions,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../../shared/components/idioms';
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail } from '../../types';
-  import { getProjectService, getProjectById } from '../../services/ProjectService';
+  import { createProjectService, getProjectById } from '../../services/ProjectService';
   import { setSelectedNodePath, consumePendingEntityId, setPendingEntityId } from '../../stores';
   import RequirementDetailView from '../../../requirements/components/sections/RequirementDetailView.svelte';
   import RequirementForm from '../../../requirements/components/idioms/RequirementForm.svelte';
   import RequirementLevelBadge from '../../../requirements/components/idioms/RequirementLevelBadge.svelte';
-  import type { Requirement, RequirementDetail, RequirementLevel, RequirementStatus, CreateRequirementRequest, UpdateRequirementRequest } from '../../../requirements/types';
+  import type {
+    Requirement,
+    RequirementDetail,
+    RequirementLevel,
+    RequirementStatus,
+    CreateRequirementRequest,
+    UpdateRequirementRequest,
+  } from '../../../requirements/types';
   import type { ComboboxOption } from '@sddp/ui';
-  import { REQUIREMENT_LEVEL_STYLES, REQUIREMENT_STATUS_STYLES, VALID_STATUS_TRANSITIONS, isEditable } from '../../../requirements/types';
-  import { getRequirementService } from '../../../requirements/services';
-  import { getConversationService } from '../../../conversations/services/ConversationService';
+  import {
+    REQUIREMENT_LEVEL_STYLES,
+    REQUIREMENT_STATUS_STYLES,
+    VALID_STATUS_TRANSITIONS,
+    isEditable,
+  } from '../../../requirements/types';
+  import { createRequirementService } from '../../../requirements/services';
+  import { createConversationService } from '../../../conversations/services/ConversationService';
   import SpecForm from '../../../specs/components/idioms/SpecForm.svelte';
   import type { CreateSpecRequest } from '../../../specs/types';
   import { createSpec } from '../../../specs/services';
@@ -145,8 +181,7 @@
       if (!authState.user?.tenantId) {
         throw new Error('User not authenticated or missing tenant');
       }
-      const service = getProjectService();
-      service.setTenantId(authState.user.tenantId);
+      const service = createProjectService(authState.user.tenantId, projectId);
 
       const tenantId = authState.user.tenantId;
       const response = await service.getProjectRequirements(
@@ -202,8 +237,7 @@
       if (!authState.user?.tenantId) {
         throw new Error('User not authenticated');
       }
-      const requirementService = getRequirementService();
-      requirementService.setContext(authState.user.tenantId, projectId);
+      const requirementService = createRequirementService(authState.user.tenantId, projectId);
 
       const detail = await requirementService.getRequirementById(requirementId);
       selectedRequirement = detail;
@@ -275,21 +309,34 @@
     // Pre-populate conversation option so Combobox shows current name
     if (selectedRequirement.conversationId && selectedRequirement.conversationName) {
       const prefix = selectedRequirement.conversationType === 'Channel' ? '#' : '';
-      conversationCandidates = [{
-        value: selectedRequirement.conversationId,
-        label: `${prefix}${selectedRequirement.conversationName}`,
-        description: selectedRequirement.conversationDescription ?? selectedRequirement.conversationType ?? undefined,
-      }];
+      conversationCandidates = [
+        {
+          value: selectedRequirement.conversationId,
+          label: `${prefix}${selectedRequirement.conversationName}`,
+          description:
+            selectedRequirement.conversationDescription ??
+            selectedRequirement.conversationType ??
+            undefined,
+        },
+      ];
     } else {
       conversationCandidates = [];
     }
     // Pre-populate parent option so Combobox shows current parent
-    if (selectedRequirement.parentId && (selectedRequirement.parentTitle || selectedRequirement.parentCode)) {
-      parentCandidates = [{
-        value: selectedRequirement.parentId,
-        label: `${selectedRequirement.parentCode ?? ''}  ${selectedRequirement.parentTitle ?? ''}`.trim(),
-        description: selectedRequirement.parentLevel ? `Level ${selectedRequirement.parentLevel}` : undefined,
-      }];
+    if (
+      selectedRequirement.parentId &&
+      (selectedRequirement.parentTitle || selectedRequirement.parentCode)
+    ) {
+      parentCandidates = [
+        {
+          value: selectedRequirement.parentId,
+          label:
+            `${selectedRequirement.parentCode ?? ''}  ${selectedRequirement.parentTitle ?? ''}`.trim(),
+          description: selectedRequirement.parentLevel
+            ? `Level ${selectedRequirement.parentLevel}`
+            : undefined,
+        },
+      ];
     } else {
       parentCandidates = [];
     }
@@ -305,8 +352,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const requirementService = getRequirementService();
-      requirementService.setContext(authState.user.tenantId, projectId);
+      const requirementService = createRequirementService(authState.user.tenantId, projectId);
 
       await requirementService.transitionStatus(selectedRequirement.id, { newStatus });
       // Reload detail to reflect updated status
@@ -333,8 +379,7 @@
       try {
         const authState = getAuthState();
         if (!authState.user?.tenantId) return;
-        const svc = getConversationService();
-        svc.setContext(authState.user.tenantId, projectId);
+        const svc = createConversationService(authState.user.tenantId, projectId);
         const results = await svc.searchConversations(query, 15);
         conversationCandidates = results.map((c) => ({
           value: c.id,
@@ -355,8 +400,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const requirementService = getRequirementService();
-      requirementService.setContext(authState.user.tenantId, projectId);
+      const requirementService = createRequirementService(authState.user.tenantId, projectId);
 
       const { conversationId: newConvId, ...updateData } = data;
       await requirementService.updateRequirement(selectedRequirement.id, updateData);
@@ -364,7 +408,9 @@
       // Handle conversation link/unlink
       const oldConvId = selectedRequirement.conversationId;
       if (newConvId && newConvId !== oldConvId) {
-        await requirementService.linkConversation(selectedRequirement.id, { conversationId: newConvId });
+        await requirementService.linkConversation(selectedRequirement.id, {
+          conversationId: newConvId,
+        });
       } else if (!newConvId && oldConvId) {
         await requirementService.unlinkConversation(selectedRequirement.id);
       }
@@ -374,7 +420,12 @@
       selectedRequirement = detail;
       requirements = requirements.map((req) =>
         req.id === detail.id
-          ? { ...req, title: detail.title, description: detail.description, updatedAt: detail.updatedAt }
+          ? {
+              ...req,
+              title: detail.title,
+              description: detail.description,
+              updatedAt: detail.updatedAt,
+            }
           : req
       );
       viewMode = 'detail';
@@ -401,8 +452,7 @@
       try {
         const authState = getAuthState();
         if (!authState.user?.tenantId) return;
-        const svc = getRequirementService();
-        svc.setContext(authState.user.tenantId, projectId);
+        const svc = createRequirementService(authState.user.tenantId, projectId);
         const results = await svc.searchRequirements(query, 15);
         parentCandidates = results.map((r) => ({
           value: r.id,
@@ -473,8 +523,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const requirementService = getRequirementService();
-      requirementService.setContext(authState.user.tenantId, projectId);
+      const requirementService = createRequirementService(authState.user.tenantId, projectId);
 
       const { conversationId: convId, ...createData } = data;
       const detail = await requirementService.createRequirement(createData);
@@ -485,9 +534,7 @@
       }
 
       // Reload detail to get full data (including conversation info)
-      const fullDetail = convId
-        ? await requirementService.getRequirementById(detail.id)
-        : detail;
+      const fullDetail = convId ? await requirementService.getRequirementById(detail.id) : detail;
 
       const newRequirement: Requirement = {
         id: fullDetail.id,
@@ -521,7 +568,11 @@
   // Filter requirements
   const filteredRequirements = $derived(
     requirements.filter((r) => {
-      if (searchQuery && !r.title.toLowerCase().includes(searchQuery.toLowerCase()) && !r.code.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (
+        searchQuery &&
+        !r.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !r.code.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
       if (levelFilter !== 'all' && r.level !== levelFilter) return false;
@@ -563,9 +614,7 @@
       ? versionHistory.filter((v) => v.id !== selectedRequirement!.id)
       : versionHistory
   );
-  const selectedVersionList = $derived(
-    pastVersions.filter((v) => selectedVersionIds.has(v.id))
-  );
+  const selectedVersionList = $derived(pastVersions.filter((v) => selectedVersionIds.has(v.id)));
   const activeVersion = $derived(
     selectedVersionList.find((v) => v.id === activeVersionTabId) ?? selectedVersionList[0] ?? null
   );
@@ -585,8 +634,7 @@
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) return;
-      const svc = getRequirementService();
-      svc.setContext(authState.user.tenantId, projectId);
+      const svc = createRequirementService(authState.user.tenantId, projectId);
       versionHistory = await svc.getVersionHistory(requirementId);
     } catch {
       versionHistory = [];
@@ -643,7 +691,10 @@
   function handleResizePointerMove(e: PointerEvent) {
     if (!isResizingVersionPanel) return;
     const delta = resizeStartY - e.clientY;
-    versionPanelHeight = Math.min(VERSION_PANEL_MAX, Math.max(VERSION_PANEL_MIN, resizeStartHeight + delta));
+    versionPanelHeight = Math.min(
+      VERSION_PANEL_MAX,
+      Math.max(VERSION_PANEL_MIN, resizeStartHeight + delta)
+    );
   }
 
   function handleResizePointerUp(e: PointerEvent) {
@@ -705,7 +756,9 @@
         {#snippet sidebar()}
           <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
             <!-- Header with Search and Actions -->
-            <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+            <div
+              class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+            >
               <div class="flex items-center gap-1 w-full">
                 <div class="relative flex-1">
                   <Icon
@@ -717,7 +770,7 @@
                     type="text"
                     placeholder="Search requirements..."
                     value={searchQuery}
-                    oninput={(e) => searchQuery = (e.target as HTMLInputElement).value}
+                    oninput={(e) => (searchQuery = (e.target as HTMLInputElement).value)}
                     variant="flat"
                     class="pl-8 w-full"
                     size="sm"
@@ -725,45 +778,57 @@
                 </div>
                 <!-- Filter Dropdown -->
                 <Dropdown position="bottom-right">
-                  {#snippet trigger()}
-                    <IconButton icon="more-vertical" size="sm" variant="ghost" title="Filter options" />
+                  {#snippet trigger({ toggle, open })}
+                    <IconButton
+                      onclick={toggle}
+                      ariaHasPopup
+                      ariaExpanded={open}
+                      icon="more-vertical"
+                      size="sm"
+                      variant="ghost"
+                      title="Filter options"
+                    />
                   {/snippet}
                   <div class="py-1 min-w-[180px]">
                     <!-- Level Filter -->
-                    <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                    <div
+                      class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                    >
                       Level
                     </div>
                     <Button
                       variant="unstyled"
                       class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                         {levelFilter === 'all'
-                          ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                      onclick={() => levelFilter = 'all'}
+                        ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                      onclick={() => (levelFilter = 'all')}
                     >
                       <Icon name="layers" size="sm" />
                       <span class="flex-1">All Levels</span>
                       {#if levelFilter === 'all'}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                       <span class="text-xs opacity-70">({levelCounts.all})</span>
                     </Button>
-                    {#each (['A', 'B', 'C'] as RequirementLevel[]) as level (level)}
+                    {#each ['A', 'B', 'C'] as RequirementLevel[] as level (level)}
                       {@const lvlStyle = REQUIREMENT_LEVEL_STYLES[level]}
                       <Button
                         variant="unstyled"
                         class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                           {levelFilter === level
-                            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                        onclick={() => levelFilter = level}
+                          ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                        onclick={() => (levelFilter = level)}
                       >
-                        <span class="w-5 h-5 flex items-center justify-center text-xs font-bold rounded {lvlStyle.bgColor} {lvlStyle.textColor}">
+                        <span
+                          class="w-5 h-5 flex items-center justify-center text-xs font-bold rounded {lvlStyle.bgColor} {lvlStyle.textColor}"
+                        >
                           {level}
                         </span>
                         <span class="flex-1">Level {level}</span>
                         {#if levelFilter === level}
-                          <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                          <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                         {/if}
                         <span class="text-xs opacity-70">({levelCounts[level]})</span>
                       </Button>
@@ -772,38 +837,40 @@
                     <div class="my-1 border-t border-[var(--color-border-primary)]"></div>
 
                     <!-- Status Filter -->
-                    <div class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase">
+                    <div
+                      class="px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase"
+                    >
                       Status
                     </div>
                     <Button
                       variant="unstyled"
                       class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                         {statusFilter === 'all'
-                          ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                      onclick={() => statusFilter = 'all'}
+                        ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                      onclick={() => (statusFilter = 'all')}
                     >
                       <Icon name="layers" size="sm" />
                       <span class="flex-1">All Status</span>
                       {#if statusFilter === 'all'}
-                        <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                        <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                       {/if}
                       <span class="text-xs opacity-70">({statusCounts.all})</span>
                     </Button>
-                    {#each (['Draft', 'InReview', 'Approved', 'Deprecated'] as RequirementStatus[]) as status (status)}
+                    {#each ['Draft', 'InReview', 'Approved', 'Deprecated'] as RequirementStatus[] as status (status)}
                       {@const style = REQUIREMENT_STATUS_STYLES[status]}
                       <Button
                         variant="unstyled"
                         class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors
                           {statusFilter === status
-                            ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]'
-                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
-                        onclick={() => statusFilter = status}
+                          ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"
+                        onclick={() => (statusFilter = status)}
                       >
                         <Icon name={style.icon} size="sm" class={style.textColor} />
                         <span class="flex-1">{style.label}</span>
                         {#if statusFilter === status}
-                          <Icon name="check" size="sm" class="text-[var(--color-accent-primary)]" />
+                          <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
                         {/if}
                         <span class="text-xs opacity-70">({statusCounts[status]})</span>
                       </Button>
@@ -814,10 +881,20 @@
             </div>
 
             <!-- List Header (matches RichListItem layout: leading + flex-1 content + meta) -->
-            <div class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
-              <span class="flex-shrink-0 w-6 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-center">Lv</span>
-              <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Title</span>
-              <span class="flex-shrink-0 text-xs font-medium text-[var(--color-text-tertiary)] uppercase">Code</span>
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
+            >
+              <span
+                class="flex-shrink-0 w-6 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-center"
+                >Lv</span
+              >
+              <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase"
+                >Title</span
+              >
+              <span
+                class="flex-shrink-0 text-xs font-medium text-[var(--color-text-tertiary)] uppercase"
+                >Code</span
+              >
             </div>
 
             <!-- Requirement List -->
@@ -835,11 +912,15 @@
                   {/snippet}
                   {#snippet badges()}
                     <PriorityBadge priority={req.priority ?? 'Medium'} size="sm" />
-                    <span class="px-1.5 py-0.5 text-[0.625rem] rounded {statusStyle.bgColor} {statusStyle.textColor}">
+                    <span
+                      class="px-1.5 py-0.5 text-[0.625rem] rounded {statusStyle.bgColor} {statusStyle.textColor}"
+                    >
                       {statusStyle.label}
                     </span>
                     {#if req.childrenCount > 0}
-                      <span class="text-xs text-[var(--color-text-tertiary)] flex items-center gap-0.5">
+                      <span
+                        class="text-xs text-[var(--color-text-tertiary)] flex items-center gap-0.5"
+                      >
                         <Icon name="git-branch" size="xs" />
                         {req.childrenCount}
                       </span>
@@ -877,7 +958,9 @@
                 {#snippet revisionHistory()}
                   <div class="px-4 pt-1 pb-3">
                     {#if versionHistoryLoading}
-                      <div class="flex items-center gap-2 py-2 text-sm text-[var(--color-text-muted)]">
+                      <div
+                        class="flex items-center gap-2 py-2 text-sm text-[var(--color-text-muted)]"
+                      >
                         <Spinner size="sm" />
                         <span>Loading...</span>
                       </div>
@@ -887,8 +970,8 @@
                           <label
                             class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors
                                    {selectedVersionIds.has(ver.id)
-                                     ? 'bg-[var(--color-accent-primary)]/10'
-                                     : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                              ? 'bg-[var(--color-accent-primary)]/10'
+                              : 'hover:bg-[var(--color-bg-tertiary)]'}"
                           >
                             <Checkbox
                               unstyled
@@ -896,13 +979,21 @@
                               onchange={() => handleVersionToggle(ver.id)}
                               class="w-3.5 h-3.5 rounded border-[var(--color-border-secondary)] accent-[var(--color-accent-primary)]"
                             />
-                            <span class="font-mono text-sm text-[var(--color-accent-primary)] flex-shrink-0">
+                            <span
+                              class="font-mono text-sm text-[var(--color-accent-text)] flex-shrink-0"
+                            >
                               v{ver.version}
                             </span>
-                            <span class="text-xs font-medium flex-shrink-0 {REQUIREMENT_STATUS_STYLES[ver.status].textColor}">
+                            <span
+                              class="text-xs font-medium flex-shrink-0 {REQUIREMENT_STATUS_STYLES[
+                                ver.status
+                              ].textColor}"
+                            >
                               {REQUIREMENT_STATUS_STYLES[ver.status].label}
                             </span>
-                            <span class="ml-auto text-xs text-[var(--color-text-muted)] flex-shrink-0">
+                            <span
+                              class="ml-auto text-xs text-[var(--color-text-muted)] flex-shrink-0"
+                            >
                               {formatShortDate(ver.validFrom)}
                             </span>
                           </label>
@@ -925,52 +1016,118 @@
             <DetailHeader>
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">New Requirement</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('requirement-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Create"
+                  onclick={() =>
+                    (
+                      document.getElementById('requirement-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if viewMode === 'promote' && selectedRequirement}
             <DetailHeader>
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">Promote to Spec</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Create" onclick={() => (document.getElementById('spec-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Create"
+                  onclick={() =>
+                    (
+                      document.getElementById('spec-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if viewMode === 'edit' && selectedRequirement}
             <DetailHeader>
               <h2 class="text-sm font-medium text-[var(--color-text-primary)]">Edit Requirement</h2>
               {#snippet actions()}
-                <IconButton icon="check" variant="success" size="sm" title="Save" onclick={() => (document.getElementById('requirement-form') as HTMLFormElement | null)?.requestSubmit()} disabled={formLoading} />
-                <IconButton icon="x" variant="ghost" size="sm" title="Cancel" onclick={handleCancelForm} />
+                <IconButton
+                  icon="check"
+                  variant="success"
+                  size="sm"
+                  title="Save"
+                  onclick={() =>
+                    (
+                      document.getElementById('requirement-form') as HTMLFormElement | null
+                    )?.requestSubmit()}
+                  disabled={formLoading}
+                />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Cancel"
+                  onclick={handleCancelForm}
+                />
               {/snippet}
             </DetailHeader>
           {:else if selectedRequirement}
             <DetailHeader>
               {#snippet leading()}
-                <RequirementLevelBadge level={selectedRequirement!.level} size="md" />
+                <RequirementLevelBadge level={selectedRequirement!.level} size="icon" />
               {/snippet}
               <DetailTitle title={selectedRequirement!.title} code={selectedRequirement!.code} />
               {#snippet actions()}
                 {@const transitions = VALID_STATUS_TRANSITIONS[selectedRequirement!.status]}
                 {#if isEditable(selectedRequirement!.status)}
-                  <IconButton icon="edit" variant="ghost" size="sm" title="Edit" onclick={handleEditRequirement} />
+                  <IconButton
+                    icon="edit"
+                    variant="ghost"
+                    size="sm"
+                    title="Edit"
+                    onclick={handleEditRequirement}
+                  />
                 {/if}
                 {#if transitions.length > 0 || selectedRequirement!.status === 'Approved'}
                   <Dropdown position="bottom-right">
-                    {#snippet trigger()}
-                      <IconButton icon="more-vertical" variant="ghost" size="sm" title="More actions" />
+                    {#snippet trigger({ toggle, open })}
+                      <IconButton
+                        onclick={toggle}
+                        ariaHasPopup
+                        ariaExpanded={open}
+                        icon="more-vertical"
+                        variant="ghost"
+                        size="sm"
+                        title="More actions"
+                      />
                     {/snippet}
                     <div class="py-1 min-w-[160px]">
                       {#if transitions.length > 0}
-                        <div class="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                        <div
+                          class="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]"
+                        >
                           Transition to
                         </div>
                         {#each transitions as status (status)}
                           <Button
                             variant="unstyled"
                             onclick={() => handleStatusChange(status)}
-                            class="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-surface-200)] transition-colors {REQUIREMENT_STATUS_STYLES[status].textColor}"
+                            class="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-surface-200)] transition-colors {REQUIREMENT_STATUS_STYLES[
+                              status
+                            ].textColor}"
                           >
                             {REQUIREMENT_STATUS_STYLES[status].label}
                           </Button>
@@ -992,7 +1149,13 @@
                     </div>
                   </Dropdown>
                 {/if}
-                <IconButton icon="x" variant="ghost" size="sm" title="Close" onclick={handleCloseRequirement} />
+                <IconButton
+                  icon="x"
+                  variant="ghost"
+                  size="sm"
+                  title="Close"
+                  onclick={handleCloseRequirement}
+                />
               {/snippet}
             </DetailHeader>
           {:else}
@@ -1005,70 +1168,74 @@
         <!-- Main Content: Requirement Detail -->
         {#if viewMode === 'create'}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
-              <RequirementForm
-                mode="create"
-                loading={formLoading}
-                {parentCandidates}
-                {memberCandidates}
-                {conversationCandidates}
-                onSearchParent={handleParentSearch}
-                {parentSearchLoading}
-                onSearchConversation={handleConversationSearch}
-                {conversationSearchLoading}
-                onSubmit={handleCreateRequirementSubmit}
-              />
+            <RequirementForm
+              mode="create"
+              loading={formLoading}
+              {parentCandidates}
+              {memberCandidates}
+              {conversationCandidates}
+              onSearchParent={handleParentSearch}
+              {parentSearchLoading}
+              onSearchConversation={handleConversationSearch}
+              {conversationSearchLoading}
+              onSubmit={handleCreateRequirementSubmit}
+            />
           </div>
         {:else if viewMode === 'promote' && selectedRequirement}
           <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-              <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-3 text-xs text-[var(--color-text-secondary)]">
-                This spec will link back to requirement <span class="font-mono">{selectedRequirement.code}</span>.
-              </div>
-              <SpecForm
-                mode="create"
-                tenantId={getAuthState().user?.tenantId ?? ''}
-                {projectId}
-                loading={formLoading}
-                initialData={{
-                  code: `SPEC-${selectedRequirement.code}`,
-                  title: selectedRequirement.title,
-                  description: selectedRequirement.description,
-                  decision: '',
-                  context: '',
-                  scope: '',
-                  outOfScope: '',
-                  definitions: '',
-                  acceptanceCriteria: '',
-                  owners: '',
-                  reviewTrigger: '',
-                  requirementId: selectedRequirement.id,
-                  bornFromConversationId: selectedRequirement.conversationId ?? undefined,
-                }}
-                onSubmit={handlePromoteSpecSubmit}
-              />
+            <div
+              class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-100)] p-3 text-xs text-[var(--color-text-secondary)]"
+            >
+              This spec will link back to requirement <span class="font-mono"
+                >{selectedRequirement.code}</span
+              >.
+            </div>
+            <SpecForm
+              mode="create"
+              tenantId={getAuthState().user?.tenantId ?? ''}
+              {projectId}
+              loading={formLoading}
+              initialData={{
+                code: `SPEC-${selectedRequirement.code}`,
+                title: selectedRequirement.title,
+                description: selectedRequirement.description,
+                decision: '',
+                context: '',
+                scope: '',
+                outOfScope: '',
+                definitions: '',
+                acceptanceCriteria: '',
+                owners: '',
+                reviewTrigger: '',
+                requirementId: selectedRequirement.id,
+                bornFromConversationId: selectedRequirement.conversationId ?? undefined,
+              }}
+              onSubmit={handlePromoteSpecSubmit}
+            />
           </div>
         {:else if viewMode === 'edit' && selectedRequirement}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
-              <RequirementForm
-                mode="edit"
-                loading={formLoading}
-                {memberCandidates}
-                {parentCandidates}
-                onSearchParent={handleParentSearch}
-                {parentSearchLoading}
-                {conversationCandidates}
-                onSearchConversation={handleConversationSearch}
-                {conversationSearchLoading}
-                initialData={{
-                  code: selectedRequirement.code,
-                  title: selectedRequirement.title,
-                  description: selectedRequirement.description,
-                  priority: selectedRequirement.priority,
-                  parentId: selectedRequirement.parentId ?? undefined,
-                  ownerUserId: selectedRequirement.owner?.id ?? undefined,
-                  conversationId: selectedRequirement.conversationId ?? undefined,
-                }}
-                onSubmit={handleUpdateRequirement}
-              />
+            <RequirementForm
+              mode="edit"
+              loading={formLoading}
+              {memberCandidates}
+              {parentCandidates}
+              onSearchParent={handleParentSearch}
+              {parentSearchLoading}
+              {conversationCandidates}
+              onSearchConversation={handleConversationSearch}
+              {conversationSearchLoading}
+              initialData={{
+                code: selectedRequirement.code,
+                title: selectedRequirement.title,
+                description: selectedRequirement.description,
+                priority: selectedRequirement.priority,
+                parentId: selectedRequirement.parentId ?? undefined,
+                ownerUserId: selectedRequirement.owner?.id ?? undefined,
+                conversationId: selectedRequirement.conversationId ?? undefined,
+              }}
+              onSubmit={handleUpdateRequirement}
+            />
           </div>
         {:else if detailLoading}
           <div class="flex-1 flex items-center justify-center">
@@ -1093,28 +1260,44 @@
             {#if selectedVersionList.length > 0}
               <div class="flex-shrink-0 flex flex-col" style="height: {versionPanelHeight}px">
                 <!-- Resize handle -->
-                <ResizeHandle orientation="horizontal" onpointerdown={handleResizePointerDown} isResizing={isResizingVersionPanel} ariaLabel="Resize version panel" />
+                <ResizeHandle
+                  orientation="horizontal"
+                  onpointerdown={handleResizePointerDown}
+                  isResizing={isResizingVersionPanel}
+                  ariaLabel="Resize version panel"
+                />
                 <!-- Label + Tab bar -->
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-secondary)] flex-shrink-0">
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-secondary)] flex-shrink-0"
+                >
                   <Icon name="history" size="xs" class="text-[var(--color-text-tertiary)]" />
-                  <span class="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">Revision Compare</span>
+                  <span
+                    class="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]"
+                    >Revision Compare</span
+                  >
                 </div>
-                <div class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-1 flex-shrink-0">
+                <div
+                  class="flex items-center border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)] px-1 flex-shrink-0"
+                >
                   {#each selectedVersionList as ver (ver.id)}
                     <Button
                       variant="unstyled"
                       onclick={() => (activeVersionTabId = ver.id)}
                       class="group flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors border-b-2
-                             {activeVersionTabId === ver.id || (!activeVersionTabId && ver.id === selectedVersionList[0]?.id)
-                               ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
-                               : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
+                             {activeVersionTabId === ver.id ||
+                      (!activeVersionTabId && ver.id === selectedVersionList[0]?.id)
+                        ? 'border-[var(--color-accent-primary)] text-[var(--color-text-primary)]'
+                        : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
                     >
                       <span class="font-mono">v{ver.version}</span>
                       <Button
                         variant="unstyled"
                         tabindex={-1}
                         aria-label="Close version tab"
-                        onclick={(e: MouseEvent) => { e.stopPropagation(); handleRemoveVersionTab(ver.id); }}
+                        onclick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          handleRemoveVersionTab(ver.id);
+                        }}
                         class="ml-1 w-4 h-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--color-surface-200)] transition-opacity text-[var(--color-text-muted)] cursor-pointer"
                         title="Close tab"
                       >
@@ -1135,43 +1318,53 @@
         {:else}
           <!-- Empty state: Summary dashboard -->
           <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-              <!-- Summary Cards -->
-              <CardGrid cols={4} gap="md">
-                <StatCard title="Total Requirements" value={requirements.length} />
-                <StatCard title="Level A" value={levelCounts.A} valueColor="text-red-600" />
-                <StatCard title="Level B" value={levelCounts.B} valueColor="text-yellow-600" />
-                <StatCard title="Level C" value={levelCounts.C} valueColor="text-blue-600" />
-              </CardGrid>
+            <!-- Summary Cards -->
+            <CardGrid cols={4} gap="md">
+              <StatCard title="Total Requirements" value={requirements.length} />
+              <StatCard title="Level A" value={levelCounts.A} valueColor="text-red-600" />
+              <StatCard title="Level B" value={levelCounts.B} valueColor="text-yellow-600" />
+              <StatCard title="Level C" value={levelCounts.C} valueColor="text-blue-600" />
+            </CardGrid>
 
-              <!-- Status Breakdown -->
-              <SurfaceCard padding="lg">
-                <h3 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">Status Breakdown</h3>
-                <div class="space-y-2">
-                  {#each (['Draft', 'InReview', 'Approved', 'Deprecated'] as RequirementStatus[]) as status (status)}
-                    {@const style = REQUIREMENT_STATUS_STYLES[status]}
-                    {@const count = statusCounts[status]}
-                    {@const percentage = requirements.length > 0 ? (count / requirements.length) * 100 : 0}
-                    <div class="flex items-center gap-3">
-                      <div class="w-20 text-xs {style.textColor}">{style.label}</div>
-                      <div class="flex-1 h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
-                        <div
-                          class="h-full {style.barColor}"
-                          style="width: {percentage}%"
-                        ></div>
-                      </div>
-                      <div class="w-8 text-xs text-right text-[var(--color-text-tertiary)]">{count}</div>
+            <!-- Status Breakdown -->
+            <SurfaceCard padding="lg">
+              <h3 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">
+                Status Breakdown
+              </h3>
+              <div class="space-y-2">
+                {#each ['Draft', 'InReview', 'Approved', 'Deprecated'] as RequirementStatus[] as status (status)}
+                  {@const style = REQUIREMENT_STATUS_STYLES[status]}
+                  {@const count = statusCounts[status]}
+                  {@const percentage =
+                    requirements.length > 0 ? (count / requirements.length) * 100 : 0}
+                  <div class="flex items-center gap-3">
+                    <div class="w-20 text-xs {style.textColor}">{style.label}</div>
+                    <div
+                      class="flex-1 h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden"
+                    >
+                      <div class="h-full {style.barColor}" style="width: {percentage}%"></div>
                     </div>
-                  {/each}
-                </div>
-              </SurfaceCard>
-
-              <div class="text-center py-6">
-                <Icon name="mouse-pointer" size="lg" class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70" />
-                <p class="text-sm font-medium text-[var(--color-text-primary)]">Select a requirement</p>
-                <p class="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Choose a requirement from the sidebar to view details.
-                </p>
+                    <div class="w-8 text-xs text-right text-[var(--color-text-tertiary)]">
+                      {count}
+                    </div>
+                  </div>
+                {/each}
               </div>
+            </SurfaceCard>
+
+            <div class="text-center py-6">
+              <Icon
+                name="mouse-pointer"
+                size="lg"
+                class="mx-auto mb-2 text-[var(--color-text-tertiary)] opacity-70"
+              />
+              <p class="text-sm font-medium text-[var(--color-text-primary)]">
+                Select a requirement
+              </p>
+              <p class="text-xs text-[var(--color-text-secondary)] mt-1">
+                Choose a requirement from the sidebar to view details.
+              </p>
+            </div>
           </div>
         {/if}
       </SidebarDetailLayout>

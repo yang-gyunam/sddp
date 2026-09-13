@@ -7,15 +7,8 @@
 <script lang="ts">
   import { Icon, Button, Spinner, Textarea } from '@sddp/ui';
   import { Modal, formatDateTime, formatNumber, formatPercent } from '@sddp/shell';
-  import type {
-    SignOffSummary,
-    SignOffDecision,
-    SignOffRequest,
-  } from '../../types';
-  import {
-    SIGN_OFF_DECISION_STYLES,
-    ROLE_TYPE_STYLES,
-  } from '../../types';
+  import type { SignOffSummary, SignOffDecision, SignOffRequest } from '../../types';
+  import { SIGN_OFF_DECISION_STYLES, ROLE_TYPE_STYLES } from '../../types';
 
   interface Props {
     open?: boolean;
@@ -42,15 +35,11 @@
 
   // Find current user's sign-off
   const currentUserSignOff = $derived(
-    currentUserId
-      ? summary.signOffs.find((s) => s.stakeholder.id === currentUserId)
-      : null
+    currentUserId ? summary.signOffs.find((s) => s.stakeholder.id === currentUserId) : null
   );
 
   // Can current user sign off?
-  const canSignOff = $derived(
-    currentUserSignOff && currentUserSignOff.decision === 'Pending'
-  );
+  const canSignOff = $derived(currentUserSignOff && currentUserSignOff.decision === 'Pending');
 
   // Summary stats
   const progressPercentage = $derived(
@@ -111,15 +100,12 @@
   }
 </script>
 
-<Modal
-  {open}
-  title="Sign-off Status"
-  size="lg"
-  onClose={handleClose}
->
+<Modal {open} title="Sign-off Status" size="lg" onClose={handleClose}>
   <div class="space-y-6">
     <!-- Summary Section -->
-    <div class="p-4 rounded-lg bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)]">
+    <div
+      class="p-4 rounded-lg bg-[var(--color-surface-100)] border border-[var(--color-border-secondary)]"
+    >
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-medium text-[var(--color-text-primary)]">Progress</h3>
         <span class="text-sm text-[var(--color-text-muted)]">
@@ -138,19 +124,27 @@
       <!-- Stats -->
       <div class="grid grid-cols-4 gap-4 text-center">
         <div>
-          <div class="text-lg font-semibold text-[var(--color-text-primary)]">{formatNumber(summary.pendingCount)}</div>
+          <div class="text-lg font-semibold text-[var(--color-text-primary)]">
+            {formatNumber(summary.pendingCount)}
+          </div>
           <div class="text-xs text-[var(--color-text-muted)]">Pending</div>
         </div>
         <div>
-          <div class="text-lg font-semibold text-green-600 dark:text-green-400">{formatNumber(summary.approvedCount)}</div>
+          <div class="text-lg font-semibold text-green-600 dark:text-green-400">
+            {formatNumber(summary.approvedCount)}
+          </div>
           <div class="text-xs text-[var(--color-text-muted)]">Approved</div>
         </div>
         <div>
-          <div class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">{formatNumber(summary.conditionalCount)}</div>
+          <div class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">
+            {formatNumber(summary.conditionalCount)}
+          </div>
           <div class="text-xs text-[var(--color-text-muted)]">Conditional</div>
         </div>
         <div>
-          <div class="text-lg font-semibold text-red-600 dark:text-red-400">{formatNumber(summary.rejectedCount)}</div>
+          <div class="text-lg font-semibold text-red-600 dark:text-red-400">
+            {formatNumber(summary.rejectedCount)}
+          </div>
           <div class="text-xs text-[var(--color-text-muted)]">Rejected</div>
         </div>
       </div>
@@ -166,12 +160,16 @@
           {@const isCurrentUser = signOff.stakeholder.id === currentUserId}
 
           <div
-            class="p-3 rounded-lg border transition-colors {isCurrentUser ? 'ring-2 ring-[var(--color-accent-primary)]' : ''} {style.bgColor} {style.borderColor}"
+            class="p-3 rounded-lg border transition-colors {isCurrentUser
+              ? 'ring-2 ring-[var(--color-accent-primary)]'
+              : ''} {style.bgColor} {style.borderColor}"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-start gap-3 min-w-0">
                 <!-- Avatar placeholder -->
-                <div class="w-10 h-10 rounded-full bg-[var(--color-surface-300)] flex items-center justify-center flex-shrink-0">
+                <div
+                  class="w-10 h-10 rounded-full bg-[var(--color-surface-300)] flex items-center justify-center flex-shrink-0"
+                >
                   <Icon name="user" size="sm" class="text-[var(--color-text-muted)]" />
                 </div>
 
@@ -181,7 +179,9 @@
                       {signOff.stakeholder.name}
                     </span>
                     {#if isCurrentUser}
-                      <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)] text-white">
+                      <span
+                        class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)] text-white"
+                      >
                         You
                       </span>
                     {/if}
@@ -195,7 +195,9 @@
 
               <!-- Decision badge -->
               <div class="flex items-center gap-2 flex-shrink-0">
-                <div class="flex items-center gap-1 px-2 py-1 rounded-full {style.bgColor} {style.textColor}">
+                <div
+                  class="flex items-center gap-1 px-2 py-1 rounded-full {style.bgColor} {style.textColor}"
+                >
                   <Icon name={style.icon} size="xs" />
                   <span class="text-xs font-medium">{style.label}</span>
                 </div>
@@ -234,7 +236,10 @@
           <Button
             variant="unstyled"
             onclick={() => handleDecisionSelect('Approved')}
-            class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors {selectedDecision === 'Approved' ? 'border-green-500 bg-green-50 dark:bg-green-950' : 'border-[var(--color-border-secondary)] hover:border-green-300'}"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors {selectedDecision ===
+            'Approved'
+              ? 'border-green-500 bg-green-50 dark:bg-green-950'
+              : 'border-[var(--color-border-secondary)] hover:border-green-300'}"
           >
             <Icon name="check-circle" size="sm" class="text-green-600 dark:text-green-400" />
             <span class="text-sm font-medium">Approve</span>
@@ -243,7 +248,10 @@
           <Button
             variant="unstyled"
             onclick={() => handleDecisionSelect('Conditional')}
-            class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors {selectedDecision === 'Conditional' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' : 'border-[var(--color-border-secondary)] hover:border-yellow-300'}"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors {selectedDecision ===
+            'Conditional'
+              ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950'
+              : 'border-[var(--color-border-secondary)] hover:border-yellow-300'}"
           >
             <Icon name="alert-circle" size="sm" class="text-yellow-600 dark:text-yellow-400" />
             <span class="text-sm font-medium">Conditional</span>
@@ -252,7 +260,10 @@
           <Button
             variant="unstyled"
             onclick={() => handleDecisionSelect('Rejected')}
-            class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors {selectedDecision === 'Rejected' ? 'border-red-500 bg-red-50 dark:bg-red-950' : 'border-[var(--color-border-secondary)] hover:border-red-300'}"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors {selectedDecision ===
+            'Rejected'
+              ? 'border-red-500 bg-red-50 dark:bg-red-950'
+              : 'border-[var(--color-border-secondary)] hover:border-red-300'}"
           >
             <Icon name="x-circle" size="sm" class="text-red-600 dark:text-red-400" />
             <span class="text-sm font-medium">Reject</span>
@@ -276,7 +287,9 @@
           label="Comments"
           required={selectedDecision === 'Rejected'}
           bind:value={comments}
-          placeholder={selectedDecision === 'Rejected' ? 'Please explain why this spec is being rejected...' : 'Add any additional comments...'}
+          placeholder={selectedDecision === 'Rejected'
+            ? 'Please explain why this spec is being rejected...'
+            : 'Add any additional comments...'}
           rows={3}
           class="mb-4"
         />
@@ -286,14 +299,15 @@
 
   {#snippet footer()}
     <div class="flex justify-end gap-2">
-      <Button variant="ghost" onclick={handleClose}>
-        Close
-      </Button>
+      <Button variant="ghost" onclick={handleClose}>Close</Button>
       {#if canSignOff}
         <Button
           variant="primary"
           onclick={handleSubmit}
-          disabled={loading || !selectedDecision || (selectedDecision === 'Conditional' && !conditions.trim()) || (selectedDecision === 'Rejected' && !comments.trim())}
+          disabled={loading ||
+            !selectedDecision ||
+            (selectedDecision === 'Conditional' && !conditions.trim()) ||
+            (selectedDecision === 'Rejected' && !comments.trim())}
         >
           {#if loading}
             <Spinner size="lg" />

@@ -14,7 +14,11 @@
     onSelect?: (node: TreeNode) => void;
     onToggle?: (nodeId: string) => void;
     onContextMenu?: (event: MouseEvent, node: TreeNode) => void;
-    onReorder?: (draggedId: string, targetId: string, position: 'before' | 'after' | 'inside') => void;
+    onReorder?: (
+      draggedId: string,
+      targetId: string,
+      position: 'before' | 'after' | 'inside'
+    ) => void;
   }
 
   let {
@@ -143,9 +147,7 @@
 
 <div class="tree-view {className}" role="tree" aria-label="Tree view">
   {#if flatNodes.length === 0}
-    <div class="text-center py-4 text-[var(--color-text-tertiary)] text-sm">
-      No items
-    </div>
+    <div class="text-center py-4 text-[var(--color-text-tertiary)] text-sm">No items</div>
   {:else}
     {#each flatNodes as { node, level } (node.id)}
       <TreeItem

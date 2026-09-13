@@ -88,24 +88,23 @@
   }
 </script>
 
+<!--
+  The close control is a sibling of the tab, not a child of it. A tab may only contain
+  presentational content, and nesting a button inside it made every tab an interactive control
+  wrapping another one (axe nested-interactive). Closing from the keyboard does not depend on
+  that button: the tab itself handles Delete and Backspace.
+-->
 <div
   class="group relative inline-flex items-center h-full px-3 pt-2 pb-1.5 text-sm cursor-pointer select-none min-w-0 transition-all duration-150
     {isActive
-      ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-primary)] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[var(--color-accent-primary)]'
-      : 'text-[var(--color-text-secondary)] bg-[color-mix(in_srgb,var(--color-bg-secondary),var(--color-bg-primary))] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}
+    ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-primary)] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[var(--color-accent-primary)]'
+    : 'text-[var(--color-text-secondary)] bg-[color-mix(in_srgb,var(--color-bg-secondary),var(--color-bg-primary))] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}
     {disabled ? 'opacity-50 cursor-not-allowed' : ''}
     {isDragging ? 'opacity-60 scale-95 shadow-lg z-10' : ''}
     {draggable && !disabled ? 'cursor-grab active:cursor-grabbing' : ''}
     {className}"
-  role="tab"
-  tabindex={disabled ? -1 : 0}
-  aria-selected={isActive}
-  aria-label="{title}{meta ? ` - ${meta}` : ''}{dirty ? ' (unsaved)' : ''}"
-  title="{title}{meta ? ` - ${meta}` : ''}"
+  role="presentation"
   draggable={draggable && !disabled}
-  onclick={handleClick}
-  onkeydown={handleKeydown}
-  onauxclick={handleMiddleClick}
   {oncontextmenu}
   {ondragstart}
   {ondragover}
@@ -113,32 +112,50 @@
   {ondrop}
   {ondragend}
   {onmousedown}
-  data-tab-id={id}
 >
-  <!-- Icon -->
-  {#if icon}
-    <Icon name={icon} size="sm" class="mr-2 flex-shrink-0" />
-  {/if}
+  <div
+    class="inline-flex items-center min-w-0 h-full focus:outline-none"
+    role="tab"
+    tabindex={disabled ? -1 : 0}
+    aria-selected={isActive}
+    aria-label="{title}{meta ? ` - ${meta}` : ''}{dirty ? ' (unsaved)' : ''}"
+    title="{title}{meta ? ` - ${meta}` : ''}"
+    onclick={handleClick}
+    onkeydown={handleKeydown}
+    onauxclick={handleMiddleClick}
+    data-tab-id={id}
+  >
+    <!-- Icon -->
+    {#if icon}
+      <Icon name={icon} size="sm" class="mr-2 flex-shrink-0" />
+    {/if}
 
-  <!-- Title -->
-  <span class="truncate max-w-32 {isPrimaryActive ? 'font-semibold' : ''}">
-    {title}
-  </span>
+    <!-- Title -->
+    <span class="truncate max-w-32 {isPrimaryActive ? 'font-semibold' : ''}">
+      {title}
+    </span>
 
-  <!-- Dirty indicator -->
-  {#if dirty && !closable}
-    <div class="ml-1.5 w-2 h-2 bg-[var(--color-text-primary)] rounded-full flex-shrink-0"></div>
-  {/if}
+    <!-- Dirty indicator -->
+    {#if dirty && !closable}
+      <div class="ml-1.5 w-2 h-2 bg-[var(--color-text-primary)] rounded-full flex-shrink-0"></div>
+    {/if}
+  </div>
 
-  <!-- Close button or dirty indicator -->
+  <!--
+    Close control: a pointer affordance only. A tablist may own nothing but tabs, so exposing a
+    button here made every tab stop counting as a required child. Keyboard users close the
+    focused tab with Delete or Backspace, which the tab handles itself.
+  -->
   {#if closable}
     {#if dirty}
       <Button
         variant="unstyled"
         onclick={handleClose}
         class="ml-2 p-0.5 rounded-sm flex items-center justify-center transition-all duration-150 opacity-100 hover:bg-[var(--color-text-primary)]/10"
-        disabled={disabled}
+        {disabled}
         title="Close {title}"
+        aria-hidden="true"
+        tabindex={-1}
       >
         <div class="w-2 h-2 bg-[var(--color-text-primary)] rounded-full"></div>
       </Button>
@@ -147,8 +164,9 @@
         icon="x"
         size="sm"
         onclick={handleClose}
-        disabled={disabled}
+        {disabled}
         title="Close {title}"
+        decorative
         class="ml-2 {isActive
           ? 'opacity-60 hover:opacity-100'
           : 'opacity-0 group-hover:opacity-100'}"

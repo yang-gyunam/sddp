@@ -5,6 +5,8 @@ using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Domain.Entities;
+using Sddp.Api.Services;
+using StackExchange.Redis;
 
 namespace Sddp.Api.Hubs;
 
@@ -276,6 +278,13 @@ public class ConversationHub : Hub
             "User {UserId} sending invitation to {TargetUserId} for conversation {ConversationId}",
             userId, targetUserId, conversationId);
 
+        await EnsureInvitationUserAsync(unitOfWork, conversation, uid, cancellationToken);
+        await EnsureInvitationUserAsync(unitOfWork, conversation, targetUid, cancellationToken);
+        var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
+        var prefix = scope.ServiceProvider.GetRequiredService<RedisCacheKeyPrefix>();
+        await redis.StringSetAsync(
+            InvitationKey(prefix, tenantId, convId, targetUid, uid), "pending", TimeSpan.FromMinutes(10));
+
         var projectIdStr = conversation.ProjectId?.ToString();
 
         // Send invitation to all connections of the target user
@@ -285,7 +294,7 @@ public class ConversationHub : Hub
             await Clients.Clients(targetConnections).SendAsync("ConversationInvitation", new
             {
                 ConversationId = conversationId,
-                ConversationName = conversationName,
+                ConversationName = conversation.Name,
                 InviterUserId = userId,
                 InviterName = Context.User?.FindFirst("name")?.Value ?? "Unknown",
                 ProjectId = projectIdStr,
@@ -331,10 +340,22 @@ public class ConversationHub : Hub
         var inviterMembers = await memberRepo.FindAsync(
             m => m.ConversationId == convId && m.UserId == inviterUid && m.IsActive,
             cancellationToken);
-        if (!inviterMembers.Any())
+        if (!inviterMembers.Any(member => member.Role.CanManageMembers()))
         {
             throw new HubException("Invitation is no longer valid");
         }
+
+        // The tuple is issued only by SendInvitation. Atomic DEL gives concurrent replies
+        // one winner and consumes declines too; neither a guessed inviter nor a replay can join.
+        var redis = outerScope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
+        var prefix = outerScope.ServiceProvider.GetRequiredService<RedisCacheKeyPrefix>();
+        if (!await redis.KeyDeleteAsync(InvitationKey(prefix, tenantId, convId, uid, inviterUid)))
+        {
+            throw new HubException("Invitation is no longer valid");
+        }
+
+        await EnsureInvitationUserAsync(outerUnitOfWork, conversation, inviterUid, cancellationToken);
+        await EnsureInvitationUserAsync(outerUnitOfWork, conversation, uid, cancellationToken);
 
         _logger.LogInformation(
             "User {UserId} responded to invitation for {ConversationId}: accepted={Accepted}",
@@ -373,8 +394,10 @@ public class ConversationHub : Hub
                 await Groups.AddToGroupAsync(connId, groupName);
             }
 
-            // Notify the conversation group about MemberJoined
-            await Clients.Group(groupName).SendAsync("MemberJoined", new
+            // Group membership can outlive authorization until the removal outbox is delivered.
+            var activeMembers = await memberRepo.FindAsync(
+                m => m.ConversationId == convId && m.IsActive, cancellationToken);
+            await Clients.Users(activeMembers.Select(m => m.UserId.ToString()).Distinct().ToList()).SendAsync("MemberJoined", new
             {
                 ConversationId = conversationId,
                 UserId = userId,
@@ -400,6 +423,36 @@ public class ConversationHub : Hub
 
     #region Helper Methods
 
+    private static RedisKey InvitationKey(
+        RedisCacheKeyPrefix prefix, GlobalUniqueId tenantId, GlobalUniqueId conversationId,
+        GlobalUniqueId recipientId, GlobalUniqueId inviterId) =>
+        $"{prefix.Value}conversation:invitation:{tenantId}:{conversationId}:{recipientId}:{inviterId}";
+
+    private static async Task EnsureInvitationUserAsync(
+        IUnitOfWork unitOfWork, Conversation conversation, GlobalUniqueId userId,
+        CancellationToken cancellationToken)
+    {
+        var user = await unitOfWork.Repository<User>().GetByIdAsync(userId, cancellationToken);
+        var roles = await unitOfWork.Repository<UserRole>().FindAsync(
+            role => role.UserId == userId && role.TenantId == conversation.TenantId && role.IsActive,
+            cancellationToken);
+        if (user is null || !user.IsActive || user.IsAI || !roles.Any())
+        {
+            throw new HubException("Invitation is no longer valid");
+        }
+
+        if (conversation.ProjectId is { } projectId)
+        {
+            var members = await unitOfWork.Repository<ProjectMember>().FindAsync(
+                member => member.ProjectId == projectId && member.UserId == userId && member.IsActive,
+                cancellationToken);
+            if (!members.Any())
+            {
+                throw new HubException("Invitation is no longer valid");
+            }
+        }
+    }
+
     private string? GetUserId()
     {
         return Context.User?.FindFirst("sub")?.Value
@@ -416,7 +469,9 @@ public class ConversationHub : Hub
 
     private static string GetGroupName(string conversationId)
     {
-        return $"conversation:{conversationId}";
+        // GUID spelling must not create a second group that server-side removal cannot find.
+        var canonicalId = GlobalUniqueId.TryParse(conversationId, out var id) ? id.ToString() : conversationId;
+        return $"conversation:{canonicalId}";
     }
 
     #endregion

@@ -80,7 +80,7 @@ export function computeTangledTreeLayout(
   _width: number,
   _height: number,
   orientation: 'horizontal' | 'vertical' = 'horizontal',
-  config: TangledTreeLayoutConfig = DEFAULT_TANGLED_TREE_CONFIG,
+  config: TangledTreeLayoutConfig = DEFAULT_TANGLED_TREE_CONFIG
 ): TangledTreeLayoutResult {
   const empty: TangledTreeLayoutResult = {
     nodes: [],
@@ -98,9 +98,10 @@ export function computeTangledTreeLayout(
     if (levels.length === 0) return empty;
 
     // 2. Run bundled layout (swap nodeWidth/nodeHeight for vertical orientation)
-    const layoutConfig = orientation === 'vertical'
-      ? { ...config, nodeWidth: config.nodeHeight, nodeHeight: 200 }
-      : config;
+    const layoutConfig =
+      orientation === 'vertical'
+        ? { ...config, nodeWidth: config.nodeHeight, nodeHeight: 200 }
+        : config;
     const result = constructBundledLayout(levels, layoutConfig);
 
     // 3. Convert to output format, applying orientation swap
@@ -151,10 +152,8 @@ export function computeTangledTreeLayout(
     }
 
     // 6. Compute layout bounds (natural = horizontal: width=depth, height=rows)
-    const lw =
-      orientation === 'horizontal' ? result.layoutWidth : result.layoutHeight;
-    const lh =
-      orientation === 'horizontal' ? result.layoutHeight : result.layoutWidth;
+    const lw = orientation === 'horizontal' ? result.layoutWidth : result.layoutHeight;
+    const lh = orientation === 'horizontal' ? result.layoutHeight : result.layoutWidth;
 
     return {
       nodes: positionedNodes,
@@ -174,7 +173,7 @@ export function computeTangledTreeLayout(
  */
 export function getVisibleNodes(
   nodes: TraceabilityNode[],
-  collapsedNodeIds: Set<string>,
+  collapsedNodeIds: Set<string>
 ): { visibleNodes: TraceabilityNode[]; hiddenChildrenCounts: Map<string, number> } {
   if (collapsedNodeIds.size === 0) {
     return { visibleNodes: nodes, hiddenChildrenCounts: new Map() };
@@ -293,18 +292,10 @@ function convertToLevels(nodes: TraceabilityNode[]): LevelData[] {
  */
 function constructBundledLayout(
   levels: LevelData[],
-  config: TangledTreeLayoutConfig,
+  config: TangledTreeLayoutConfig
 ): { nodes: TangleNode[]; links: TangleLink[]; layoutWidth: number; layoutHeight: number } {
-  const {
-    padding,
-    nodeHeight,
-    nodeWidth,
-    bundleWidth,
-    levelYPadding,
-    metroD,
-    minFamilyHeight,
-    c,
-  } = config;
+  const { padding, nodeHeight, nodeWidth, bundleWidth, levelYPadding, metroD, minFamilyHeight, c } =
+    config;
   const bigc = nodeWidth + c;
 
   // ---- Step 1: Precompute bundles per level ----
@@ -355,7 +346,14 @@ function constructBundledLayout(
           source: node,
           target: parent,
           bundle: node.bundle,
-          xt: 0, yt: 0, xb: 0, yb: 0, xs: 0, ys: 0, c1: 0, c2: 0,
+          xt: 0,
+          yt: 0,
+          xb: 0,
+          yb: 0,
+          xs: 0,
+          ys: 0,
+          c1: 0,
+          c2: 0,
         });
       }
     }
@@ -373,10 +371,7 @@ function constructBundledLayout(
 
   for (const n of allNodes) {
     n.bundles = Object.keys(n.bundlesIndex).map((k) => n.bundlesIndex[k]!);
-    n.bundles.sort(
-      (a, b) =>
-        Math.max(...b.map((d) => d.span)) - Math.max(...a.map((d) => d.span)),
-    );
+    n.bundles.sort((a, b) => Math.max(...b.map((d) => d.span)) - Math.max(...a.map((d) => d.span)));
     n.bundles.forEach((bGroup, i) => {
       for (const bb of bGroup) {
         bb.i = i;
@@ -426,11 +421,7 @@ function constructBundledLayout(
     const targetBundles = l.target.bundlesIndex[l.bundle.id];
     const targetBundleI = targetBundles ? targetBundles[0]!.i : 0;
     const totalBundles = l.target.bundles.length;
-    l.yt =
-      l.target.y +
-      targetBundleI * metroD -
-      (totalBundles * metroD) / 2 +
-      metroD / 2;
+    l.yt = l.target.y + targetBundleI * metroD - (totalBundles * metroD) / 2 + metroD / 2;
     l.xb = l.bundle.x;
     l.yb = l.bundle.y;
     l.xs = l.source.x;
@@ -462,31 +453,21 @@ function constructBundledLayout(
     const targetBundles = l.target.bundlesIndex[l.bundle.id];
     const targetBundleI = targetBundles ? targetBundles[0]!.i : 0;
     const totalBundles = l.target.bundles.length;
-    l.yt =
-      l.target.y +
-      targetBundleI * metroD -
-      (totalBundles * metroD) / 2 +
-      metroD / 2;
+    l.yt = l.target.y + targetBundleI * metroD - (totalBundles * metroD) / 2 + metroD / 2;
     l.ys = l.source.y;
 
     const levelDiff = l.source.level - l.target.level;
     l.c1 =
-      levelDiff > 1
-        ? Math.min(bigc, l.xb - l.xt, l.yb > l.yt ? l.yb - l.yt : Infinity) - c
-        : c;
+      levelDiff > 1 ? Math.min(bigc, l.xb - l.xt, l.yb > l.yt ? l.yb - l.yt : Infinity) - c : c;
     if (l.c1 < 0) l.c1 = c;
     l.c2 = c;
   }
 
   // ---- Step 8: Layout bounds ----
   const layoutWidth =
-    allNodes.length > 0
-      ? Math.max(...allNodes.map((n) => n.x)) + nodeWidth + 2 * padding
-      : 0;
+    allNodes.length > 0 ? Math.max(...allNodes.map((n) => n.x)) + nodeWidth + 2 * padding : 0;
   const layoutHeight =
-    allNodes.length > 0
-      ? Math.max(...allNodes.map((n) => n.y)) + nodeHeight / 2 + 2 * padding
-      : 0;
+    allNodes.length > 0 ? Math.max(...allNodes.map((n) => n.y)) + nodeHeight / 2 + 2 * padding : 0;
 
   return { nodes: allNodes, links, layoutWidth, layoutHeight };
 }
@@ -503,10 +484,7 @@ function constructBundledLayout(
  *
  * For vertical (top-to-bottom), swap x↔y and adjust arc sweeps.
  */
-function buildMetroPath(
-  link: TangleLink,
-  orientation: 'horizontal' | 'vertical',
-): string {
+function buildMetroPath(link: TangleLink, orientation: 'horizontal' | 'vertical'): string {
   const { xt, yt, xb, xs, ys, c1, c2 } = link;
 
   if (orientation === 'horizontal') {
@@ -522,9 +500,11 @@ function buildMetroPath(
   }
 
   // Vertical (top-to-bottom): swap x↔y, flip arc sweep directions
-  const vxt = yt, vyt = xt;
+  const vxt = yt,
+    vyt = xt;
   const vyb = xb;
-  const vxs = ys, vys = xs;
+  const vxs = ys,
+    vys = xs;
 
   return [
     `M ${vxt} ${vyt}`,
@@ -544,7 +524,7 @@ function buildMetroPath(
 function applyOrientation(
   x: number,
   y: number,
-  orientation: 'horizontal' | 'vertical',
+  orientation: 'horizontal' | 'vertical'
 ): { x: number; y: number } {
   return orientation === 'horizontal' ? { x, y } : { x: y, y: x };
 }
@@ -553,11 +533,11 @@ function applyOrientation(
 function computeCrossLinkPath(
   source: PositionedNode,
   target: PositionedNode,
-  orientation: 'horizontal' | 'vertical',
+  orientation: 'horizontal' | 'vertical'
 ): string {
   const offset = Math.min(
     Math.abs(orientation === 'horizontal' ? target.y - source.y : target.x - source.x) * 0.4,
-    60,
+    60
   );
 
   if (orientation === 'horizontal') {
@@ -575,7 +555,7 @@ function flatFallback(
   nodes: TraceabilityNode[],
   crossLinks: TraceabilityCrossLink[],
   width: number,
-  height: number,
+  height: number
 ): TangledTreeLayoutResult {
   const layers = [0, 1, 2, 3];
   const layerNodes = layers.map((l) => nodes.filter((n) => n.layer === l));

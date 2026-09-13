@@ -3,11 +3,29 @@
  * Handles dynamic component resolution for tabs
  */
 
-import type { Tab } from '../types/layout.types';
+import type { LazyComponentReference, Tab } from '../types/layout.types';
 
 export interface ComponentResolutionResult {
   component: unknown | null;
   error: Error | null;
+}
+
+export function createLazyComponent(
+  id: string,
+  load: () => Promise<unknown>
+): LazyComponentReference {
+  return { kind: 'sddp-lazy-component', id, load };
+}
+
+export function isLazyComponentReference(component: unknown): component is LazyComponentReference {
+  return (
+    typeof component === 'object' &&
+    component !== null &&
+    'kind' in component &&
+    component.kind === 'sddp-lazy-component' &&
+    'load' in component &&
+    typeof component.load === 'function'
+  );
 }
 
 /**
@@ -15,7 +33,7 @@ export interface ComponentResolutionResult {
  */
 export function getComponentType(
   component: Tab['component']
-): 'none' | 'function' | 'promise' | 'module' | 'unknown' {
+): 'none' | 'function' | 'lazy' | 'promise' | 'module' | 'unknown' {
   if (!component) {
     return 'none';
   }
@@ -28,6 +46,10 @@ export function getComponentType(
     return 'promise';
   }
 
+  if (isLazyComponentReference(component)) {
+    return 'lazy';
+  }
+
   if (typeof component === 'object' && 'default' in component) {
     return 'module';
   }
@@ -38,9 +60,7 @@ export function getComponentType(
 /**
  * Synchronously resolves a component if possible
  */
-export function resolveComponentSync(
-  component: Tab['component']
-): ComponentResolutionResult {
+export function resolveComponentSync(component: Tab['component']): ComponentResolutionResult {
   if (!component) {
     return { component: null, error: null };
   }
@@ -81,6 +101,15 @@ export async function resolveComponentAsync(
       return { component: resolved, error: null };
     }
 
+    if (isLazyComponentReference(component)) {
+      const module = await component.load();
+      const resolved =
+        typeof module === 'object' && module !== null && 'default' in module
+          ? (module as { default: unknown }).default
+          : module;
+      return { component: resolved, error: null };
+    }
+
     if (typeof component === 'object' && 'default' in component) {
       return { component: (component as { default: unknown }).default, error: null };
     }
@@ -96,5 +125,5 @@ export async function resolveComponentAsync(
  * Checks if a tab needs async loading
  */
 export function needsAsyncLoad(component: Tab['component']): boolean {
-  return component instanceof Promise;
+  return component instanceof Promise || isLazyComponentReference(component);
 }

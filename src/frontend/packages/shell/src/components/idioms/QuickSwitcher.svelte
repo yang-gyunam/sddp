@@ -9,10 +9,7 @@
     onclose?: () => void;
   }
 
-  let {
-    visible = $bindable(false),
-    onclose,
-  }: Props = $props();
+  let { visible = $bindable(false), onclose }: Props = $props();
 
   let searchQuery = $state('');
   let selectedIndex = $state(0);
@@ -49,9 +46,8 @@
       return recentTabs;
     }
     const query = searchQuery.toLowerCase();
-    return allTabs.filter((tab) =>
-      tab.title.toLowerCase().includes(query) ||
-      tab.path?.toLowerCase().includes(query)
+    return allTabs.filter(
+      (tab) => tab.title.toLowerCase().includes(query) || tab.path?.toLowerCase().includes(query)
     );
   });
 
@@ -128,7 +124,9 @@
     aria-label="Quick Switcher"
     tabindex="-1"
   >
-    <div class="w-full max-w-lg bg-[var(--color-bg-primary)] rounded-lg shadow-2xl border border-[var(--color-border)] overflow-hidden">
+    <div
+      class="w-full max-w-lg bg-[var(--color-bg-primary)] rounded-lg shadow-2xl border border-[var(--color-border)] overflow-hidden"
+    >
       <!-- Search Input -->
       <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
         <Icon name="search" size="sm" class="text-[var(--color-text-tertiary)]" />
@@ -139,7 +137,10 @@
           placeholder="Search open files..."
           class="flex-1 bg-transparent border-none outline-none text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
         />
-        <kbd class="px-1.5 py-0.5 text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] rounded">ESC</kbd>
+        <kbd
+          class="px-1.5 py-0.5 text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] rounded"
+          >ESC</kbd
+        >
       </div>
 
       <!-- Results List -->
@@ -157,8 +158,8 @@
                   onclick={() => selectTab(tab)}
                   class="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors
                     {index === selectedIndex
-                      ? 'bg-[var(--color-primary-500)]/10 text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)]'
-                      : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'}"
+                    ? 'bg-[var(--color-primary-500)]/10 text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)]'
+                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'}"
                 >
                   <Icon name={tab.icon || 'file'} size="sm" class="flex-shrink-0" />
                   <div class="flex-1 min-w-0">
@@ -169,7 +170,9 @@
                       {/if}
                     </div>
                     {#if tab.path}
-                      <div class="text-xs text-[var(--color-text-tertiary)] truncate">{tab.path}</div>
+                      <div class="text-xs text-[var(--color-text-tertiary)] truncate">
+                        {tab.path}
+                      </div>
                     {/if}
                   </div>
                 </Button>
@@ -180,7 +183,9 @@
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+      <div
+        class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
+      >
         <div class="flex items-center gap-4 text-xs text-[var(--color-text-tertiary)]">
           <span class="flex items-center gap-1">
             <kbd class="px-1 py-0.5 bg-[var(--color-bg-tertiary)] rounded">↑</kbd>

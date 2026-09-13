@@ -44,8 +44,6 @@ public class JwtService : IJwtService
         GlobalUniqueId userId,
         string username,
         GlobalUniqueId tenantId,
-        IEnumerable<string> roles,
-        IEnumerable<string> permissions,
         string? displayName = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
@@ -61,18 +59,6 @@ public class JwtService : IJwtService
             new("tenant_id", tenantId.ToString()),
             new("name", displayName ?? username)
         };
-
-        // Add role claims.
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
-        }
-
-        // Add permission claims.
-        foreach (var permission in permissions)
-        {
-            claims.Add(new Claim("permission", permission));
-        }
 
         var token = new JwtSecurityToken(
             issuer: _issuer,

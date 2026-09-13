@@ -1,10 +1,11 @@
 # SDDP Backend Dockerfile
 # Multi-stage build for .NET 10 API
 
-ARG DOTNET_VERSION=10.0
+ARG DOTNET_SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.300
+ARG DOTNET_ASPNET_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9@sha256:7644f992230d35cf230017189d4038c0ae0f7388b13f4f7ae1900a155bafb597
 
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
+FROM ${DOTNET_SDK_IMAGE} AS build
 WORKDIR /src
 
 # Copy project files for restore (cache-friendly layer)
@@ -24,7 +25,7 @@ COPY . .
 RUN dotnet publish Sddp.Api/Sddp.Api.csproj -c Release -o /app
 
 # Runtime stage (self-contained: no prebuilt local image required)
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
+FROM ${DOTNET_ASPNET_IMAGE} AS runtime
 
 # Runtime native deps needed by Npgsql (GSSAPI)
 RUN apt-get update \
@@ -39,6 +40,11 @@ RUN useradd --no-create-home --shell /bin/false appuser
 
 # Copy published output
 COPY --from=build --chown=appuser /app .
+
+# Writable runtime output (git clones, materialized artifact descriptors). /app itself is
+# root-owned on purpose, so a relative default like "data/artifact-descriptors" would land
+# in an unwritable directory and every write would fail at runtime.
+RUN mkdir -p /app/data && chown appuser /app/data
 
 USER appuser
 

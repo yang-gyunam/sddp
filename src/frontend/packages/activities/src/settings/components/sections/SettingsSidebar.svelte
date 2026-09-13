@@ -9,7 +9,11 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { Icon, Button } from '@sddp/ui';
   import { config as appConfig } from '@sddp/shell';
-  import { settingsNavigationStore, setActiveCategory, setActiveProjectCategory } from '../../stores/settingsNavigation.store';
+  import {
+    settingsNavigationStore,
+    setActiveCategory,
+    setActiveProjectCategory,
+  } from '../../stores/settingsNavigation.store';
 
   interface SidebarItem {
     id: string;
@@ -37,9 +41,24 @@
   // --- Data ---
 
   const profileChildren: SidebarItem[] = [
-    { id: 'profile:basic', label: 'Basic Information', icon: 'user', scrollTarget: 'section-basic' },
-    { id: 'profile:timezone', label: 'Timezone & Language', icon: 'globe', scrollTarget: 'section-timezone' },
-    { id: 'profile:preferences', label: 'Preferences', icon: 'sliders', scrollTarget: 'section-preferences' },
+    {
+      id: 'profile:basic',
+      label: 'Basic Information',
+      icon: 'user',
+      scrollTarget: 'section-basic',
+    },
+    {
+      id: 'profile:timezone',
+      label: 'Timezone & Language',
+      icon: 'globe',
+      scrollTarget: 'section-timezone',
+    },
+    {
+      id: 'profile:preferences',
+      label: 'Preferences',
+      icon: 'sliders',
+      scrollTarget: 'section-preferences',
+    },
     // Hidden: no backend notification infrastructure yet (email server, Web Push, SignalR events)
     // { id: 'profile:notifications', label: 'Notifications', icon: 'bell', scrollTarget: 'section-notifications' },
   ];
@@ -117,7 +136,11 @@
 <div class="flex flex-col h-full p-4 overflow-y-auto">
   <!-- USER Section -->
   <div class="mb-6">
-    <div class="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-1 px-2">USER</div>
+    <div
+      class="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-1 px-2"
+    >
+      USER
+    </div>
 
     <!-- Profile (expandable parent) -->
     <div class="mb-0.5">
@@ -125,23 +148,25 @@
         variant="unstyled"
         class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors border
                {isProfileActive
-                 ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-                 : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]'}"
-        onclick={() => { selectCategory('profile'); profileExpanded = true; }}
+          ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+          : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]'}"
+        onclick={() => {
+          selectCategory('profile');
+          profileExpanded = true;
+        }}
         aria-label="Profile"
       >
         <Button
           variant="unstyled"
           class="w-4 text-[0.5625rem] text-center flex-shrink-0 bg-transparent border-none p-0 cursor-pointer leading-none text-[var(--color-text-tertiary)]"
-          onclick={(e) => { e.stopPropagation(); toggleProfile(); }}
+          onclick={(e) => {
+            e.stopPropagation();
+            toggleProfile();
+          }}
         >
           {profileExpanded ? '▼' : '▶'}
         </Button>
-        <Icon
-          name="user"
-          size="sm"
-          class="text-[var(--color-text-tertiary)]"
-        />
+        <Icon name="user" size="sm" class="text-[var(--color-text-tertiary)]" />
         <span class="flex-1 text-sm truncate font-medium">Profile</span>
       </Button>
 
@@ -153,8 +178,8 @@
               variant="unstyled"
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors border
                      {isSelected
-                       ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-                       : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+                ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+                : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
               onclick={() => selectProfileChild(item)}
               aria-label={item.label}
             >
@@ -169,7 +194,11 @@
   <!-- PROJECT Section -->
   {#if ownedProjects.length > 0}
     <div class="mb-6">
-      <div class="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-1 px-2">PROJECT</div>
+      <div
+        class="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-1 px-2"
+      >
+        PROJECT
+      </div>
 
       {#each ownedProjects as project (project.id)}
         <div class="mb-0.5">
@@ -179,7 +208,9 @@
             onclick={() => toggleProject(project.id)}
             aria-label={project.name}
           >
-            <span class="w-4 text-[0.5625rem] text-center text-[var(--color-text-tertiary)] flex-shrink-0">
+            <span
+              class="w-4 text-[0.5625rem] text-center text-[var(--color-text-tertiary)] flex-shrink-0"
+            >
               {expandedProjects.has(project.id) ? '▼' : '▶'}
             </span>
             <span class="flex-1 text-sm truncate font-medium">{project.name}</span>
@@ -193,16 +224,12 @@
                   variant="unstyled"
                   class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors border
                          {isSelected
-                           ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-                           : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+                    ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+                    : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
                   onclick={() => selectProjectCategory(project.id, item.id)}
                   aria-label={item.label}
                 >
-                  <Icon
-                    name={item.icon}
-                    size="sm"
-                    class="text-[var(--color-text-tertiary)]"
-                  />
+                  <Icon name={item.icon} size="sm" class="text-[var(--color-text-tertiary)]" />
                   <span class="flex-1 text-sm truncate">{item.label}</span>
                 </Button>
               {/each}
@@ -216,7 +243,11 @@
   <!-- SYSTEM Section -->
   {#if isAdmin}
     <div class="mb-6">
-      <div class="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-1 px-2">SYSTEM</div>
+      <div
+        class="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-1 px-2"
+      >
+        SYSTEM
+      </div>
 
       {#each systemItems as item (item.id)}
         {@const isSelected = activeCategory === item.id}
@@ -224,16 +255,12 @@
           variant="unstyled"
           class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors border
                  {isSelected
-                   ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
-                   : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
+            ? 'bg-[var(--color-accent-primary)]/10 border-[var(--color-accent-primary)]/30 text-[var(--color-text-primary)]'
+            : 'border-transparent hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'}"
           onclick={() => selectCategory(item.id)}
           aria-label={item.label}
         >
-          <Icon
-            name={item.icon}
-            size="sm"
-            class="text-[var(--color-text-tertiary)]"
-          />
+          <Icon name={item.icon} size="sm" class="text-[var(--color-text-tertiary)]" />
           <span class="flex-1 text-sm truncate">{item.label}</span>
         </Button>
       {/each}

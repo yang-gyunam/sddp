@@ -21,8 +21,7 @@ export async function getTraceabilityMap(
   tenantId: string,
   projectId: string
 ): Promise<TraceabilityMapData> {
-  return fetchWithAuth<TraceabilityMapData>(
-    `/projects/${projectId}/traceability-map`,
-    { tenantId }
-  );
+  return fetchWithAuth<TraceabilityMapData>(`/projects/${projectId}/traceability-map`, {
+    tenantId,
+  });
 }

@@ -70,26 +70,31 @@
   let starredExpanded = $state(true);
 
   // Determine if using flat structure (Global view) or project-grouped (legacy)
-  let useFlatStructure = $derived(channels.length > 0 || privateChannels.length > 0 || topics.length > 0 || projectGroups.length === 0);
+  let useFlatStructure = $derived(
+    channels.length > 0 ||
+      privateChannels.length > 0 ||
+      topics.length > 0 ||
+      projectGroups.length === 0
+  );
 
   // Client-side filtering (same UX as Project > Conversations)
   const filteredChannels = $derived.by(() => {
     const query = localSearchQuery.trim().toLowerCase();
     const all = [...channels, ...privateChannels];
     if (!query) return all;
-    return all.filter(c => c.name.toLowerCase().includes(query));
+    return all.filter((c) => c.name.toLowerCase().includes(query));
   });
 
   const filteredTopics = $derived.by(() => {
     const query = localSearchQuery.trim().toLowerCase();
     if (!query) return topics;
-    return topics.filter(c => c.name.toLowerCase().includes(query));
+    return topics.filter((c) => c.name.toLowerCase().includes(query));
   });
 
   const filteredStarred = $derived.by(() => {
     const query = localSearchQuery.trim().toLowerCase();
     if (!query) return starredConversations;
-    return starredConversations.filter(c => c.name.toLowerCase().includes(query));
+    return starredConversations.filter((c) => c.name.toLowerCase().includes(query));
   });
 
   function handleSectionToggle(section: string) {
@@ -126,15 +131,19 @@
     }
   }
 
-  function handleCreateChannel() { onCreateChannel?.(); }
-  function handleCreateForum() { onCreateForum?.(); }
+  function handleCreateChannel() {
+    onCreateChannel?.();
+  }
+  function handleCreateForum() {
+    onCreateForum?.();
+  }
 </script>
 
-<aside
-  class="conversation-sidebar flex flex-col h-full bg-[var(--color-bg-primary)] {className}"
->
+<aside class="conversation-sidebar flex flex-col h-full bg-[var(--color-bg-primary)] {className}">
   <!-- Search Bar -->
-  <div class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]">
+  <div
+    class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+  >
     <div class="flex items-center gap-1 w-full">
       <!-- Search Input -->
       <div class="relative flex-1">
@@ -189,7 +198,9 @@
           title="CHANNELS"
           expanded={isSectionExpanded('channels')}
           onToggle={() => handleSectionToggle('channels')}
-          actions={[{ id: 'add-channel', icon: 'plus', label: 'New Channel', onClick: handleCreateChannel }]}
+          actions={[
+            { id: 'add-channel', icon: 'plus', label: 'New Channel', onClick: handleCreateChannel },
+          ]}
         >
           <div class="bg-[var(--color-bg-primary)]">
             {#each filteredChannels as conversation (conversation.id)}
@@ -198,8 +209,8 @@
                 class="w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
                   transition-colors duration-150
                   {selectedConversationId === conversation.id
-                    ? 'bg-[var(--color-accent-primary)]/10'
-                    : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                  ? 'bg-[var(--color-accent-primary)]/10'
+                  : 'hover:bg-[var(--color-bg-tertiary)]'}"
                 onclick={() => handleConversationClick(conversation)}
               >
                 <Icon
@@ -233,7 +244,9 @@
           title="FORUMS"
           expanded={isSectionExpanded('topics')}
           onToggle={() => handleSectionToggle('topics')}
-          actions={[{ id: 'add-forum', icon: 'plus', label: 'New Forum', onClick: handleCreateForum }]}
+          actions={[
+            { id: 'add-forum', icon: 'plus', label: 'New Forum', onClick: handleCreateForum },
+          ]}
         >
           <div class="bg-[var(--color-bg-primary)]">
             {#each filteredTopics as conversation (conversation.id)}
@@ -242,8 +255,8 @@
                 class="w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
                   transition-colors duration-150
                   {selectedConversationId === conversation.id
-                    ? 'bg-[var(--color-accent-primary)]/10'
-                    : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                  ? 'bg-[var(--color-accent-primary)]/10'
+                  : 'hover:bg-[var(--color-bg-tertiary)]'}"
                 onclick={() => handleConversationClick(conversation)}
               >
                 <Icon
@@ -274,7 +287,9 @@
       {:else}
         <!-- Legacy: Project-grouped Structure -->
         <div class="py-1">
-          <div class="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+          <div
+            class="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]"
+          >
             By Project
           </div>
           {#each projectGroups as group (group.projectId)}
@@ -293,7 +308,6 @@
             </div>
           {/if}
         </div>
-
       {/if}
     {/if}
 

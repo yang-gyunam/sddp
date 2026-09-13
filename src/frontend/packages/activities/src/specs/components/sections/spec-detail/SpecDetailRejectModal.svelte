@@ -9,12 +9,7 @@
     onSubmit: () => void;
   }
 
-  let {
-    show,
-    rejectReason = $bindable(''),
-    onCancel,
-    onSubmit,
-  }: Props = $props();
+  let { show, rejectReason = $bindable(''), onCancel, onSubmit }: Props = $props();
 </script>
 
 {#if show}
@@ -30,12 +25,8 @@
         />
       </div>
       <div class="flex justify-end gap-2">
-        <Button variant="ghost" onclick={onCancel}>
-          Cancel
-        </Button>
-        <Button variant="danger" onclick={onSubmit}>
-          Reject
-        </Button>
+        <Button variant="ghost" onclick={onCancel}>Cancel</Button>
+        <Button variant="danger" onclick={onSubmit}>Reject</Button>
       </div>
     </div>
   </div>
