@@ -37,7 +37,8 @@ describe('Icon', () => {
     const { container } = render(Icon, { props: { name: 'nonexistent-icon-xyz' } });
     // Should render fallback 'x' icon path (M18 6L6 18M6 6l12 12)
     const paths = container.querySelectorAll('path');
-    expect(paths.length).toBeGreaterThan(0);
+    expect(paths).toHaveLength(1);
+    expect(paths[0]?.getAttribute('d')).toBe('M18 6L6 18M6 6l12 12');
   });
 
   it('should set aria-hidden on SVG', () => {

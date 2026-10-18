@@ -33,7 +33,7 @@ public record UpsertArtifactRequest(
 /// <summary>
 /// Artifact DTO
 /// </summary>
-public record VerifyArtifactRequest(Guid ArtifactId, string CurrentHash);
+public record VerifyArtifactRequest(Guid ArtifactId, string? CurrentHash = null);
 
 /// <summary>
 /// Artifact controller
@@ -368,7 +368,7 @@ public class ArtifactsController : BaseApiController
             tenantId,
             projectId,
             GlobalUniqueId.FromGuid(request.ArtifactId),
-            request.CurrentHash), cancellationToken);
+            request.CurrentHash ?? string.Empty), cancellationToken);
 
         return Ok(ApiResponse<ArtifactVerifyResult>.Ok(result));
     }

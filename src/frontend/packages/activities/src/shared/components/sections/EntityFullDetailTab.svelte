@@ -1,6 +1,7 @@
 <!-- Section: EntityFullDetailTab — Projects > Traceability -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { navigateToEntity } from '../../navigation/entityNavigation';
   import { Icon, Spinner, ResizeHandle } from '@sddp/ui';
   import { getAuthState } from '@sddp/shell/auth';
   import DetailHeader from '../idioms/DetailHeader.svelte';
@@ -239,11 +240,20 @@
           <SpecDetailView
             spec={specData}
             signOffSummary={specSignOff}
+            onRequirementClick={(id) => navigateToEntity(projectId, 'requirement', id)}
+            onConversationClick={(id) => navigateToEntity(projectId, 'conversation', id)}
             readonly={true}
             showHeader={false}
           />
         {:else if entityType === 'Requirement' && requirementData}
-          <RequirementDetailView requirement={requirementData} readonly={true} showHeader={false} />
+          <RequirementDetailView
+            requirement={requirementData}
+            readonly={true}
+            showHeader={false}
+            onParentSelect={(id) => navigateToEntity(projectId, 'requirement', id)}
+            onChildSelect={(child) => navigateToEntity(projectId, 'requirement', child.id)}
+            onConversationClick={(id) => navigateToEntity(projectId, 'conversation', id)}
+          />
         {:else if entityType === 'Conversation' && conversationData}
           <ChannelView
             conversationId={conversationData.id}
@@ -260,11 +270,20 @@
           <GlossaryDetail
             term={glossaryData}
             usage={glossaryUsage}
+            onTermSelect={(id) => navigateToEntity(projectId, 'glossary', id)}
+            onSpecSelect={(id) => navigateToEntity(projectId, 'spec', id)}
+            onConversationSelect={(id) => navigateToEntity(projectId, 'conversation', id)}
+            onRequirementSelect={(id) => navigateToEntity(projectId, 'requirement', id)}
             readonly={true}
             showHeader={false}
           />
         {:else if entityType === 'Artifact' && artifactDetail}
-          <ArtifactContent artifact={artifactDetail} showHeader={false} />
+          <ArtifactContent
+            artifact={artifactDetail}
+            showHeader={false}
+            onViewSpec={() =>
+              artifactDetail?.specId && navigateToEntity(projectId, 'spec', artifactDetail.specId)}
+          />
         {/if}
       </div>
 

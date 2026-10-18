@@ -16,6 +16,7 @@ using StackExchange.Redis;
 using Sddp.Application.Telemetry;
 using Sddp.Domain.Events;
 using Sddp.Infrastructure.Jobs.Quartz;
+using Sddp.Infrastructure.Jobs;
 using Sddp.Infrastructure.Persistence;
 using Sddp.Infrastructure.Persistence.Contexts;
 using Sddp.Infrastructure.Persistence.Interceptors;
@@ -308,6 +309,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddQuartzServices(this IServiceCollection services)
     {
+        services.AddScoped<ApprovalSlaMonitorJob>();
         services.AddQuartz(q =>
         {
             q.UseSimpleTypeLoader();

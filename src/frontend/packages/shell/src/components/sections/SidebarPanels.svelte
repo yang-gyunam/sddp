@@ -336,7 +336,10 @@
   }
 </script>
 
-<div bind:this={containerRef} class="flex flex-col h-full overflow-y-auto overflow-x-hidden {className}">
+<div
+  bind:this={containerRef}
+  class="flex flex-col h-full overflow-y-auto overflow-x-hidden {className}"
+>
   {#if currentPanels.length > 0}
     {#each currentPanels as panel (panel.id)}
       {@const panelContent = panelContentMap[panel.id]}

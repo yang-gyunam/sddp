@@ -272,6 +272,7 @@ public sealed class UpdateGlossaryTermCommandHandler : IRequestHandler<UpdateGlo
         await (termRepo.AddAsync(newTerm, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
+        _embeddingTrigger.TriggerGlossaryTermEmbedding(request.TenantId, request.ProjectId, existingTerm.Id);
         _embeddingTrigger.TriggerGlossaryTermEmbedding(request.TenantId, request.ProjectId, newTerm.Id);
 
         // Build audit log with field-level changes
@@ -499,10 +500,12 @@ public sealed record DeleteGlossaryTermCommand(
 public sealed class DeleteGlossaryTermCommandHandler : IRequestHandler<DeleteGlossaryTermCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmbeddingTriggerService _embeddingTrigger;
 
-    public DeleteGlossaryTermCommandHandler(IUnitOfWork unitOfWork)
+    public DeleteGlossaryTermCommandHandler(IUnitOfWork unitOfWork, IEmbeddingTriggerService embeddingTrigger)
     {
         _unitOfWork = unitOfWork;
+        _embeddingTrigger = embeddingTrigger;
     }
 
     public async Task<bool> Handle(DeleteGlossaryTermCommand request, CancellationToken cancellationToken)
@@ -521,6 +524,8 @@ public sealed class DeleteGlossaryTermCommandHandler : IRequestHandler<DeleteGlo
         term.Deactivate();
         await (termRepo.UpdateAsync(term, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+
+        _embeddingTrigger.TriggerGlossaryTermEmbedding(request.TenantId, request.ProjectId, request.TermId);
 
         request.AuditLog = new AuditLogRequest(
             null,

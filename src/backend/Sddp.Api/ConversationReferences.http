@@ -1,0 +1,18 @@
+@baseUrl = http://localhost:5001
+@token = replace-with-access-token
+@tenantId = 00000000-0000-0000-0000-000000000001
+@projectId = 00000000-0000-0000-0000-000000000002
+@messageId = 00000000-0000-0000-0000-000000000003
+@sourceId = 00000000-0000-0000-0000-000000000004
+
+### Current source (replace IDs with a persisted AI citation; also supports glossary, decision, artifact)
+GET {{baseUrl}}/api/ai/messages/{{messageId}}/references/spec/{{sourceId}}
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}
+
+### Missing or uncited source returns 404
+GET {{baseUrl}}/api/ai/messages/{{messageId}}/references/spec/00000000-0000-0000-0000-000000000005
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}

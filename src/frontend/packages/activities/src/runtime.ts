@@ -36,3 +36,5 @@ export type { AuditLogDto } from './projects/services/TimelineService';
 export { getDashboardHubService } from './dashboard/services/DashboardHubService';
 export { getMyNotifications } from './dashboard/services/DashboardService';
 export { addNotification, setNotifications } from './dashboard/stores/dashboard.store';
+
+export { aiCapabilityStore, bindAiCapabilityState } from './ai/stores/ai-capability.store';

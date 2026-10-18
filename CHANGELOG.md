@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0] - 2026-10-03
+
+### Fixed
+
+- Improved browser back/forward navigation and multi-panel item URLs across project menus.
+- Corrected related-item links, dark-theme surfaces and theme indicators.
+- Standardized list row heights and aligned frontend/API version reporting.
+
+### Security and distribution
+
+- Updated the transitive devalue dependency to 5.9.4.
+- Kept the public edition free-only, excluding AI modules, model services and AI settings.
+- Corrected provisioning guidance and the limited public unit-test commands.
+
+See [release notes](RELEASE.md) for installation, upgrade precautions and known limitations.
+
 ## [v0.3.0] - 2026-09-13
 
 ### Security

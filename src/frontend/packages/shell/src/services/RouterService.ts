@@ -1,180 +1,184 @@
-/**
- * RouterService - URL routing and tab synchronization
- * Syncs browser URL with active tab state
- */
-
+/** URL history belongs to the router; tabs retain pathname identity. */
 import { get } from 'svelte/store';
 import { tabActions, tabsStore, globalActiveTab, activeGroupId } from '../stores/tabs.store';
-import type { Tab as _Tab } from '../types/layout.types';
 
-/**
- * Router Service - Manages URL routing and tab synchronization
- */
 export class RouterService {
   private static initialized = false;
   private static unsubscribeTab: (() => void) | null = null;
   private static isNavigating = false;
   private static onNavigateToPath: ((path: string) => void) | null = null;
+  private static searches = new Map<string, string>();
+  private static pending: { path: string; search: string } | null = null;
 
-  /**
-   * Set a handler for path-based navigation (called when a tab needs to be created from a URL path)
-   */
   static setNavigateHandler(handler: (path: string) => void): void {
     this.onNavigateToPath = handler;
   }
 
-  /**
-   * Initialize router - sets up URL sync with tabs
-   */
   static initialize(): () => void {
-    if (this.initialized) {
-      console.warn('RouterService already initialized');
-      return () => {};
-    }
-
+    if (this.initialized) return () => {};
     this.initialized = true;
-
-    // Listen to browser back/forward navigation
+    this.pending = { path: window.location.pathname, search: window.location.search };
     window.addEventListener('popstate', this.handlePopState);
-
-    // Listen to tab changes and update URL
-    this.unsubscribeTab = globalActiveTab.subscribe((tab) => {
-      if (!tab || this.isNavigating) return;
-      this.updateUrl(tab.path || '/');
-    });
-
-    // Handle initial URL on load
-    this.handleInitialUrl();
-
-    // Return cleanup function
+    // A restored tab must not overwrite a directly opened URL during subscription.
+    this.isNavigating = true;
+    try {
+      this.unsubscribeTab = globalActiveTab.subscribe((tab) => {
+        if (!tab || this.isNavigating) return;
+        const path = tab.path || '/';
+        const search =
+          this.pending?.path === path ? this.pending.search : this.searches.get(tab.id) || '';
+        this.pending = null;
+        this.writeUrl(path + search, false);
+      });
+      if (window.location.pathname !== '/')
+        this.activatePath(window.location.pathname, window.history.state);
+      this.rememberLocation();
+      this.stampLocation();
+    } finally {
+      this.isNavigating = false;
+    }
     return () => this.cleanup();
   }
 
-  /**
-   * Handle initial URL when app loads
-   */
-  private static handleInitialUrl(): void {
-    const path = window.location.pathname;
-    if (path && path !== '/') {
-      this.onNavigateToPath?.(path);
+  /** Only the active tab may consume the browser's detail selection. */
+  static isActiveTab(tabId: string): boolean {
+    return get(globalActiveTab)?.id === tabId;
+  }
+
+  private static rememberLocation(): void {
+    const tab = get(globalActiveTab);
+    if (tab?.path === window.location.pathname) {
+      this.searches.set(tab.id, window.location.search);
+      this.pending = null;
+    } else {
+      this.pending = { path: window.location.pathname, search: window.location.search };
     }
   }
 
-  /**
-   * Handle browser back/forward navigation
-   */
-  private static handlePopState = (_event: PopStateEvent): void => {
-    const path = window.location.pathname;
+  private static stampLocation(): void {
+    const tab = get(globalActiveTab);
+    if (tab?.path !== window.location.pathname) return;
+    window.history.replaceState(
+      { ...window.history.state, tabId: tab.id, groupId: get(activeGroupId) },
+      '',
+      window.location.href
+    );
+  }
 
-    // Prevent recursive navigation
-    this.isNavigating = true;
+  private static notify(): void {
+    window.dispatchEvent(new Event('sddp:routechange'));
+  }
 
-    // Find existing tab with this path
+  private static activatePath(path: string, owner?: { tabId?: string; groupId?: string }): void {
     const state = get(tabsStore);
-    const group = state.groups.find((g) => g.id === get(activeGroupId));
+    // Tab IDs survive moving between groups; prefer the recorded tab wherever it lives.
+    const originalGroup = state.groups.find((g) =>
+      g.tabs.some((t) => t.id === owner?.tabId && t.path === path)
+    );
+    const group = originalGroup || state.groups.find((g) => g.id === get(activeGroupId));
+    const tab =
+      originalGroup?.tabs.find((t) => t.id === owner?.tabId) ||
+      group?.tabs.find((t) => t.path === path);
+    if (tab && group) tabActions.switchToTab(tab.id, group.id);
+    else this.onNavigateToPath?.(path);
+  }
 
-    if (group) {
-      const existingTab = group.tabs.find((t) => t.path === path);
-      if (existingTab) {
-        // Switch to existing tab
-        tabActions.switchToTab(existingTab.id, group.id);
-      } else {
-        this.onNavigateToPath?.(path);
-      }
-    }
-
-    // Reset navigation flag after a short delay
-    setTimeout(() => {
+  private static handlePopState = (): void => {
+    this.isNavigating = true;
+    try {
+      this.activatePath(window.location.pathname, window.history.state);
+      this.rememberLocation();
+      this.stampLocation();
+    } finally {
       this.isNavigating = false;
-    }, 100);
+    }
+    this.notify();
   };
 
-  /**
-   * Update browser URL without triggering navigation
-   */
-  private static updateUrl(path: string): void {
-    if (window.location.pathname === path) return;
-
-    // Prevent recursive navigation
-    this.isNavigating = true;
-
-    // Update URL without reload
-    window.history.pushState({ path }, '', path);
-
-    // Reset navigation flag after a short delay
-    setTimeout(() => {
-      this.isNavigating = false;
-    }, 100);
+  private static writeUrl(path: string, replace: boolean): void {
+    if (
+      window.location.pathname + window.location.search === path &&
+      window.history.state?.tabId === get(globalActiveTab)?.id
+    )
+      return;
+    if (replace) window.history.replaceState({ path }, '', path);
+    else window.history.pushState({ path }, '', path);
+    this.rememberLocation();
+    this.stampLocation();
+    this.notify();
   }
 
-  /**
-   * Navigate to a path (programmatic navigation)
-   */
   static navigate(path: string): void {
     this.isNavigating = true;
+    try {
+      this.writeUrl(path, false);
+      this.activatePath(window.location.pathname);
+      this.rememberLocation();
+      this.stampLocation();
+    } finally {
+      this.isNavigating = false;
+    }
+    this.notify();
+  }
 
-    // Update URL
-    window.history.pushState({ path }, '', path);
-
-    // Find or create tab with this path
-    const state = get(tabsStore);
-    const groupId = get(activeGroupId);
-    const group = state.groups.find((g) => g.id === groupId);
-
-    if (group) {
-      const existingTab = group.tabs.find((t) => t.path === path);
-      if (existingTab) {
-        tabActions.switchToTab(existingTab.id, groupId);
-      } else {
-        this.onNavigateToPath?.(path);
+  /** Set detail selection without changing the owning tab's pathname. */
+  static selectItem(id: string | null, tabId?: string): void {
+    if (tabId && !this.isActiveTab(tabId)) {
+      const group = get(tabsStore).groups.find((g) => g.tabs.some((t) => t.id === tabId));
+      if (!group) return;
+      this.isNavigating = true;
+      try {
+        tabActions.switchToTab(tabId, group.id);
+      } finally {
+        this.isNavigating = false;
       }
     }
-
-    setTimeout(() => {
-      this.isNavigating = false;
-    }, 100);
+    const tab = get(globalActiveTab);
+    const path = tab?.path || window.location.pathname;
+    const query = new URLSearchParams(
+      (!window.history.state?.tabId || window.history.state.tabId === tab?.id) &&
+        window.location.pathname === path
+        ? window.location.search
+        : this.searches.get(tab?.id || '') || ''
+    );
+    if (id) query.set('id', id);
+    else query.delete('id');
+    const search = query.toString();
+    this.writeUrl(path + (search ? `?${search}` : ''), false);
   }
 
-  /**
-   * Replace current URL without adding to history
-   */
+  /** TabFactory may synchronize a pathname after tab activation. Keep its detail query. */
   static replace(path: string): void {
-    this.isNavigating = true;
-    window.history.replaceState({ path }, '', path);
-    setTimeout(() => {
-      this.isNavigating = false;
-    }, 100);
+    const tab = get(globalActiveTab);
+    const search =
+      this.pending?.path === path
+        ? this.pending.search
+        : tab?.path === path
+          ? this.searches.get(tab.id) || ''
+          : '';
+    const target = path.includes('?') ? path : path + search;
+    this.writeUrl(target, true);
   }
 
-  /**
-   * Go back in history
-   */
   static back(): void {
     window.history.back();
   }
-
-  /**
-   * Go forward in history
-   */
   static forward(): void {
     window.history.forward();
   }
-
-  /**
-   * Get current path
-   */
   static getCurrentPath(): string {
     return window.location.pathname;
   }
 
-  /**
-   * Cleanup - remove event listeners
-   */
   private static cleanup(): void {
     window.removeEventListener('popstate', this.handlePopState);
     this.unsubscribeTab?.();
     this.unsubscribeTab = null;
     this.initialized = false;
+    this.isNavigating = false;
+    this.searches.clear();
+    this.pending = null;
+    this.onNavigateToPath = null;
   }
 }
 

@@ -49,6 +49,7 @@
   } from '@sddp/activities/settings/utils';
   // Projects
   import {
+    bindAiCapabilityState,
     projectStore,
     getProjectState,
     setProjects,
@@ -77,7 +78,10 @@
   // Shared utilities
   import { problems } from '@sddp/shell/stores';
   // Local
-  import { toggleTheme, isDarkMode } from './stores/theme.store';
+  import { toggleTheme } from './stores/theme.store';
+  import { useTheme } from './hooks/useTheme.svelte';
+
+  const theme = useTheme();
   import { resetAppState, resetAppStatePreserveLayout } from './lib/resetAppState';
   import type { TreeNode } from './types';
   import { activityItems, activityBottomItems, activityPanels } from './config/activity.config';
@@ -108,6 +112,7 @@
     sessionStatus: 'checking',
   });
   let authUnsubscribe: (() => void) | null = null;
+  let capabilityUnsubscribe: (() => void) | null = null;
 
   // App initialization state (prevents Welcome screen flicker during tab restoration)
   let appInitializing = $state(true);
@@ -330,6 +335,8 @@
     // Deep link redirect: /dashboard/recent → /?returnUrl=/dashboard/recent
     bootstrap.handleDeepLinkRedirect();
 
+    capabilityUnsubscribe = bindAiCapabilityState(authStore, projectStore);
+
     // Subscribe to auth state changes
     authUnsubscribe = authStore.subscribe((state) => {
       authState = state;
@@ -387,7 +394,7 @@
         bootstrap.navigateToReturnUrl();
 
         // Replace the returnUrl history entry so browser back won't return to it
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
       }
     } catch {
       // Token refresh failed, user needs to login
@@ -403,6 +410,7 @@
     cleanupToastRouting?.();
     realtimeBridge.disconnect();
     selectionSync.destroy();
+    capabilityUnsubscribe?.();
     authUnsubscribe?.();
     layoutUnsubscribe?.();
     conversationUnsubscribe?.();
@@ -431,7 +439,7 @@
     bootstrap.navigateToReturnUrl();
 
     // Replace the login screen history entry so browser back won't return to it
-    window.history.replaceState(null, '', window.location.pathname);
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
   }
 
   // Handle logout
@@ -1091,8 +1099,8 @@
       : []),
     {
       id: 'theme',
-      text: isDarkMode() ? 'Dark' : 'Light',
-      icon: isDarkMode() ? 'moon' : 'sun',
+      text: theme.current === 'dark' ? 'Dark' : 'Light',
+      icon: theme.current === 'dark' ? 'moon' : 'sun',
       position: 'right' as const,
       onClick: toggleTheme,
     },

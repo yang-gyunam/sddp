@@ -33,6 +33,8 @@ try
     Log.Information("Starting SDDP API...");
 
     var builder = WebApplication.CreateBuilder(args);
+    builder.Services.AddSddpAiModule(builder.Configuration,
+        Sddp.Api.Configuration.DistributionInfo.Load(builder.Configuration));
 
     if (!builder.Environment.IsEnvironment("Testing"))
     {
@@ -91,8 +93,6 @@ try
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<IVersionDiffService, VersionDiffService>();
     builder.Services.AddScoped<IAuditLogService, AuditLogService>();
-    builder.Services.AddScoped<IEmbeddingTriggerService, NoOpEmbeddingTriggerService>();
-    builder.Services.AddScoped<IAnalysisTriggerService, NoOpAnalysisTriggerService>();
 
     builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ICommand<>).Assembly));
     builder.Services.AddValidatorsFromAssembly(typeof(ICommand<>).Assembly);
@@ -191,6 +191,7 @@ try
     }
 
     app.UseSddpSecurityPipeline();
+    app.UseSddpAi();
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {

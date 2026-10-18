@@ -175,8 +175,8 @@ export const INITIAL_AI_STATE: AiState = {
   activeRequests: [],
   isExpanded: false,
   activeTab: 'context',
-  aiSystemEnabled: true,
-  aiEffectiveEnabled: true,
+  aiSystemEnabled: false,
+  aiEffectiveEnabled: false,
 };
 
 export function sortContextItems(items: AiContextItem[]): AiContextItem[] {

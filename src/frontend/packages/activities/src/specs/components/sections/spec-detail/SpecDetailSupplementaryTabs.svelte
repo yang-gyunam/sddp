@@ -49,7 +49,10 @@
     onDocumentationTabSelected?: () => void | Promise<void>;
     isReadOnly: boolean;
 
-    aiFeatureFlagEnabled: boolean;
+    aiCanRead: boolean;
+    aiCanExecute: boolean;
+    aiStatusMessage: string;
+    onRetryAi: () => void;
     analysisLoading: boolean;
     qualityReport: AiReport | null;
     impactReport: AiReport | null;
@@ -105,7 +108,10 @@
     onDocumentationTabSelected,
     isReadOnly,
 
-    aiFeatureFlagEnabled,
+    aiCanRead,
+    aiCanExecute,
+    aiStatusMessage,
+    onRetryAi,
     analysisLoading,
     qualityReport,
     impactReport,
@@ -174,7 +180,10 @@
     <div class="mt-4">
       {#if activeDetailTab === 'ai-analysis'}
         <SpecDetailAiAnalysisTab
-          {aiFeatureFlagEnabled}
+          {aiCanRead}
+          {aiCanExecute}
+          {aiStatusMessage}
+          {onRetryAi}
           {isReadOnly}
           {analysisLoading}
           {qualityReport}

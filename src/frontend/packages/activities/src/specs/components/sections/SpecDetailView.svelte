@@ -52,7 +52,7 @@
     type ImpactAnalysisResult,
     type QualityAnalysisResult,
   } from '../../../ai';
-  import { getAiStatus } from '../../../ai/services/AiStatusService';
+  import { createResourceAiCapability } from '../../../ai/stores/resource-ai-capability.svelte';
 
   interface Props {
     spec: SpecDetailType;
@@ -130,9 +130,12 @@
   let impactTriggering = $state(false);
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let lastSpecId: string | null = null;
-  let aiStatusRequestId = $state(0);
-  let aiEffectiveEnabled = $state(true);
-  const aiFeatureFlagEnabled = appConfig.get('enableAiFeatures');
+  let analysisGeneration = 0;
+  const aiCapability = createResourceAiCapability(() => ({
+    tenantId: spec.tenantId,
+    projectId: spec.projectId,
+  }));
+  const aiView = $derived(aiCapability.view());
   const specSupplementaryTabsEnabled = appConfig.get('enableSpecSupplementaryTabs');
   const artifactService = $derived(createArtifactService(spec.tenantId, spec.projectId));
   let artifacts = $state<Artifact[]>([]);
@@ -210,12 +213,11 @@
     ];
   });
   const detailTabs = $derived.by<TabItem[]>(() => {
-    const tabs: TabItem[] = [];
+    const tabs: TabItem[] = aiView.visible
+      ? [{ id: 'ai-analysis', label: 'AI Analysis', icon: 'cpu' }]
+      : [];
     if (!specSupplementaryTabsEnabled) {
       return tabs;
-    }
-    if (aiFeatureFlagEnabled && aiEffectiveEnabled) {
-      tabs.push({ id: 'ai-analysis', label: 'AI Analysis', icon: 'cpu' });
     }
     if (!isReadOnly) {
       tabs.push({ id: 'generation', label: 'Generation', icon: 'code' });
@@ -562,6 +564,12 @@
   }
 
   async function loadReportForType(type: AiAnalysisType): Promise<void> {
+    if (!aiView.canRead) return;
+    const generation = analysisGeneration;
+    const service = aiService;
+    const targetId = spec.id;
+    const current = () =>
+      generation === analysisGeneration && targetId === spec.id && aiView.canRead;
     const isQuality = type === 'Quality';
     const setReport = (report: AiReport | null) => {
       if (isQuality) {
@@ -579,71 +587,69 @@
     };
 
     try {
-      const summaries = await aiService.getReportsByTarget(spec.id, type);
+      const summaries = await service.getReportsByTarget(targetId, type);
+      if (!current()) return;
       const latest = summaries[0];
       if (!latest) {
         setReport(null);
         return;
       }
-      const detail = await aiService.getReportById(latest.id);
+      const detail = await service.getReportById(latest.id);
+      if (!current()) return;
       setReport(detail);
       setError(null);
     } catch (error) {
+      if (!current()) return;
       const message = error instanceof Error ? error.message : 'Failed to load analysis';
       setError(message);
     }
   }
 
   async function loadAnalysisReports(silent = false): Promise<void> {
+    if (!aiView.canRead) return;
+    const generation = analysisGeneration;
     if (!silent) {
       analysisLoading = true;
     }
 
     await Promise.all([loadReportForType('Quality'), loadReportForType('Impact')]);
 
-    if (!silent) {
+    if (!silent && generation === analysisGeneration) {
       analysisLoading = false;
     }
   }
 
-  async function loadAiAvailabilityAndReports(tenantId: string, projectId: string): Promise<void> {
-    if (!specSupplementaryTabsEnabled || !aiFeatureFlagEnabled) {
-      aiEffectiveEnabled = false;
-      analysisLoading = false;
-      return;
-    }
-
-    const requestId = ++aiStatusRequestId;
-    let effectiveEnabled = true;
-
-    try {
-      const status = await getAiStatus(tenantId, projectId);
-      effectiveEnabled = status.effectiveEnabled;
-    } catch {
-      effectiveEnabled = true;
-    }
-
-    if (requestId !== aiStatusRequestId) return;
-
-    aiEffectiveEnabled = effectiveEnabled;
-    if (!effectiveEnabled) {
-      activeDetailTab = 'documentation';
-      analysisLoading = false;
-      return;
-    }
-
-    activeDetailTab = 'ai-analysis';
-    await loadAnalysisReports().catch(() => {
-      analysisLoading = false;
-    });
-  }
+  $effect.pre(() => {
+    // Include the response identity so refresh/logout invalidates in-flight report requests.
+    void aiCapability.state;
+    void spec.id;
+    analysisGeneration++;
+    qualityReport = null;
+    impactReport = null;
+    qualityError = null;
+    impactError = null;
+    qualityTriggering = false;
+    impactTriggering = false;
+    analysisLoading = false;
+    if (aiView.canRead)
+      untrack(() => {
+        void loadAnalysisReports();
+      });
+    return () => {
+      analysisGeneration++;
+    };
+  });
 
   async function runAnalysis(type: AiAnalysisType): Promise<void> {
     if (type !== 'Quality' && type !== 'Impact') return;
-    if (!specSupplementaryTabsEnabled || !aiFeatureFlagEnabled) {
-      toast.info('AI analysis is coming soon.');
+    if (!aiView.canExecute || isReadOnly) {
+      toast.info(aiView.message);
       return;
     }
+    const generation = analysisGeneration;
+    const targetId = spec.id;
+    const current = () =>
+      generation === analysisGeneration && targetId === spec.id && aiView.canExecute;
     const setTriggering = (value: boolean) => {
       if (type === 'Quality') {
         qualityTriggering = value;
@@ -668,6 +674,7 @@
         targetType: 'spec',
       });
 
+      if (!current()) return;
       if (type === 'Quality') {
         qualityReport = report;
       } else {
@@ -676,10 +683,11 @@
 
       setError(null);
     } catch (error) {
+      if (!current()) return;
       const message = error instanceof Error ? error.message : 'Failed to trigger analysis';
       setError(message);
     } finally {
-      setTriggering(false);
+      if (current()) setTriggering(false);
     }
   }
 
@@ -706,13 +714,9 @@
     scopeExpanded = true;
     criteriaExpanded = true;
     governanceExpanded = true;
-    aiEffectiveEnabled = false;
     activeDetailTab = 'documentation';
     untrack(() => {
       if (specSupplementaryTabsEnabled) {
-        loadAiAvailabilityAndReports(spec.tenantId, spec.projectId).catch(() => {
-          analysisLoading = false;
-        });
         loadArtifacts().catch((err) => console.warn('[SpecDetail] loadArtifacts failed:', err));
         loadSummary().catch(() => {
           summaryLoading = false;
@@ -727,7 +731,8 @@
   });
 
   $effect(() => {
-    const shouldPoll = isProcessing(qualityReport?.status) || isProcessing(impactReport?.status);
+    const shouldPoll =
+      aiView.canRead && (isProcessing(qualityReport?.status) || isProcessing(impactReport?.status));
     if (shouldPoll && !pollTimer) {
       pollTimer = setInterval(() => {
         loadAnalysisReports(true).catch((err) =>
@@ -874,7 +879,10 @@
           }
         }}
         {isReadOnly}
-        {aiFeatureFlagEnabled}
+        aiCanRead={aiView.canRead}
+        aiCanExecute={aiView.canExecute}
+        aiStatusMessage={aiView.message}
+        onRetryAi={aiCapability.refresh}
         {analysisLoading}
         {qualityReport}
         {impactReport}

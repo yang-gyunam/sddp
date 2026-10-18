@@ -136,7 +136,7 @@
 
 <div class="effort-sidebar {className}">
   <!-- Header: Period Navigation + Search + Actions -->
-  <div class="effort-sidebar__header">
+  <div class="project-list-search effort-sidebar__header">
     <div class="effort-sidebar__header-row">
       <div class="effort-sidebar__period">
         <IconButton
@@ -281,7 +281,7 @@
   </div>
 
   <!-- Table Header -->
-  <div class="effort-sidebar__table-header">
+  <div class="project-list-heading effort-sidebar__table-header">
     <span class="effort-sidebar__col effort-sidebar__col--member">Member</span>
     <span class="effort-sidebar__col effort-sidebar__col--num">Allocated</span>
     <span class="effort-sidebar__col effort-sidebar__col--num">Spent</span>

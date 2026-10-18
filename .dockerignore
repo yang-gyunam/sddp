@@ -1,0 +1,11 @@
+**
+!sddp.config.json
+!src/
+!src/backend/
+!src/backend/**
+src/backend/**/bin
+src/backend/**/obj
+src/backend/**/TestResults
+src/backend/**/.env*
+src/backend/**/.sonarqube
+src/backend/**/coverage

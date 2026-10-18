@@ -1,5 +1,6 @@
 <!-- Activity: Projects > Nav: Traceability (project-{id}-traceability) | Screen ID: PRJ-TRACE-001 -->
 <script lang="ts">
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { untrack } from 'svelte';
   import { Icon, IconButton, Button, Spinner, ResizeHandle } from '@sddp/ui';
   import {
@@ -204,6 +205,21 @@
     document.addEventListener('pointermove', onPointerMove);
     document.addEventListener('pointerup', onPointerUp);
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/traceability`,
+    selection: () => activeEntityId || null,
+    ready: () => !loading,
+    restore: (id) => {
+      if (!id) {
+        handleCloseAllTabs();
+        return;
+      }
+      const node = data?.nodes.find((n) => n.id === id);
+      if (node) handleNodeClick(id, node.entityType);
+      else handleCloseAllTabs();
+    },
+  });
 </script>
 
 <PageShell class={className}>

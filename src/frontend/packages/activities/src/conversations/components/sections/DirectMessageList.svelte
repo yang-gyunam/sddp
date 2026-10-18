@@ -43,7 +43,7 @@
     {#each filteredItems as item (item.id)}
       <Button
         variant="unstyled"
-        class="w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer
+        class="project-list-row w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer
           transition-colors duration-150
           {selectedId === item.id
           ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'

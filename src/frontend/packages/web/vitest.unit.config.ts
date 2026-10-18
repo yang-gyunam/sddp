@@ -1,18 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath, URL } from 'node:url';
 
-/**
- * unit test settings.
- *
- * activities, shell, web unit test tests/unit/.
- * .
- *
- * :
- *   npx vitest --config vitest.unit.config.ts
- *   npx vitest --config vitest.unit.config.ts --coverage
- *   npx vitest --config vitest.unit.config.ts tests/unit/activities/
- *   npx vitest --config vitest.unit.config.ts tests/unit/shell/
- */
+/** Public error-handler unit tests; UI controls run in the ui workspace. */
 export default defineConfig({
   resolve: {
     alias: {
@@ -33,6 +22,6 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/unit/**/*.{test,spec}.{js,ts}'],
-    passWithNoTests: true,
+    passWithNoTests: false,
   },
 });

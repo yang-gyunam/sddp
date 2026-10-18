@@ -10,7 +10,7 @@ Code tells you **"what."** But it never tells you **"why."**
 
 <!-- img: Team discussing design on Slack → six months later only code remains (Before/After contrast) -->
 
-The age of AI-generated code is here. GitHub Copilot completes functions, and Claude generates entire modules. Code writing speed has increased tenfold, yet one thing hasn't changed.
+The age of AI-generated code is here. GitHub Copilot completes functions, and Claude generates entire modules. These tools can accelerate code writing, yet one thing has not changed.
 
 **Recording and preserving agreements is still a human responsibility.**
 
@@ -38,9 +38,9 @@ As tools grow more powerful, complexity increases — and as complexity increase
 
 SDDP is one answer to this problem.
 
-The core idea is simple. **Transform discussions into structured specs, generate code from those specs, and track every change.** A spec is not just a document — it is an Immutable Agreement Artifact where the team's consensus is permanently recorded.
+The core idea is simple. **Connect discussions, requirements, reviewed specs and implementation artifacts so decisions remain traceable.** A spec is not just a document — it is an Immutable Agreement Artifact where the team's consensus is permanently recorded.
 
-Approved specs are locked. When changes are needed, you don't modify the existing spec — you create a new version. Just as Git preserves the change history of code, SDDP preserves the **change history of decisions**.
+Approval and locking are separate steps. Once a spec is locked, changes follow the versioning workflow rather than silently replacing the agreed content. Just as Git preserves the change history of code, SDDP preserves the **change history of decisions**.
 
 * * *
 
@@ -50,7 +50,7 @@ Approved specs are locked. When changes are needed, you don't modify the existin
 
 Drew Breunig argued in [The Spec-Driven Development Triangle](https://www.dbreunig.com/2026/03/04/the-spec-driven-development-triangle.html) that Spec, Test, and Code should form a circular feedback loop. Implementation improves the specification, the specification improves the tests, and the tests improve the code — a triangle.
 
-SDDP adds one more vertex to this triangle: **Conversation**.
+SDDP adds one more vertex to this long-term design: **Conversation**. The diagram describes the intended feedback loop, not an automatic code-generation or rule-analysis feature of the free edition.
 
 ```
     Conversation
@@ -62,11 +62,23 @@ SDDP adds one more vertex to this triangle: **Conversation**.
       Code ────────────┘
 ```
 
-Requirements emerge from conversations, requirements are refined into specs, and code is generated from specs. When code drifts from the spec, a Rule detects it. It's not a triangle — it's a square. And the starting point of this square is not code, but **people's conversations**.
+Requirements emerge from conversations, requirements are refined into specs, and implementation artifacts link back to those specs. Automated generation and rule-based semantic verification are goals of the broader design. The starting point is **people's conversations**.
 
 * * *
 
 ![SDDP Square: Conversation → Requirement → Spec → Code](assets/intro/05-sddp-square.gif)
+
+## What the free v0.4.0 edition provides
+
+The public application records conversations, requirements, specs, relationships and artifact
+status. Approval and locking are explicit workflow steps. Artifact content-hash verification
+is a file-consistency check, not proof that code satisfies the meaning of a spec; maintenance
+operations also depend on deployment flags and permissions.
+
+AI assistance, semantic search and code-generation tools are not included. The Generation tab
+does not generate code. The animated examples illustrate the workflow and do not establish
+that every part of the long-term feedback loop is implemented. See the [public guide](public-guide.md)
+for the supported public workflow.
 
 ## People Decide, Specs Remember, Code Proves
 

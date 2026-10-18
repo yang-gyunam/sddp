@@ -48,8 +48,8 @@ services:
 
   sddp-api:
     build:
-      context: ./src/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/backend/Dockerfile
     container_name: sddp-public-api
     # Before upgrading an existing container, migrate /app/data into this volume.
     # See docs/deploy/api-data.md. Do not recreate the old container first.
@@ -63,11 +63,6 @@ services:
       - Authentication__DevelopmentCredentials__ExposureMode=Loopback
       - ConnectionStrings__DefaultConnection=Host=sddp-db;Port=5432;Database=${POSTGRES_DB:-sddp};Username=${POSTGRES_USER:-sddp};Password=${POSTGRES_PASSWORD:-sddp_password}
       - Redis__ConnectionString=sddp-redis:6379
-      - Ollama__Url=http://sddp-ollama:11434
-      - Ollama__ChatModel=phi4-mini
-      - Ollama__EmbedModel=nomic-embed-text
-      - Ollama__TimeoutSeconds=300
-      - Ollama__MaxConcurrent=2
       - SpeechToText__Url=http://sddp-whisper:8000
       - SpeechToText__Model=Systran/faster-whisper-small
       - SpeechToText__TimeoutSeconds=120
@@ -90,33 +85,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-    restart: unless-stopped
-    networks:
-      - sddp-network
-
-  sddp-ollama:
-    image: ollama/ollama:0.17.6  # Pin updated: 2026-03-05
-    container_name: sddp-public-ollama
-    entrypoint: ["/bin/sh", "/ollama-entrypoint.sh"]
-    environment:
-      OLLAMA_CHAT_MODEL: phi4-mini
-      OLLAMA_EMBED_MODEL: nomic-embed-text
-    ports:
-      - "127.0.0.1:11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-      - ./docker/ollama-entrypoint.sh:/ollama-entrypoint.sh:ro
-    deploy:
-      resources:
-        limits:
-          memory: ${OLLAMA_MEMORY_LIMIT:-8G}
-          cpus: "${OLLAMA_CPU_LIMIT:-4}"
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     restart: unless-stopped
     networks:
       - sddp-network
@@ -180,7 +148,6 @@ services:
         VITE_API_VERSION: "${VITE_API_VERSION:-v1}"
         VITE_ENABLE_DEBUG: "${VITE_ENABLE_DEBUG:-false}"
         VITE_ENABLE_ANALYTICS: "${VITE_ENABLE_ANALYTICS:-false}"
-        VITE_ENABLE_AI_FEATURES: "${VITE_ENABLE_AI_FEATURES:-false}"
         VITE_ENABLE_SPEECH_TO_TEXT: "${VITE_ENABLE_SPEECH_TO_TEXT:-true}"
         VITE_ENABLE_ARTIFACT_MAINTENANCE: "${VITE_ENABLE_ARTIFACT_MAINTENANCE:-false}"
         VITE_ENABLE_PROJECT_INTEGRATIONS: "${VITE_ENABLE_PROJECT_INTEGRATIONS:-false}"
@@ -217,7 +184,6 @@ volumes:
   postgres_data:
   postgres_tablespace:
   redis_data:
-  ollama_data:
   whisper_data:
   gitea_data:
   gitea_config:

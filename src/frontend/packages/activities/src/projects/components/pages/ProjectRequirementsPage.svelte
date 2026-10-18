@@ -1,6 +1,8 @@
 <!-- Activity: Projects > Nav: Requirements (project-{id}-requirements) | Screen ID: PRJ-REQ-001 -->
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
+  import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
+  import { onMount, untrack } from 'svelte';
   import {
     Icon,
     Input,
@@ -33,7 +35,7 @@
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail } from '../../types';
   import { createProjectService, getProjectById } from '../../services/ProjectService';
-  import { setSelectedNodePath, consumePendingEntityId, setPendingEntityId } from '../../stores';
+  import { consumePendingEntityId } from '../../stores';
   import RequirementDetailView from '../../../requirements/components/sections/RequirementDetailView.svelte';
   import RequirementForm from '../../../requirements/components/idioms/RequirementForm.svelte';
   import RequirementLevelBadge from '../../../requirements/components/idioms/RequirementLevelBadge.svelte';
@@ -135,8 +137,39 @@
       statusFilter = saved.statusFilter ?? 'all';
       selectedRequirementId = saved.selectedRequirementId ?? null;
     }
+    if (
+      RouterService.isActiveTab(tabId) &&
+      window.location.pathname === `/project/${projectId}/requirements`
+    ) {
+      selectedRequirementId = new URLSearchParams(window.location.search).get('id');
+    }
     restoredKey = tabStateKey;
     isRestored = true;
+  });
+
+  const routePath = $derived(`/project/${projectId}/requirements`);
+  let detailRequestId = 0;
+
+  function restoreRouteSelection(): void {
+    if (!RouterService.isActiveTab(tabId) || window.location.pathname !== routePath) return;
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (id === selectedRequirementId && (selectedRequirement || detailLoading)) return;
+    selectedRequirementId = id;
+    selectedRequirement = null;
+    viewMode = 'detail';
+    error = null;
+    ++detailRequestId;
+    detailLoading = false;
+    if (id) void loadRequirementDetail(id);
+  }
+
+  onMount(() => {
+    restoreRouteSelection();
+    window.addEventListener('sddp:routechange', restoreRouteSelection);
+    return () => {
+      ++detailRequestId;
+      window.removeEventListener('sddp:routechange', restoreRouteSelection);
+    };
   });
 
   // Persist tab state
@@ -156,6 +189,7 @@
     // Check for cross-type navigation (e.g., from Specs → Requirements)
     const pendingId = consumePendingEntityId();
     if (pendingId) {
+      RouterService.selectItem(pendingId, tabId);
       selectedRequirementId = pendingId;
     }
     untrack(() => loadRequirements());
@@ -231,7 +265,9 @@
   }
 
   async function loadRequirementDetail(requirementId: string) {
+    const requestId = ++detailRequestId;
     detailLoading = true;
+    selectedRequirement = null;
     try {
       const authState = getAuthState();
       if (!authState.user?.tenantId) {
@@ -240,41 +276,19 @@
       const requirementService = createRequirementService(authState.user.tenantId, projectId);
 
       const detail = await requirementService.getRequirementById(requirementId);
+      if (requestId !== detailRequestId) return;
       selectedRequirement = detail;
     } catch (err) {
-      console.error('Failed to load requirement detail:', err);
-      // Fallback: create detail from requirement list item
-      const req = requirements.find((r) => r.id === requirementId);
-      if (req) {
-        selectedRequirement = {
-          ...req,
-          priority: req.priority ?? 'Medium',
-          parentCode: null,
-          parentTitle: null,
-          parentLevel: null,
-          conversationName: null,
-          conversationDescription: null,
-          conversationType: null,
-          ancestors: [],
-          siblings: [],
-          children: [],
-          linkedSpecs: [],
-          owner: null,
-          createdBy: { id: '', name: null, avatarUrl: null },
-          updatedBy: { id: '', name: null, avatarUrl: null },
-          validFrom: req.createdAt,
-          validTo: null,
-        };
-      }
+      if (requestId !== detailRequestId) return;
+      selectedRequirement = null;
+      error = err instanceof Error ? err.message : 'Requirement unavailable';
     } finally {
-      detailLoading = false;
+      if (requestId === detailRequestId) detailLoading = false;
     }
   }
 
   function handleSelectRequirement(req: Requirement) {
-    selectedRequirementId = req.id;
-    viewMode = 'detail';
-    loadRequirementDetail(req.id);
+    RouterService.selectItem(req.id, tabId);
   }
 
   function handleRequirementListScroll(e: Event): void {
@@ -289,15 +303,11 @@
 
   function handleTraceNodeClick(node: PrimaryFlowNode): void {
     if (!node.id) return;
-    selectedRequirementId = node.id;
-    viewMode = 'detail';
-    loadRequirementDetail(node.id);
+    RouterService.selectItem(node.id, tabId);
   }
 
   function handleCloseRequirement(): void {
-    selectedRequirementId = null;
-    selectedRequirement = null;
-    viewMode = 'detail';
+    RouterService.selectItem(null, tabId);
   }
 
   function handleEditRequirement(): void {
@@ -483,6 +493,7 @@
   }
 
   function handleCreateRequirement() {
+    RouterService.selectItem(null, tabId);
     selectedRequirementId = null;
     selectedRequirement = null;
     viewMode = 'create';
@@ -509,8 +520,7 @@
       viewMode = 'detail';
 
       // Navigate to the specs page and select the newly created spec
-      setPendingEntityId(detail.id);
-      setSelectedNodePath(`${projectId}/specs`);
+      navigateToEntity(projectId, 'spec', detail.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to promote to spec');
     } finally {
@@ -555,6 +565,7 @@
       };
 
       requirements = [newRequirement, ...requirements];
+      RouterService.selectItem(fullDetail.id, tabId);
       selectedRequirementId = fullDetail.id;
       selectedRequirement = fullDetail;
       viewMode = 'detail';
@@ -603,9 +614,7 @@
   }
 
   function handleParentSelect(parentId: string) {
-    selectedRequirementId = parentId;
-    viewMode = 'detail';
-    loadRequirementDetail(parentId);
+    RouterService.selectItem(parentId, tabId);
   }
 
   // Version history — derived values
@@ -669,7 +678,7 @@
   }
 
   function handleConversationClick(conversationId: string) {
-    RouterService.navigate(`/conversation/${conversationId}`);
+    navigateToEntity(projectId, 'conversation', conversationId);
   }
 
   // Resize handlers for version comparison panel
@@ -754,10 +763,10 @@
         maxRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.maxRightPanelWidth}
       >
         {#snippet sidebar()}
-          <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
+          <ProjectListLayout lines={2}>
             <!-- Header with Search and Actions -->
             <div
-              class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+              class="project-list-search flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
             >
               <div class="flex items-center gap-1 w-full">
                 <div class="relative flex-1">
@@ -882,7 +891,7 @@
 
             <!-- List Header (matches RichListItem layout: leading + flex-1 content + meta) -->
             <div
-              class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
+              class="project-list-heading flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
             >
               <span
                 class="flex-shrink-0 w-6 text-xs font-medium text-[var(--color-text-tertiary)] uppercase text-center"
@@ -942,7 +951,7 @@
                 </div>
               {/if}
             </div>
-          </div>
+          </ProjectListLayout>
         {/snippet}
 
         {#snippet rightPanel()}

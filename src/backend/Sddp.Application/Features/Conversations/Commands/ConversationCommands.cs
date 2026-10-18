@@ -410,6 +410,17 @@ public sealed class PostConversationMessageCommandHandler : IRequestHandler<Post
             request.ReplyToId);
 
         await (messageRepo.AddAsync(message, cancellationToken)).ConfigureAwait(false);
+        if (!sender.IsAI && !message.Type.IsAiGenerated() && conversation.ProjectId.HasValue
+            && conversation.Scope == ConversationScope.ProjectScoped)
+        {
+            var payload = System.Text.Json.JsonSerializer.Serialize(new {
+                TenantId = request.TenantId.ToGuid(), ProjectId = conversation.ProjectId.Value.ToGuid(),
+                ConversationId = conversation.Id.ToGuid(), MessageId = message.Id.ToGuid()
+            });
+            await _unitOfWork.Repository<OutboxMessage>().AddAsync(OutboxMessage.Create(
+                "AiConversationMessageCommitted", "conversation", conversation.Id, payload), cancellationToken).ConfigureAwait(false);
+        }
+
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
         var readStatuses = await (readStatusRepo.FindAsync(
@@ -582,10 +593,12 @@ public sealed record EditConversationMessageCommand(
 public sealed class EditConversationMessageCommandHandler : IRequestHandler<EditConversationMessageCommand, ConversationMessageDto?>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmbeddingTriggerService _embeddingTrigger;
 
-    public EditConversationMessageCommandHandler(IUnitOfWork unitOfWork)
+    public EditConversationMessageCommandHandler(IUnitOfWork unitOfWork, IEmbeddingTriggerService embeddingTrigger)
     {
         _unitOfWork = unitOfWork;
+        _embeddingTrigger = embeddingTrigger;
     }
 
     public async Task<ConversationMessageDto?> Handle(EditConversationMessageCommand request, CancellationToken cancellationToken)
@@ -625,6 +638,9 @@ public sealed class EditConversationMessageCommandHandler : IRequestHandler<Edit
         await (messageRepo.UpdateAsync(message, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
+        if (conversation.ProjectId is { } projectId)
+            _embeddingTrigger.TriggerConversationEmbedding(request.TenantId, projectId, request.ConversationId);
+
         var sender = await (userRepo.GetByIdAsync(message.SenderId, cancellationToken)).ConfigureAwait(false);
         var senderName = sender?.DisplayName ?? "Unknown";
 
@@ -662,10 +678,12 @@ public sealed record DeleteConversationMessageCommand(
 public sealed class DeleteConversationMessageCommandHandler : IRequestHandler<DeleteConversationMessageCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmbeddingTriggerService _embeddingTrigger;
 
-    public DeleteConversationMessageCommandHandler(IUnitOfWork unitOfWork)
+    public DeleteConversationMessageCommandHandler(IUnitOfWork unitOfWork, IEmbeddingTriggerService embeddingTrigger)
     {
         _unitOfWork = unitOfWork;
+        _embeddingTrigger = embeddingTrigger;
     }
 
     public async Task<bool> Handle(DeleteConversationMessageCommand request, CancellationToken cancellationToken)
@@ -710,6 +728,9 @@ public sealed class DeleteConversationMessageCommandHandler : IRequestHandler<De
         message.Deactivate();
         await (messageRepo.UpdateAsync(message, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+
+        if (conversation.ProjectId is { } projectId)
+            _embeddingTrigger.TriggerConversationEmbedding(request.TenantId, projectId, request.ConversationId);
 
         request.AuditLog = new AuditLogRequest(
             ActorId: request.UserId,

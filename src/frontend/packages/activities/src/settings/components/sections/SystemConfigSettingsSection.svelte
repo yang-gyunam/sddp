@@ -28,6 +28,7 @@
   import { Icon, IconButton, Input, Switch, Select, Button, Spinner } from '@sddp/ui';
   import type { SystemConfig } from '../../types';
   import { createSystemConfigService } from '../../services';
+  import { createResourceAiCapability } from '../../../ai/stores/resource-ai-capability.svelte';
   import { resetTenantData } from '../../../projects/services/ProjectService';
 
   interface Props {
@@ -37,7 +38,6 @@
 
   let { tenantId = '', tabId = '' }: Props = $props();
 
-  const aiFeatureFlagEnabled = appConfig.get('enableAiFeatures');
   const systemConfigAuthEnabled = appConfig.get('enableSystemConfigAuthentication');
   const systemConfigPerformanceEnabled = appConfig.get('enableSystemConfigPerformance');
 
@@ -63,6 +63,9 @@
   });
 
   const effectiveTenantId = $derived(tenantId || authState.user?.tenantId || '');
+  const aiCapability = createResourceAiCapability(() => ({ tenantId: effectiveTenantId }));
+  const aiView = $derived(aiCapability.view());
+  const aiSettingsEditable = $derived(aiView.canConfigure && !error && !loading && !saving);
   let configService = $derived(createSystemConfigService(effectiveTenantId));
 
   const configGroups: {
@@ -71,7 +74,7 @@
     icon: string;
     desc: string;
     count: number;
-  }[] = [
+  }[] = $derived([
     { id: 'general', label: 'General', icon: 'settings', desc: 'Basic system settings', count: 3 },
     ...(systemConfigAuthEnabled
       ? [
@@ -102,8 +105,22 @@
           },
         ]
       : []),
-    { id: 'aiAgent', label: 'AI Agent', icon: 'cpu', desc: 'AI model configuration', count: 4 },
-  ];
+    ...(aiView.visible
+      ? [
+          {
+            id: 'aiAgent' as const,
+            label: 'AI Agent',
+            icon: 'cpu',
+            desc: 'AI model configuration',
+            count: 4,
+          },
+        ]
+      : []),
+  ]);
+  $effect(() => {
+    if (aiCapability.state.data?.distribution?.aiInstalled === false && activeGroup === 'aiAgent')
+      activeGroup = 'general';
+  });
 
   let searchQuery = $state('');
 
@@ -125,6 +142,9 @@
 
   $effect(() => {
     if (configGroups.some((g) => g.id === activeGroup)) return;
+    // A capability refresh hides the form temporarily without discarding the selected group.
+    if (activeGroup === 'aiAgent' && aiCapability.state.data?.distribution?.aiInstalled !== false)
+      return;
     activeGroup = configGroups[0]?.id ?? 'general';
   });
 
@@ -186,7 +206,7 @@
         storage: { database: 'PostgreSQL', storageUsed: 0, storageLimit: 0 },
         performance: { cacheEnabled: true, cdnEnabled: false, compressionEnabled: true },
         aiAgent: {
-          enabled: aiFeatureFlagEnabled,
+          enabled: false,
           provider: 'Ollama',
           model: 'llama3.2',
           endpoint: 'http://localhost:11434',
@@ -205,7 +225,7 @@
   const isActiveGroupDisabled = $derived(
     (activeGroup === 'auth' && !systemConfigAuthEnabled) ||
       (activeGroup === 'performance' && !systemConfigPerformanceEnabled) ||
-      (activeGroup === 'aiAgent' && !aiFeatureFlagEnabled)
+      (activeGroup === 'aiAgent' && !aiSettingsEditable)
   );
 
   /** Save config for the active group */
@@ -219,14 +239,18 @@
       toast.info('Performance settings are coming soon.');
       return;
     }
-    if (activeGroup === 'aiAgent' && !aiFeatureFlagEnabled) {
-      toast.info('AI features are coming soon.');
+    if (activeGroup === 'aiAgent' && !aiSettingsEditable) {
+      toast.info(aiView.message);
       return;
     }
 
     saving = true;
     try {
-      config = await configService.saveConfig(config);
+      config = await configService.saveConfig(
+        config,
+        aiView.canConfigure && dirtyGroups.has('aiAgent')
+      );
+      aiCapability.refresh();
       dirtyGroups = new Set();
       const label = activeGroupInfo?.label ?? activeGroup;
       toast.success(`${label} settings saved`);
@@ -271,6 +295,13 @@
 </script>
 
 <PageShell>
+  {#if aiView.distributionUnavailable}
+    <div role="status">
+      Deployment capabilities could not be loaded.
+      <Button variant="ghost" size="sm" onclick={aiCapability.refresh}>Retry capabilities</Button>
+    </div>
+  {/if}
+
   {#if loading}
     <div class="flex-1 flex items-center justify-center pb-28"><Spinner size="lg" /></div>
   {:else if !config && error}
@@ -522,18 +553,16 @@
                   onchange={() => markDirty()}
                 />
               </SettingItem>
-            {:else if activeGroup === 'aiAgent'}
+            {:else if activeGroup === 'aiAgent' && aiView.visible}
               <SettingItem
                 category="AI Agent"
                 title="AI Features Enabled"
-                description={aiFeatureFlagEnabled
-                  ? 'Enable AI-assisted analysis, suggestions, and automated insights across all projects.'
-                  : 'Coming Soon. AI runtime is temporarily disabled due to hardware constraints in this environment.'}
+                description={aiView.message}
               >
                 <Switch
                   bind:checked={config.aiAgent.enabled}
                   onchange={() => markDirty()}
-                  disabled={!aiFeatureFlagEnabled}
+                  disabled={!aiSettingsEditable}
                 />
               </SettingItem>
 
@@ -546,7 +575,7 @@
                     { value: 'Azure', label: 'Azure OpenAI' },
                   ]}
                   onchange={() => markDirty()}
-                  disabled={!aiFeatureFlagEnabled || !config.aiAgent.enabled}
+                  disabled={!aiSettingsEditable || !config.aiAgent.enabled}
                 />
               </SettingItem>
 
@@ -555,7 +584,7 @@
                   type="text"
                   bind:value={config.aiAgent.model}
                   onchange={markDirty}
-                  disabled={!aiFeatureFlagEnabled || !config.aiAgent.enabled}
+                  disabled={!aiSettingsEditable || !config.aiAgent.enabled}
                 />
               </SettingItem>
 
@@ -564,17 +593,14 @@
                   type="url"
                   bind:value={config.aiAgent.endpoint}
                   onchange={markDirty}
-                  disabled={!aiFeatureFlagEnabled || !config.aiAgent.enabled}
+                  disabled={!aiSettingsEditable || !config.aiAgent.enabled}
                 />
               </SettingItem>
 
-              {#if !aiFeatureFlagEnabled}
-                <div class="ai-disabled-notice">
-                  <Icon name="clock" size="sm" />
-                  <span
-                    >Coming Soon: AI features are temporarily unavailable in this environment.</span
-                  >
-                </div>
+              {#if aiView.unavailable}
+                <Button variant="ghost" size="sm" onclick={aiCapability.refresh}
+                  >Retry AI availability</Button
+                >
               {/if}
             {/if}
           </div>
@@ -646,18 +672,5 @@
     margin-top: 0.5rem;
     font-size: 0.8125rem;
     color: var(--color-text-secondary, #6b7280);
-  }
-
-  .ai-disabled-notice {
-    margin: 0.25rem 0 0;
-    padding: 0.625rem 0.875rem;
-    border-radius: 6px;
-    border: 1px solid var(--color-warning-200, #fde68a);
-    background: var(--color-warning-50, #fffbeb);
-    color: var(--color-warning-700, #a16207);
-    font-size: 0.8125rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
   }
 </style>

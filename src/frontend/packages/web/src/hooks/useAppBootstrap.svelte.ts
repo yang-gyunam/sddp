@@ -79,13 +79,14 @@ export function useAppBootstrap(params: AppBootstrapParams) {
     const path = getReturnUrlFromQuery();
     if (!path) return;
     clearReturnUrlFromQuery();
-    params.onOpenTabFromPath(path);
+    RouterService.replace(path);
+    params.onOpenTabFromPath(path.split('?')[0] ?? path);
   }
 
   function handleDeepLinkRedirect() {
     const initialPath = window.location.pathname;
     if (initialPath && initialPath !== '/') {
-      setReturnUrlInQuery(initialPath);
+      setReturnUrlInQuery(initialPath + window.location.search);
     }
   }
 

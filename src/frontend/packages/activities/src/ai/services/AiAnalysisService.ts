@@ -3,7 +3,6 @@
  */
 
 import { fetchWithAuth } from '../../shared/api';
-import { config as appConfig } from '@sddp/shell/core';
 import type { AiAnalysisType, AiReport, AiReportSummary, TriggerAnalysisRequest } from '../types';
 
 // ============================================
@@ -15,9 +14,6 @@ export async function triggerAnalysis(
   projectId: string,
   request: TriggerAnalysisRequest
 ): Promise<AiReport> {
-  if (!appConfig.get('enableAiFeatures')) {
-    throw new Error('AI features are coming soon.');
-  }
   return fetchWithAuth<AiReport>('/ai/analyze', {
     method: 'POST',
     body: request,
@@ -32,9 +28,6 @@ export async function getReportsByTarget(
   targetId: string,
   analysisType?: AiAnalysisType
 ): Promise<AiReportSummary[]> {
-  if (!appConfig.get('enableAiFeatures')) {
-    return [];
-  }
   const params = new URLSearchParams();
   if (analysisType) params.set('analysisType', analysisType);
 
@@ -52,9 +45,6 @@ export async function getReportById(
   projectId: string,
   reportId: string
 ): Promise<AiReport> {
-  if (!appConfig.get('enableAiFeatures')) {
-    throw new Error('AI features are coming soon.');
-  }
   return fetchWithAuth<AiReport>(`/ai/reports/${reportId}`, {
     tenantId,
     projectId,

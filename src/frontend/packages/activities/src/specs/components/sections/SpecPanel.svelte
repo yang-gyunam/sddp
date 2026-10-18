@@ -1,14 +1,14 @@
 <!-- Section: SpecPanel — Specs > spec-{id} (menu-registry) -->
 <script lang="ts">
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
   import { Icon, IconButton, Button } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
-  import { tabActions, RouterService, toast, getTabState, setTabState } from '@sddp/shell';
+  import { toast, getTabState, setTabState } from '@sddp/shell';
   import SpecList from './SpecList.svelte';
   import SpecDetailView from './SpecDetailView.svelte';
   import SpecVersionHistory from '../idioms/SpecVersionHistory.svelte';
   import SpecForm from '../idioms/SpecForm.svelte';
-  import RequirementPanel from '../../../requirements/components/sections/RequirementPanel.svelte';
   import { createSpecStoreScope } from '../../stores';
   import type {
     Spec,
@@ -357,23 +357,11 @@
   }
 
   function handleRequirementClick(requirementId: string): void {
-    tabActions.createTab({
-      title: `Requirement`,
-      icon: 'clipboard-list',
-      dirty: false,
-      closable: true,
-      component: RequirementPanel,
-      props: {
-        tenantId,
-        projectId,
-        requirementId,
-      },
-      path: `/requirement-${requirementId}`,
-    });
+    navigateToEntity(projectId, 'requirement', requirementId);
   }
 
   function handleConversationClick(conversationId: string): void {
-    RouterService.navigate(`/conversation/${conversationId}`);
+    navigateToEntity(projectId, 'conversation', conversationId);
   }
 
   function enterEditMode(): void {

@@ -5,15 +5,18 @@ SDDP Design System - a Svelte 5 UI component library
 ## Installation
 
 ```bash
-npm install @sddp/ui
+cd src/frontend
+npm ci
 ```
+
+This package is linked by the repository npm workspaces. A separately published npm package is not required. Run package-local commands below from `src/frontend/packages/ui`.
 
 ## Components
 
 ### Form Controls
 | Component | Description |
 |---------|------|
-| `Button` | Supports Primary, Secondary, Ghost, Danger, and Outline variants |
+| `Button` | Supports primary, secondary, ghost, danger, outline and unstyled variants |
 | `Input` | Supports Text, Password, Email, Number, and other input types |
 | `Textarea` | Multi-line text input |
 | `Checkbox` | Checkbox with indeterminate-state support |
@@ -122,4 +125,4 @@ npm run type-check
 - Svelte 5 (Runes syntax)
 - TypeScript
 - Tailwind CSS
-- Storybook 8
+- Storybook 10

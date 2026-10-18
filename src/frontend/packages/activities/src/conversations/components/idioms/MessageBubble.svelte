@@ -16,6 +16,9 @@
     getAvatarInitials,
     renderMarkdown,
   } from '@sddp/shell';
+  import AutomaticAnalysisBody from '../../../ai/components/idioms/AutomaticAnalysisBody.svelte';
+  import { parseAutomaticAnalysis } from '../../../ai/utils/automatic-analysis-display';
+  import ConversationEvidence from '../../../ai/components/idioms/ConversationEvidence.svelte';
   import MessageTypeIcon from './MessageTypeIcon.svelte';
   import DecisionImpactBadge from './DecisionImpactBadge.svelte';
   import {
@@ -32,6 +35,7 @@
     isLast?: boolean;
     viewMode?: ConversationViewMode;
     projectId?: string;
+    tenantId?: string;
     showToolbar?: boolean;
     class?: string;
     onReferenceClick?: (reference: ReferenceMeta) => void;
@@ -39,6 +43,7 @@
     onEdit?: (message: Message, newContent: string) => void;
     onDelete?: (message: Message) => void;
     onReply?: (message: Message) => void;
+    onAskAi?: (message: Message) => void;
     messages?: Message[];
     currentUserRole?: string;
   }
@@ -49,6 +54,7 @@
     isLast = false,
     viewMode = 'slack',
     projectId = '',
+    tenantId = '',
     showToolbar = false,
     class: className = '',
     onReferenceClick,
@@ -56,6 +62,7 @@
     onEdit,
     onDelete,
     onReply,
+    onAskAi,
     messages = [],
     currentUserRole = 'Member',
   }: Props = $props();
@@ -120,7 +127,8 @@
     !!onDelete && (isOwn || currentUserRole === 'Moderator' || currentUserRole === 'Owner')
   );
   const canReply = $derived(!!onReply);
-  const hasActions = $derived(canEdit || canDelete || canReply);
+  const canAskAi = $derived(!!onAskAi && !AI_MESSAGE_TYPES.includes(message.type));
+  const hasActions = $derived(canEdit || canDelete || canReply || canAskAi);
 
   // Find the message being replied to
   const replyToMessage = $derived(
@@ -216,6 +224,7 @@
         ? 'max-w-[72%]'
         : 'max-w-[88%]'
   );
+  const automaticAnalysis = $derived(parseAutomaticAnalysis(message.type, message.content));
   const isAiMessage = $derived(AI_MESSAGE_TYPES.includes(message.type));
   const senderAvatar = $derived(parseAvatarUrl(message.sender?.avatarUrl));
   const avatarText = $derived(isAiMessage ? 'AI' : getAvatarInitials(message.sender?.name ?? ''));
@@ -363,6 +372,22 @@
   }
 </script>
 
+{#snippet askAiAction()}
+  {#if canAskAi}
+    <Button
+      variant="unstyled"
+      class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] text-left"
+      onclick={(event) => {
+        event.stopPropagation();
+        showMenu = false;
+        onAskAi?.(message);
+      }}
+    >
+      <Icon name="sparkles" size="xs" /> Ask AI
+    </Button>
+  {/if}
+{/snippet}
+
 {#if viewMode === 'log'}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -392,6 +417,7 @@
           bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
           rounded-md shadow-lg py-1 min-w-[120px]"
         >
+          {@render askAiAction()}
           {#if canReply}
             <Button
               variant="unstyled"
@@ -452,6 +478,7 @@
         </span>
         {#if isAiMessage}
           <span
+            aria-label="AI-generated message"
             class="px-1.5 py-0.5 rounded border border-dotted border-[var(--color-accent-primary)] text-[0.625rem] uppercase text-[var(--color-accent-text)]"
           >
             AI
@@ -607,7 +634,9 @@
               Replying to a message...
             </div>
           {/if}
-          {#if message.type === 'AiReminder'}
+          {#if automaticAnalysis}
+            <AutomaticAnalysisBody analysis={automaticAnalysis} />
+          {:else if message.type === 'AiReminder'}
             <SurfaceCard padding="md" class="space-y-2">
               <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                 <Icon name="bell" size="xs" />
@@ -635,7 +664,15 @@
               {@html renderMarkdown(message.content)}
             </div>
           {/if}
-          {#if referenceItems.length > 0}
+          {#if isAiMessage}
+            <ConversationEvidence
+              messageId={message.id}
+              references={message.references ?? []}
+              compactUnresolved={!!automaticAnalysis}
+              {projectId}
+              {tenantId}
+            />
+          {:else if referenceItems.length > 0}
             <div class="mt-2 pt-2 border-t border-[var(--color-border-secondary)]">
               <span class="text-xs text-[var(--color-text-muted)]">References:</span>
               <div class="flex flex-wrap gap-1 mt-1">
@@ -726,6 +763,7 @@
           bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
           rounded-md shadow-lg py-1 min-w-[120px]"
         >
+          {@render askAiAction()}
           {#if canReply}
             <Button
               variant="unstyled"
@@ -783,6 +821,7 @@
       </span>
       {#if isAiMessage}
         <span
+          aria-label="AI-generated message"
           class="px-1.5 py-0.5 rounded border border-dotted border-[var(--color-accent-primary)] text-[0.625rem] uppercase text-[var(--color-accent-text)]"
         >
           AI
@@ -941,7 +980,9 @@
           Replying to a message...
         </div>
       {/if}
-      {#if message.type === 'AiReminder'}
+      {#if automaticAnalysis}
+        <AutomaticAnalysisBody analysis={automaticAnalysis} />
+      {:else if message.type === 'AiReminder'}
         <SurfaceCard padding="md" class="space-y-2">
           <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
             <Icon name="bell" size="xs" />
@@ -969,7 +1010,15 @@
           {@html renderMarkdown(message.content)}
         </div>
       {/if}
-      {#if referenceItems.length > 0}
+      {#if isAiMessage}
+        <ConversationEvidence
+          messageId={message.id}
+          references={message.references ?? []}
+          compactUnresolved={!!automaticAnalysis}
+          {projectId}
+          {tenantId}
+        />
+      {:else if referenceItems.length > 0}
         <div class="mt-2 pt-2 border-t border-[var(--color-border-secondary)]">
           <span class="text-xs text-[var(--color-text-muted)]">References:</span>
           <div class="flex flex-wrap gap-1 mt-1">
@@ -1067,25 +1116,109 @@
         ? 'items-start'
         : 'items-end'}"
     >
-      <!-- Header -->
-      <div class="flex items-center gap-2 mb-1 {isOwn ? '' : 'flex-row-reverse'}">
-        <span class="text-sm font-medium text-[var(--color-text-primary)]">
-          {message.sender?.name ?? 'Unknown'}
-        </span>
-        <MessageTypeIcon type={message.type} size="sm" />
-        {#if isAiMessage}
-          <span
-            class="px-1.5 py-0.5 rounded border border-dotted border-[var(--color-accent-primary)] text-[0.625rem] uppercase text-[var(--color-accent-text)]"
-          >
-            AI
+      <!-- Header: actions have their own slot outside the bubble. -->
+      <div class="flex items-start gap-2 mb-1 w-full {isOwn ? '' : 'flex-row-reverse'}">
+        <div
+          class="flex flex-1 min-w-0 flex-wrap items-center gap-x-2 gap-y-1 {isOwn
+            ? ''
+            : 'flex-row-reverse'}"
+        >
+          <span class="text-sm font-medium text-[var(--color-text-primary)]">
+            {message.sender?.name ?? 'Unknown'}
           </span>
-        {/if}
-        <span class="text-xs text-[var(--color-text-muted)]">
-          {formattedTime}
-        </span>
-        {#if message.isEdited}
-          <span class="text-xs text-[var(--color-text-muted)] italic">(edited)</span>
-        {/if}
+          <MessageTypeIcon type={message.type} size="sm" />
+          {#if isAiMessage}
+            <span
+              aria-label="AI-generated message"
+              class="px-1.5 py-0.5 rounded border border-dotted border-[var(--color-accent-primary)] text-[0.625rem] uppercase text-[var(--color-accent-text)]"
+            >
+              AI
+            </span>
+          {/if}
+          <span class="text-xs text-[var(--color-text-muted)]">
+            {formattedTime}
+          </span>
+          {#if message.isEdited}
+            <span class="text-xs text-[var(--color-text-muted)] italic">(edited)</span>
+          {/if}
+        </div>
+        <div class="relative shrink-0">
+          <!-- Actions menu button (hover) -->
+          {#if hasActions && !isEditing && !showDeleteConfirm}
+            <Button
+              variant="unstyled"
+              type="button"
+              class="{showMenu
+                ? 'opacity-100'
+                : 'opacity-0'} group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100
+              w-6 h-6 flex items-center justify-center rounded
+              bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
+              text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]
+              shadow-sm transition-all z-10"
+              title="Message actions"
+              aria-expanded={showMenu}
+              onclick={handleMenuToggle}
+            >
+              <Icon name="more-horizontal" size="xs" />
+            </Button>
+
+            <!-- Dropdown menu -->
+            {#if showMenu}
+              <div
+                class="absolute top-full mt-1 {isOwn ? 'right-0' : 'left-0'} z-20
+              bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
+              rounded-md shadow-lg py-1 min-w-[120px]"
+              >
+                {@render askAiAction()}
+                {#if canReply}
+                  <Button
+                    variant="unstyled"
+                    type="button"
+                    class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
+                    hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      handleReply();
+                    }}
+                  >
+                    <Icon name="corner-up-left" size="xs" />
+                    Reply
+                  </Button>
+                {/if}
+                {#if canEdit}
+                  <Button
+                    variant="unstyled"
+                    type="button"
+                    class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
+                    hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      handleStartEdit();
+                    }}
+                  >
+                    <Icon name="pencil" size="xs" />
+                    Edit
+                  </Button>
+                {/if}
+                {#if canDelete}
+                  <Button
+                    variant="unstyled"
+                    type="button"
+                    class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-error-600)]
+                    hover:bg-[var(--color-error-50)] transition-colors text-left"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      handleStartDelete();
+                    }}
+                  >
+                    <Icon name="trash-2" size="xs" />
+                    Delete
+                  </Button>
+                {/if}
+              </div>
+            {/if}
+          {/if}
+        </div>
       </div>
 
       <!-- Bubble -->
@@ -1094,78 +1227,6 @@
         class:rounded-tl-none={isOwn}
         class:rounded-tr-none={!isOwn}
       >
-        <!-- Actions menu button (hover) -->
-        {#if hasActions && !isEditing && !showDeleteConfirm}
-          <Button
-            variant="unstyled"
-            type="button"
-            class="absolute -top-2 right-1 opacity-0 group-hover:opacity-100
-              w-6 h-6 flex items-center justify-center rounded
-              bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-              text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]
-              shadow-sm transition-all z-10"
-            title="Message actions"
-            onclick={handleMenuToggle}
-          >
-            <Icon name="more-horizontal" size="xs" />
-          </Button>
-
-          <!-- Dropdown menu -->
-          {#if showMenu}
-            <div
-              class="absolute -top-2 right-8 z-20
-              bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-              rounded-md shadow-lg py-1 min-w-[120px]"
-            >
-              {#if canReply}
-                <Button
-                  variant="unstyled"
-                  type="button"
-                  class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
-                    hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    handleReply();
-                  }}
-                >
-                  <Icon name="corner-up-left" size="xs" />
-                  Reply
-                </Button>
-              {/if}
-              {#if canEdit}
-                <Button
-                  variant="unstyled"
-                  type="button"
-                  class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
-                    hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    handleStartEdit();
-                  }}
-                >
-                  <Icon name="pencil" size="xs" />
-                  Edit
-                </Button>
-              {/if}
-              {#if canDelete}
-                <Button
-                  variant="unstyled"
-                  type="button"
-                  class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-error-600)]
-                    hover:bg-[var(--color-error-50)] transition-colors text-left"
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    handleStartDelete();
-                  }}
-                >
-                  <Icon name="trash-2" size="xs" />
-                  Delete
-                </Button>
-              {/if}
-            </div>
-          {/if}
-        {/if}
-
         <!-- Reply quote -->
         {#if replyToMessage}
           <div class="reply-quote mb-1.5">
@@ -1315,7 +1376,9 @@
           {/if}
 
           <!-- Content -->
-          {#if message.type === 'AiReminder'}
+          {#if automaticAnalysis}
+            <AutomaticAnalysisBody analysis={automaticAnalysis} />
+          {:else if message.type === 'AiReminder'}
             <SurfaceCard padding="md" class="space-y-2">
               <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                 <Icon name="bell" size="xs" />
@@ -1345,7 +1408,15 @@
           {/if}
 
           <!-- References -->
-          {#if referenceItems.length > 0}
+          {#if isAiMessage}
+            <ConversationEvidence
+              messageId={message.id}
+              references={message.references ?? []}
+              compactUnresolved={!!automaticAnalysis}
+              {projectId}
+              {tenantId}
+            />
+          {:else if referenceItems.length > 0}
             <div class="mt-2 pt-2 border-t border-[var(--color-border-secondary)]">
               <span class="text-xs text-[var(--color-text-muted)]">References:</span>
               <div class="flex flex-wrap gap-1 mt-1">

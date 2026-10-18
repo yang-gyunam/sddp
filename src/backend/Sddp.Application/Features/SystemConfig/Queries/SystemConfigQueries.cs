@@ -158,7 +158,8 @@ public sealed class GetSystemConfigQueryHandler : IRequestHandler<GetSystemConfi
 public sealed record GetSystemConfigGroupQuery(
     string ConfigGroup,
     GlobalUniqueId? TenantId,
-    GlobalUniqueId? ProjectId) : IQuery<Dictionary<string, SystemConfigItemDto>>;
+    GlobalUniqueId? ProjectId,
+    bool IncludeInherited = true) : IQuery<Dictionary<string, SystemConfigItemDto>>;
 
 public sealed class GetSystemConfigGroupQueryHandler : IRequestHandler<GetSystemConfigGroupQuery, Dictionary<string, SystemConfigItemDto>>
 {
@@ -177,7 +178,8 @@ public sealed class GetSystemConfigGroupQueryHandler : IRequestHandler<GetSystem
             request.ProjectId,
             cancellationToken)).ConfigureAwait(false);
 
-        var groupConfigs = configs.Where(c => c.ConfigGroup == request.ConfigGroup);
+        var groupConfigs = configs.Where(c => c.ConfigGroup == request.ConfigGroup
+            && (request.IncludeInherited || (c.TenantId == request.TenantId && c.ProjectId == request.ProjectId)));
         var result = new Dictionary<string, SystemConfigItemDto>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var config in groupConfigs)

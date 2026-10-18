@@ -487,10 +487,12 @@ public sealed record PostTopicMessageCommand(
 public sealed class PostTopicMessageCommandHandler : IRequestHandler<PostTopicMessageCommand, ForumMessageDto?>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmbeddingTriggerService _embeddingTrigger;
 
-    public PostTopicMessageCommandHandler(IUnitOfWork unitOfWork)
+    public PostTopicMessageCommandHandler(IUnitOfWork unitOfWork, IEmbeddingTriggerService embeddingTrigger)
     {
         _unitOfWork = unitOfWork;
+        _embeddingTrigger = embeddingTrigger;
     }
 
     public async Task<ForumMessageDto?> Handle(PostTopicMessageCommand request, CancellationToken cancellationToken)
@@ -544,6 +546,8 @@ public sealed class PostTopicMessageCommandHandler : IRequestHandler<PostTopicMe
 
         await (messageRepo.AddAsync(message, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+        if (forum.ProjectId is { } projectId)
+            _embeddingTrigger.TriggerConversationEmbedding(request.TenantId, projectId, forum.Id);
 
         request.AuditLog = new AuditLogRequest(
             ActorId: request.SenderUserId,

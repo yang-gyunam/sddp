@@ -15,13 +15,21 @@
     onCredentialsChange?: () => void;
   }
 
-  let { onSubmit, error = null, isLoading = false, tenantIds = [], onCredentialsChange }: Props = $props();
+  let {
+    onSubmit,
+    error = null,
+    isLoading = false,
+    tenantIds = [],
+    onCredentialsChange,
+  }: Props = $props();
 
   // Form state
   let username = $state('');
   let password = $state('');
   let tenantId = $state('');
-  $effect(() => { if (!tenantIds.includes(tenantId)) tenantId = ''; });
+  $effect(() => {
+    if (!tenantIds.includes(tenantId)) tenantId = '';
+  });
 
   function credentialsChanged() {
     tenantId = '';
@@ -72,8 +80,11 @@
     }
 
     if (tenantIds.length > 0 && !tenantId) return;
-    await onSubmit({ username: username.trim(), password,
-      ...(tenantIds.length > 0 ? { tenantId } : {}) });
+    await onSubmit({
+      username: username.trim(),
+      password,
+      ...(tenantIds.length > 0 ? { tenantId } : {}),
+    });
   }
 
   // Handle input blur for field-level validation
@@ -130,8 +141,14 @@
   />
 
   {#if tenantIds.length > 0}
-    <Select label="Tenant" placeholder="Select a tenant" bind:value={tenantId}
-      options={tenantIds.map((id) => ({ value: id, label: id }))} disabled={isLoading} required />
+    <Select
+      label="Tenant"
+      placeholder="Select a tenant"
+      bind:value={tenantId}
+      options={tenantIds.map((id) => ({ value: id, label: id }))}
+      disabled={isLoading}
+      required
+    />
   {/if}
 
   <!-- Remember Me & Forgot Password -->

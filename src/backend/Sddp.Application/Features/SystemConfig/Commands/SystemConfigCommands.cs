@@ -489,7 +489,8 @@ public sealed class DeleteSystemConfigValueCommandHandler : IRequestHandler<Dele
 /// </summary>
 public sealed record ResetSystemConfigCommand(
     GlobalUniqueId? TenantId,
-    GlobalUniqueId? ProjectId) : ICommand<bool>, IAuditableRequest<bool>
+    GlobalUniqueId? ProjectId,
+    bool IncludeAi = true) : ICommand<bool>, IAuditableRequest<bool>
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(bool response) => AuditLog;
@@ -511,6 +512,7 @@ public sealed class ResetSystemConfigCommandHandler : IRequestHandler<ResetSyste
         var configs = await (repo.FindAsync(
             c => c.TenantId == request.TenantId
                 && c.ProjectId == request.ProjectId
+                && (request.IncludeAi || c.ConfigGroup != "aiAgent")
                 && !c.IsSystem
                 && c.IsActive,
             cancellationToken)).ConfigureAwait(false);

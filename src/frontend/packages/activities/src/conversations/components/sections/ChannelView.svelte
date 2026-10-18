@@ -1,11 +1,15 @@
 <!-- Section: ChannelView — Conversations > Channel/DM/Global, Projects > Conversations -->
 <script lang="ts">
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
+  import { keepMessageBottomVisible } from '../../actions/keepMessageBottomVisible';
   import { Icon, Button, IconButton, Spinner, ResizeHandle } from '@sddp/ui';
-  import { PageBody, PageShell, toast, RouterService } from '@sddp/shell';
+  import { PageBody, PageShell, toast } from '@sddp/shell';
   import { tabActions } from '@sddp/shell/stores';
   import { getConversationHubService } from '../../services';
   import MessageBubble from '../idioms/MessageBubble.svelte';
+  import ConversationAiRunPanel from '../../../ai/components/idioms/ConversationAiRunPanel.svelte';
+  import { createConversationAiRun } from '../../../ai/stores/conversation-ai-run.svelte';
   import MessageInput from '../idioms/MessageInput.svelte';
   import { ConversationHeader } from '../idioms';
   import ParticipantsPanel from './ParticipantsPanel.svelte';
@@ -232,6 +236,20 @@
   const isChannelReadOnly = $derived(
     isReadOnlyProp || (hasStatusControls && channelStatus != null && channelStatus !== 'Active')
   );
+  const aiRun = createConversationAiRun(
+    () => ({
+      tenantId: tenantId ?? getAuthState().user?.tenantId ?? '',
+      projectId: projectId ?? '',
+      containerType: 'conversation',
+      containerId: conversationId,
+      readonly: isChannelReadOnly,
+    }),
+    async (isCurrent, passiveOutputId) => {
+      await loadMessages(true, isCurrent, true, passiveOutputId);
+      return messages;
+    }
+  );
+
   const canConclude = $derived(
     hasStatusControls &&
       channelStatus === 'Active' &&
@@ -349,17 +367,6 @@
       toast.success('Message deleted');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete message');
-    }
-  }
-
-  function scrollToBottomIfNear(): void {
-    if (!messagesContainer) return;
-    const { scrollHeight, scrollTop, clientHeight } = messagesContainer;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 80;
-    if (isNearBottom) {
-      requestAnimationFrame(() => {
-        messagesContainer?.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
-      });
     }
   }
 
@@ -489,10 +496,17 @@
     }
   }
 
-  async function loadMessages(reset = false): Promise<void> {
+  async function loadMessages(
+    reset = false,
+    isCurrent = () => true,
+    propagateError = false,
+    passiveOutputId?: string
+  ): Promise<void> {
     const targetConversationId = conversationId;
-    loading = true;
-    error = null;
+    if (!propagateError) {
+      loading = true;
+      error = null;
+    }
     try {
       await ensureContext();
       const cursor = reset ? undefined : (nextCursor ?? undefined);
@@ -501,33 +515,51 @@
           cursor,
           limit: 50,
         });
-        if (targetConversationId !== conversationId) {
+        if (targetConversationId !== conversationId || !isCurrent()) {
           return;
         }
         const batch = page.messages.map(mapConversationMessage).reverse();
-        messages = reset ? batch : [...batch, ...messages];
-        nextCursor = page.nextCursor;
-        hasMore = page.hasMore;
+        if (passiveOutputId) {
+          if (!batch.some((message) => message.id === passiveOutputId)) return;
+          const existing = new Set(messages.map((message) => message.id));
+          messages = [...messages, ...batch.filter((message) => !existing.has(message.id))];
+        } else {
+          messages = reset ? batch : [...batch, ...messages];
+        }
+        if (!passiveOutputId) {
+          nextCursor = page.nextCursor;
+          hasMore = page.hasMore;
+        }
       } else {
         const page = await service.getMessages(targetConversationId, { cursor, limit: 50 });
-        if (targetConversationId !== conversationId) {
+        if (targetConversationId !== conversationId || !isCurrent()) {
           return;
         }
         const batch = mapChannelMessages(page.messages).reverse();
-        messages = reset ? batch : [...batch, ...messages];
-        nextCursor = page.nextCursor;
-        hasMore = page.hasMore;
+        if (passiveOutputId) {
+          if (!batch.some((message) => message.id === passiveOutputId)) return;
+          const existing = new Set(messages.map((message) => message.id));
+          messages = [...messages, ...batch.filter((message) => !existing.has(message.id))];
+        } else {
+          messages = reset ? batch : [...batch, ...messages];
+        }
+        if (!passiveOutputId) {
+          nextCursor = page.nextCursor;
+          hasMore = page.hasMore;
+        }
       }
       // Scroll to bottom on initial load (channel selected)
-      if (reset) {
+      if (reset && !passiveOutputId) {
         requestAnimationFrame(() => {
           messagesContainer?.scrollTo({ top: messagesContainer.scrollHeight });
         });
       }
     } catch (err) {
+      if (!isCurrent()) return;
+      if (propagateError) throw err;
       error = err instanceof Error ? err.message : 'Failed to load messages';
     } finally {
-      if (targetConversationId === conversationId) {
+      if (!propagateError && targetConversationId === conversationId && isCurrent()) {
         loading = false;
       }
     }
@@ -655,7 +687,7 @@
   }
 
   function handleLinkedRequirementClick(req: LinkedRequirement): void {
-    RouterService.navigate(`/requirement/${req.id}`);
+    navigateToEntity(projectId, 'requirement', req.id);
   }
 
   let prevConversationId = $state<string | null>(null);
@@ -681,7 +713,6 @@
         if (message.conversationId !== conversationId) return;
         if (messages.some((item) => item.id === message.id)) return;
         messages = [...messages, normalizeMessage(message)];
-        scrollToBottomIfNear();
       },
       onMessageEdited: (message) => {
         if (message.conversationId !== conversationId) return;
@@ -853,6 +884,7 @@
       <!-- Messages Area -->
       <div
         bind:this={messagesContainer}
+        use:keepMessageBottomVisible
         class="flex-1 overflow-y-auto p-3 space-y-3 bg-[var(--color-surface-50)]"
       >
         {#if loading && uniqueMessages.length === 0}
@@ -883,12 +915,14 @@
 
           {#each uniqueMessages as message, index (message.id)}
             <MessageBubble
+              {tenantId}
               {message}
               {viewMode}
               {projectId}
               isOwn={currentUserId ? message.sender?.id === currentUserId : false}
               isLast={index === uniqueMessages.length - 1}
               onExtractRequirement={canExtractRequirement ? handleExtractRequirement : undefined}
+              onAskAi={aiRun.canAsk ? aiRun.ask : undefined}
               onEdit={!isChannelReadOnly ? handleEditMessage : undefined}
               onDelete={!isChannelReadOnly ? handleDeleteMessage : undefined}
               {currentUserRole}
@@ -905,6 +939,8 @@
           {/if}
         {/if}
       </div>
+
+      <ConversationAiRunPanel run={aiRun} />
 
       <!-- Message Input (hidden for concluded/readonly channels) -->
       {#if !isChannelReadOnly}

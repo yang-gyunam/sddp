@@ -6,11 +6,12 @@
 
 ```bash
 cd src/frontend
-npm install
+npm ci
 npm run dev
 ```
 
-The default local development URL is `http://localhost:3500`.
+The default local development URL is `http://localhost:3500`. Start and provision the evaluation
+API/DB/Redis first using the [public guide](../../../../docs/public-guide.md).
 
 ## Commands
 
@@ -18,7 +19,6 @@ The default local development URL is `http://localhost:3500`.
 cd src/frontend
 npm run build
 npm run test
-npm run test:e2e -w @sddp/web
 ```
 
 Run the production build from `src/frontend`; it builds the library packages first and verifies
@@ -29,3 +29,9 @@ source-wiring diagnostic and is not the release contract.
 
 - [../../../../docs/public-guide.md](../../../../docs/public-guide.md)
 - [../../../../README.md](../../../../README.md)
+
+Only the UI-control and public error-handler unit suites are shipped. `npm test` at the frontend root runs both once; `npm test` in this web package runs only the error-handler suite. L1/L2/L3 and integration test commands are not shipped.
+
+For OnBrick browser tests, follow [public validation](../../../../docs/public-guide.md#validation).
+They need separate scenario seed data and a Playwright browser; their global setup clears
+the evaluation Redis instance and writes an E2E project. Unit tests do not have these service prerequisites.

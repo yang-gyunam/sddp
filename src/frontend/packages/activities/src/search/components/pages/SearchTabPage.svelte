@@ -1,5 +1,6 @@
 <!-- Activity: Search > Nav: Search Tab -->
 <script lang="ts">
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   /**
    * SearchTabPage - Tab-friendly search content (without sidebar).
    * Used when SearchSidebar is rendered separately in the App aside.
@@ -9,14 +10,7 @@
   import { createSearchService } from '../../services/SearchService';
   import { addRecentSearch, getSearchQuery } from '../../stores/searchQuery.store';
   import type { SearchResult, SearchResultItem, AdvancedSearchOptions } from '../../types';
-  import {
-    toast,
-    navigateToSpec,
-    navigateToRequirement,
-    navigateToConversation,
-    navigateToGlossary,
-    getAuthState,
-  } from '@sddp/shell';
+  import { toast, getAuthState } from '@sddp/shell';
 
   interface Props {
     tenantId?: string;
@@ -73,21 +67,8 @@
   }
 
   function handleResultClick(item: SearchResultItem) {
-    switch (item.type) {
-      case 'spec':
-        navigateToSpec(item.id);
-        break;
-      case 'requirement':
-        navigateToRequirement(item.id);
-        break;
-      case 'conversation':
-        navigateToConversation(item.id);
-        break;
-      case 'glossary':
-        navigateToGlossary(item.id);
-        break;
-      default:
-        toast.info(`Opening ${item.type}: ${item.title}`);
+    if (!navigateToEntity(item.projectId, item.type, item.id)) {
+      toast.info('This item cannot be opened without project context.');
     }
   }
 

@@ -1,12 +1,7 @@
 <!-- Section: MemberOwnershipPanel — Projects > Effort -->
 <script lang="ts">
-  import { SurfaceCard, formatDate } from '@sddp/shell';
+  import { SurfaceCard, formatDate, RouterService } from '@sddp/shell';
   import { Button, Input, IconButton, Icon, Select, Spinner } from '@sddp/ui';
-  import {
-    navigateToGlossary,
-    navigateToRequirement,
-    navigateToSpec,
-  } from '@sddp/shell/core/services';
   import { loadMemberOwnership, type MemberOwnershipOptions } from '../../stores';
   import type {
     MemberOwnershipPage,
@@ -16,6 +11,7 @@
   } from '../../types';
 
   interface Props {
+    projectId: string;
     ownership: MemberOwnershipPage;
     userId: string;
     isLoading?: boolean;
@@ -25,6 +21,7 @@
   }
 
   let {
+    projectId,
     ownership,
     userId,
     isLoading = false,
@@ -66,19 +63,11 @@
   }
 
   function resolveOpenHandler(item: MemberOwnershipItem): (() => void) | undefined {
-    if (item.type === 'requirements') {
-      return () => navigateToRequirement(item.id, item.title);
-    }
-    if (item.type === 'specs') {
-      return () => navigateToSpec(item.specId ?? item.id, item.specCode ?? item.title);
-    }
-    if (item.type === 'glossary') {
-      return () => navigateToGlossary(item.id, item.title);
-    }
-    if (item.type === 'artifacts' && item.specId) {
-      return () => navigateToSpec(item.specId!, item.specCode ?? item.title);
-    }
-    return undefined;
+    if (!projectId || !item.id) return undefined;
+    return () =>
+      RouterService.navigate(
+        `/project/${encodeURIComponent(projectId)}/${item.type}?id=${encodeURIComponent(item.id)}`
+      );
   }
 
   function reloadOwnership(): void {

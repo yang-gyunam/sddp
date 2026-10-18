@@ -65,7 +65,7 @@
 <div class="flex flex-col h-full bg-[var(--color-bg-primary)] {className}">
   <!-- Search + Action Buttons (follows SpecsSidebar pattern) -->
   <div
-    class="sidebar-header flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+    class="project-list-search sidebar-header flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
   >
     <div class="flex items-center gap-1 w-full">
       <!-- Search Input -->

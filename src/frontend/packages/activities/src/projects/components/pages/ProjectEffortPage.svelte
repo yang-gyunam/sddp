@@ -1,5 +1,7 @@
 <!-- Activity: Projects > Nav: Effort (project-{id}-effort) | Screen ID: PRJ-EFF-001 -->
 <script lang="ts">
+  import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { untrack } from 'svelte';
   import { SvelteDate } from 'svelte/reactivity';
   import { IconButton, Button, Icon, CardGrid } from '@sddp/ui';
@@ -441,6 +443,15 @@
       effortScope.setDateRange(range.start, range.end);
     }
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/effort`,
+    selection: () => selectedMemberId,
+    ready: () => !isLoading,
+    restore: (id) => {
+      return effortScope.selectMember(id);
+    },
+  });
 </script>
 
 <PageShell class={className}>
@@ -465,20 +476,22 @@
       {:else}
         <SidebarDetailLayout sidebarWidth={420} minSidebarWidth={380} maxSidebarWidth={500}>
           {#snippet sidebar()}
-            <EffortSidebar
-              {members}
-              {selectedMemberId}
-              {viewMode}
-              {periodLabel}
-              tabId={tabStateKey}
-              onMemberSelect={handleMemberSelect}
-              onPrevPeriod={handlePrevPeriod}
-              onNextPeriod={handleNextPeriod}
-              onCurrentPeriod={handleCurrentPeriod}
-              onViewModeChange={handleViewModeChange}
-              onSettings={handleSettingsClick}
-              {isLoading}
-            />
+            <ProjectListLayout lines={3}>
+              <EffortSidebar
+                {members}
+                {selectedMemberId}
+                {viewMode}
+                {periodLabel}
+                tabId={tabStateKey}
+                onMemberSelect={handleMemberSelect}
+                onPrevPeriod={handlePrevPeriod}
+                onNextPeriod={handleNextPeriod}
+                onCurrentPeriod={handleCurrentPeriod}
+                onViewModeChange={handleViewModeChange}
+                onSettings={handleSettingsClick}
+                {isLoading}
+              />
+            </ProjectListLayout>
           {/snippet}
 
           <!-- Main Content: Timesheet & Details -->
@@ -625,6 +638,7 @@
                       />
                     {:else if ownership}
                       <MemberOwnershipPanel
+                        {projectId}
                         {ownership}
                         userId={selectedMember.userId}
                         isLoading={ownershipLoading}

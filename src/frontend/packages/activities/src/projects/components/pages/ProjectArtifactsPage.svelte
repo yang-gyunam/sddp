@@ -1,5 +1,7 @@
 <!-- Activity: Projects > Nav: Artifacts (project-{id}-artifacts) | Screen ID: PRJ-ART-001 -->
 <script lang="ts">
+  import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { Icon, IconButton, Button, CardGrid, Spinner } from '@sddp/ui';
@@ -678,6 +680,24 @@
       }
     }, 300);
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/artifacts`,
+    selection: () => selectedArtifactId,
+    ready: () => !loading,
+    restore: async (id) => {
+      selectedArtifactId = id;
+      viewMode = 'detail';
+      while (
+        id &&
+        selectedArtifactId === id &&
+        !allArtifacts.some((a) => a.id === id) &&
+        hasMoreArtifacts
+      ) {
+        await loadArtifacts(false);
+      }
+    },
+  });
 </script>
 
 <PageShell class={className}>
@@ -702,7 +722,11 @@
 
   <PageBody class="p-0">
     {#if loading}
-      <div class="flex-1 flex items-center justify-center" role="status" aria-label="Loading artifacts">
+      <div
+        class="flex-1 flex items-center justify-center"
+        role="status"
+        aria-label="Loading artifacts"
+      >
         <Spinner size="lg" />
       </div>
     {:else}
@@ -716,23 +740,25 @@
         maxRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.maxRightPanelWidth}
       >
         {#snippet sidebar()}
-          <ArtifactSidebar
-            typeGroups={filteredTypeGroups}
-            {selectedArtifactId}
-            {searchQuery}
-            {filterType}
-            {statusCounts}
-            onSearch={handleSearch}
-            onFilterChange={handleFilterChange}
-            onToggleType={handleToggleType}
-            onSelectArtifact={handleSelectArtifact}
-            onRegenerate={artifactMaintenanceEnabled ? handleRegenerate : undefined}
-            onVerifyAll={artifactMaintenanceEnabled ? handleVerifyAll : undefined}
-            hasMore={hasMoreArtifacts}
-            {loadingMore}
-            onLoadMore={handleLoadMoreArtifacts}
-            class="h-full"
-          />
+          <ProjectListLayout lines={1}>
+            <ArtifactSidebar
+              typeGroups={filteredTypeGroups}
+              {selectedArtifactId}
+              {searchQuery}
+              {filterType}
+              {statusCounts}
+              onSearch={handleSearch}
+              onFilterChange={handleFilterChange}
+              onToggleType={handleToggleType}
+              onSelectArtifact={handleSelectArtifact}
+              onRegenerate={artifactMaintenanceEnabled ? handleRegenerate : undefined}
+              onVerifyAll={artifactMaintenanceEnabled ? handleVerifyAll : undefined}
+              hasMore={hasMoreArtifacts}
+              {loadingMore}
+              onLoadMore={handleLoadMoreArtifacts}
+              class="h-full"
+            />
+          </ProjectListLayout>
         {/snippet}
 
         {#snippet rightPanel()}

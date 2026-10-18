@@ -151,8 +151,10 @@
   // Resize state
   let leftPanelWidth = $state(320); // default 320px
   let isResizing = $state(false);
-  let containerElement: HTMLDivElement | undefined;
-  void containerElement;
+  let containerWidth = $state(0);
+  const collapseTopicList = $derived(
+    !!(selectedTopic || showCreateForm) && containerWidth - leftPanelWidth < 320
+  );
 
   const MIN_LEFT_WIDTH = 200;
   const MAX_LEFT_WIDTH = 500;
@@ -297,9 +299,13 @@
   }
 </script>
 
-<div bind:this={containerElement} class="flex h-full {className}">
+<div bind:clientWidth={containerWidth} class="flex h-full {className}">
   <!-- Left Panel: Topic List -->
-  <div class="flex flex-col flex-shrink-0" style="width: {leftPanelWidth}px">
+  <div
+    class="flex flex-col flex-shrink-0"
+    class:hidden={collapseTopicList}
+    style="width: {leftPanelWidth}px"
+  >
     <div class="flex flex-col h-full bg-[var(--color-bg-section)]">
       <ConversationHeader icon="list" title={conversationName} badge={topics.length}>
         {#snippet actions()}
@@ -435,7 +441,9 @@
   </div>
 
   <!-- Resize Handle -->
-  <ResizeHandle orientation="vertical" onpointerdown={handleResizeStart} {isResizing} />
+  {#if !collapseTopicList}
+    <ResizeHandle orientation="vertical" onpointerdown={handleResizeStart} {isResizing} />
+  {/if}
 
   <!-- Right Panel: Create Form, Topic Detail, or Statistics -->
   <div class="flex-1 min-w-0 border-l border-[var(--color-border-primary)]">

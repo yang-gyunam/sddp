@@ -45,4 +45,7 @@
     <ProjectReference Include="..\Sddp.Abstractions\Sddp.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="../../../sddp.config.json" LogicalName="Sddp.Distribution.json" />
+  </ItemGroup>
 </Project>

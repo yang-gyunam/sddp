@@ -1,5 +1,7 @@
 <!-- Activity: Projects > Nav: Glossary (project-{id}-glossary) | Screen ID: PRJ-GLO-001 -->
 <script lang="ts">
+  import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { tick, untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { Icon, IconButton, Button, CardGrid, Checkbox, Spinner, ResizeHandle } from '@sddp/ui';
@@ -389,8 +391,11 @@
       const tenantId = authState.user?.tenantId;
       if (!tenantId) return;
       const detail = await getTermById(tenantId, projectId, termId);
+      if (selectedTermId !== termId) return;
       selectedTermDetail = detail;
+      if (!allTerms.some((t) => t.id === detail.id)) allTerms = [...allTerms, detail];
     } catch (err) {
+      if (selectedTermId !== termId) return;
       console.error('Failed to load term detail:', err);
       selectedTermDetail = null;
     }
@@ -816,6 +821,16 @@
       updatedAt: detail.updatedAt,
     };
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/glossary`,
+    selection: () => selectedTermId,
+    ready: () => !loading,
+    restore: (id) => {
+      if (id) return handleSelectTermById(id);
+      else handleCloseTerm();
+    },
+  });
 </script>
 
 <PageShell class={className}>
@@ -859,21 +874,23 @@
         maxSidebarWidth={SIDEBAR_DETAIL_LAYOUT.maxSidebarWidth}
       >
         {#snippet sidebar()}
-          <GlossarySidebar
-            {categoryGroups}
-            {selectedTermId}
-            {searchQuery}
-            {filterType}
-            {statusCounts}
-            onSearch={handleSearch}
-            onFilterChange={handleFilterChange}
-            onToggleCategory={handleToggleCategory}
-            onSelectTerm={handleSelectTermById}
-            hasMore={hasMoreTerms}
-            {loadingMore}
-            onLoadMore={handleLoadMoreTerms}
-            class="h-full"
-          />
+          <ProjectListLayout lines={1}>
+            <GlossarySidebar
+              {categoryGroups}
+              {selectedTermId}
+              {searchQuery}
+              {filterType}
+              {statusCounts}
+              onSearch={handleSearch}
+              onFilterChange={handleFilterChange}
+              onToggleCategory={handleToggleCategory}
+              onSelectTerm={handleSelectTermById}
+              hasMore={hasMoreTerms}
+              {loadingMore}
+              onLoadMore={handleLoadMoreTerms}
+              class="h-full"
+            />
+          </ProjectListLayout>
         {/snippet}
 
         {#snippet rightPanel()}

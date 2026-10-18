@@ -2205,7 +2205,7 @@ CREATE TABLE system_configs (
  project_id UUID, -- NULL = tenant-level config
 
  -- Config
- config_group VARCHAR(50) NOT NULL, -- : general, auth, storage, performance, aiAgent
+ config_group VARCHAR(50) NOT NULL, -- : general, auth, storage, performance
  config_key VARCHAR(100) NOT NULL, -- : siteName, sessionTimeout, cacheEnabled
  config_value TEXT, -- Config ( )
 
@@ -2863,8 +2863,7 @@ VALUES
  ('00000000-0000-0000-0001-000000000024', 'AUDIT_ACTOR_TYPE', 'Audit Actor Type', 'Audit log actor type', 'SYSTEM', TRUE, FALSE, 24),
 
  -- Config
- ('00000000-0000-0000-0001-000000000100', 'SYS_CONFIG', 'System Config', 'System Config Value', 'CONFIG', TRUE, FALSE, 100),
- ('00000000-0000-0000-0001-000000000101', 'AI_CONFIG', 'AI Config', 'AI agent config values', 'CONFIG', TRUE, FALSE, 101)
+ ('00000000-0000-0000-0001-000000000100', 'SYS_CONFIG', 'System Config', 'System Config Value', 'CONFIG', TRUE, FALSE, 100)
 
 ON CONFLICT (code) DO UPDATE SET
  name = EXCLUDED.name,
@@ -3305,22 +3304,6 @@ VALUES
  '{"value": 8, "type": "integer", "min": 6, "max": 32}'),
  ('00000000-0000-0000-0006-000100000005', '00000000-0000-0000-0001-000000000100', 'MAX_UPLOAD_SIZE_MB', 'Max Upload Size', 'Maximum Upload Size (MB)', TRUE,
  '{"value": 10, "type": "integer", "min": 1, "max": 100}')
-ON CONFLICT (group_code_id, code) DO UPDATE SET
- name = EXCLUDED.name, description = EXCLUDED.description, attributes = EXCLUDED.attributes, updated_at = NOW();
-
--- -----------------------------------------------------------------------------
--- AI_CONFIG (AI Config) — Group 101
--- -----------------------------------------------------------------------------
-INSERT INTO codes (id, group_code_id, code, name, description, is_system, attributes)
-VALUES
- ('00000000-0000-0000-0006-000101000001', '00000000-0000-0000-0001-000000000101', 'AI_PROVIDER', 'AI Provider', 'AI Service Provider', TRUE,
- '{"value": "ollama", "type": "string", "options": ["ollama", "openai", "anthropic"]}'),
- ('00000000-0000-0000-0006-000101000002', '00000000-0000-0000-0001-000000000101', 'AI_MODEL', 'AI Model', 'AI Model', TRUE,
- '{"value": "llama3.2", "type": "string"}'),
- ('00000000-0000-0000-0006-000101000003', '00000000-0000-0000-0001-000000000101', 'AI_ENDPOINT', 'AI Endpoint', 'AI API Endpoint', TRUE,
- '{"value": "http://localhost:11434", "type": "string"}'),
- ('00000000-0000-0000-0006-000101000004', '00000000-0000-0000-0001-000000000101', 'AI_ENABLED', 'AI Enabled', 'AI Feature Enabled', TRUE,
- '{"value": true, "type": "boolean"}')
 ON CONFLICT (group_code_id, code) DO UPDATE SET
  name = EXCLUDED.name, description = EXCLUDED.description, attributes = EXCLUDED.attributes, updated_at = NOW();
 
@@ -3781,18 +3764,6 @@ VALUES
  (NULL, NULL, 'performance', 'compressionEnabled', 'true', 'boolean', 'Response Compression', 'Compress API responses', FALSE, 4),
  (NULL, NULL, 'performance', 'rateLimitEnabled', 'false', 'boolean', 'Rate Limiting', 'Enable API rate limiting (not yet enforced)', FALSE, 5),
  (NULL, NULL, 'performance', 'rateLimitPerMinute', '100', 'number', 'Rate Limit (per minute)', 'Max API requests per minute (not yet enforced)', FALSE, 6)
-ON CONFLICT DO NOTHING; -- relies on uq_system_configs_scope_group_key (COALESCE-based unique index)
-
--- AI Agent Settings
-INSERT INTO system_configs (tenant_id, project_id, config_group, config_key, config_value, value_type, display_name, description, is_sensitive, sort_order)
-VALUES
- (NULL, NULL, 'aiAgent', 'enabled', 'false', 'boolean', 'AI Agent Enabled', 'Enable AI-assisted features', FALSE, 1),
- (NULL, NULL, 'aiAgent', 'provider', 'Ollama', 'string', 'AI Provider', 'AI service provider (Ollama, OpenAI, Azure)', FALSE, 2),
- (NULL, NULL, 'aiAgent', 'model', 'llama3.2', 'string', 'AI Model', 'Model name/identifier', FALSE, 3),
- (NULL, NULL, 'aiAgent', 'endpoint', 'http://localhost:11434', 'string', 'AI Endpoint', 'API endpoint URL', FALSE, 4),
- (NULL, NULL, 'aiAgent', 'apiKey', '', 'string', 'API Key', 'AI service API key', TRUE, 5),
- (NULL, NULL, 'aiAgent', 'maxTokens', '4096', 'number', 'Max Tokens', 'Maximum tokens per request', FALSE, 6),
- (NULL, NULL, 'aiAgent', 'temperature', '0.7', 'number', 'Temperature', 'Response randomness (0-2)', FALSE, 7)
 ON CONFLICT DO NOTHING; -- relies on uq_system_configs_scope_group_key (COALESCE-based unique index)
 
 -- -----------------------------------------------------------------------------

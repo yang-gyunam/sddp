@@ -66,6 +66,11 @@ public class OutboxProcessor : IOutboxProcessor
             await (_messageHandler.HandleAsync(message, cancellationToken)).ConfigureAwait(false);
             message.MarkAsProcessed();
         }
+        catch (OutboxDeferredException)
+        {
+            // The durable event remains pending until its background consumer acknowledges it.
+            return;
+        }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
@@ -121,4 +126,10 @@ public class ProjectionOutboxMessageHandler : IOutboxMessageHandler
 
         await (_projectionDispatcher.DispatchAsync(message.EventType, message.Payload, cancellationToken)).ConfigureAwait(false);
     }
+}
+
+/// <summary>A durable event was accepted for background work but has not completed yet.</summary>
+public sealed class OutboxDeferredException : Exception
+{
+    public OutboxDeferredException() : base("OUTBOX_WORK_PENDING") { }
 }

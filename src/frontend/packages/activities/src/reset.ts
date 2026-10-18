@@ -1,3 +1,4 @@
+import { resetAiCapability } from './ai/stores/ai-capability.store';
 import { resetConversationStore } from './conversations/stores/conversation.store';
 import { resetSidebarStore } from './conversations/stores/conversation-sidebar.store';
 import { resetConversationView } from './conversations/stores/conversation-view.store';
@@ -68,6 +69,7 @@ export const activityResetters = [
   resetTaskStore,
   resetTaskService,
   resetAiStore,
+  resetAiCapability,
   resetAiAnalysisService,
   resetSearchQuery,
   resetSearchResultsStore,

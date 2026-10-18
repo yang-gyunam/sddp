@@ -1,5 +1,6 @@
 <!-- Activity: Projects > Nav: Tasks (project-{id}-tasks) | Screen ID: PRJ-TASK-001 -->
 <script lang="ts">
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { Icon, IconButton, Button, Input, Select } from '@sddp/ui';
@@ -256,8 +257,10 @@
     loadingTask = true;
     try {
       const detail = await getTaskById(undefined as unknown as string, taskId);
+      if (selectedTaskId !== taskId) return;
       currentTask = mapToTask(detail, project?.name || 'Project');
     } catch (err) {
+      if (selectedTaskId !== taskId) return;
       console.error('[ProjectTasksPage] Failed to load task detail:', err);
       currentTask = null;
     } finally {
@@ -413,6 +416,16 @@
       toast.error(err instanceof Error ? err.message : 'Failed to delete task');
     }
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/tasks`,
+    selection: () => selectedTaskId,
+    restore: (id) => {
+      selectedTaskId = id;
+      currentTask = null;
+      panelMode = 'view';
+    },
+  });
 </script>
 
 <PageShell class={className}>

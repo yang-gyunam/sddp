@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
+using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
@@ -22,9 +23,12 @@ public class ConversationTopicsController : BaseApiController
 {
     private readonly ISender _sender;
 
-    public ConversationTopicsController(ISender sender)
+    private readonly IUnitOfWork _unitOfWork;
+
+    public ConversationTopicsController(ISender sender, IUnitOfWork unitOfWork)
     {
         _sender = sender;
+        _unitOfWork = unitOfWork;
     }
 
     /// <summary>
@@ -32,6 +36,7 @@ public class ConversationTopicsController : BaseApiController
     /// </summary>
     [HttpGet("{conversationId}/topics")]
     [ResourceScope<Forum>("conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationRead)]
     public async Task<IActionResult> GetTopics(
         string conversationId,
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
@@ -50,6 +55,9 @@ public class ConversationTopicsController : BaseApiController
         {
             return BadRequest(ApiResponse<object>.Fail(ApiErrorCodes.InvalidEntity.ConversationId, "Invalid conversation ID format"));
         }
+
+        var accessError = await RequireForumRead(conversationId, tenantId, cancellationToken);
+        if (accessError is not null) return accessError;
 
         var result = await _sender.Send(new GetTopicsByForumIdQuery(
             tenantId, parsedConversationId, page, pageSize, status), cancellationToken);
@@ -110,6 +118,7 @@ public class ConversationTopicsController : BaseApiController
     /// </summary>
     [HttpGet("{conversationId}/topics/{topicId}")]
     [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationRead)]
     public async Task<IActionResult> GetTopicById(
         string conversationId,
         string topicId,
@@ -126,6 +135,9 @@ public class ConversationTopicsController : BaseApiController
         {
             return BadRequest(ApiResponse<object>.Fail(ApiErrorCodes.InvalidEntity.TopicId, "Invalid topic ID format"));
         }
+
+        var accessError = await RequireForumRead(conversationId, tenantId, cancellationToken);
+        if (accessError is not null) return accessError;
 
         var result = await _sender.Send(new GetTopicByIdQuery(tenantId, parsedTopicId), cancellationToken);
 
@@ -354,6 +366,7 @@ public class ConversationTopicsController : BaseApiController
     /// </summary>
     [HttpGet("{conversationId}/topics/{topicId}/messages")]
     [ResourceScope<Topic>("topicId", Through = nameof(Topic.ForumId), ParentType = typeof(Forum), ParentRouteKey = "conversationId", OnNullProject = NullProjectPolicy.Tenant)]
+    [RequirePermission(PermissionCodes.ConversationRead)]
     public async Task<IActionResult> GetTopicMessages(
         string conversationId,
         string topicId,
@@ -378,6 +391,9 @@ public class ConversationTopicsController : BaseApiController
         {
             cursorTime = parsedCursor;
         }
+
+        var accessError = await RequireForumRead(conversationId, tenantId, cancellationToken);
+        if (accessError is not null) return accessError;
 
         var result = await _sender.Send(new GetTopicMessagesQuery(
             tenantId, parsedTopicId, cursorTime, limit), cancellationToken);
@@ -442,4 +458,19 @@ public class ConversationTopicsController : BaseApiController
         return Created($"/api/conversations/{conversationId}/topics/{topicId}/messages/{result.Id}",
             ApiResponse<ForumMessageDto>.Ok(result));
     }
+    private async Task<IActionResult?> RequireForumRead(string conversationId, GlobalUniqueId tenantId, CancellationToken ct)
+    {
+        var userError = RequireUserId(out var userId);
+        if (userError is not null) return userError;
+        if (!GlobalUniqueId.TryParse(conversationId, out var forumId))
+            return BadRequest(ApiResponse<object>.Fail(ApiErrorCodes.InvalidEntity.ConversationId, "Invalid conversation ID format"));
+        var forum = await _unitOfWork.Repository<Forum>().GetByIdAsync(forumId, ct);
+        if (forum is null || !forum.IsActive || forum.TenantId != tenantId)
+            return NotFound(ApiResponse<object>.Fail(ApiErrorCodes.Crud.NotFound, "Topic not found"));
+        if (forum.Visibility == ConversationVisibility.Private && await _unitOfWork.Repository<ConversationMember>()
+            .CountAsync(m => m.ConversationId == forumId && m.UserId == userId && m.IsActive, ct) == 0)
+            return NotFound(ApiResponse<object>.Fail(ApiErrorCodes.Crud.NotFound, "Topic not found"));
+        return null;
+    }
+
 }

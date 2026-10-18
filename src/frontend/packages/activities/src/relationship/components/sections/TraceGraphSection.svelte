@@ -1,5 +1,6 @@
 <!-- Section: TraceGraphSection — Projects > Specs/Requirements/Artifacts/Conversations -->
 <script lang="ts">
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
   import { Icon, Button, IconButton, Checkbox, Spinner } from '@sddp/ui';
   import { CollapsibleGroup } from '@sddp/shell';
@@ -167,7 +168,7 @@
         navigateToArtifact(id, label, EntityFullDetailTab, detailProps);
         break;
       case 'Task':
-        // Task navigation is handled by onNodeClick in the parent component
+        navigateToEntity(projectId, 'task', id);
         break;
     }
   }

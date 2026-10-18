@@ -177,9 +177,10 @@ function mapProjectApiResponse(raw: unknown, responseName = 'project response'):
     throw new Error(`Invalid ${responseName}: owner information is required`);
   }
 
-  const description = raw['description'] === null
-    ? undefined
-    : getOptionalStringField(raw, 'description', responseName);
+  const description =
+    raw['description'] === null
+      ? undefined
+      : getOptionalStringField(raw, 'description', responseName);
 
   return {
     id: getRequiredStringField(raw, 'id', responseName),

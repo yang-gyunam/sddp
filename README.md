@@ -6,21 +6,21 @@ SDDP turns discussions and agreements into structured specs and keeps implementa
 
 Code explains what changed. SDDP keeps the why.
 
-This public repository contains the application runtime, public tests, and the OnBrick showcase assets needed to evaluate the product.
+This repository contains the free edition: conversations, requirements, specs, Knowledge, glossary, artifacts, tasks and effort tracking. AI assistance, semantic search and code-generation tools are not included. Optional local Whisper dictation is available separately.
 
 ## One Decision, End to End
 
-A partial-refund decision moves from the design discussion into an explicit requirement, a reviewed spec, and the implementation artifact that proves it.
+This recorded example follows a partial-refund decision from a discussion to a requirement, a reviewed spec and a linked implementation artifact. Artifact links preserve traceability; they do not prove that code satisfies every requirement.
 
-![SDDP following a partial-refund decision from conversation through requirement and spec to the implementation artifact](docs/assets/readme/01-decision-trail.gif)
+![SDDP following a partial-refund decision from conversation through requirement and spec to a linked implementation artifact](docs/assets/readme/01-decision-trail.gif)
 
 ## Why SDDP?
 
 If you open code written six months ago and can no longer explain why it looks that way, SDDP is the problem space we care about.
 
 - Preserve decision context through **Conversation -> Requirement -> Spec -> Code**
-- Treat approved specs as locked and evolve them through versioned updates
-- Detect implementation drift when code moves away from the approved spec
+- Review and approve specs, then explicitly lock them; preserve decisions through versions
+- Track recorded artifact status and content-hash verification results
 - Dictate conversation messages with local speech-to-text (Whisper, no cloud calls)
 
 Public setup and evaluation notes are in [docs/public-guide.md](docs/public-guide.md).
@@ -45,9 +45,10 @@ Move through the vocabulary, implementation artifacts, work, and effort behind a
 
 ### Prerequisites
 
-- Docker
-- Node.js 22 LTS recommended
-- .NET 10 SDK
+- Git, Docker with Docker Compose v2, Make and a POSIX-compatible shell
+- For local frontend development/tests: Node.js from `.nvmrc` (22.23.2) and npm
+- For local backend builds: .NET SDK from `global.json` (10.0.300)
+- For the optional Whisper warmup command: curl and Python 3
 
 ### Docker-Only Setup
 
@@ -56,13 +57,21 @@ git clone https://github.com/yang-gyunam/sddp.git sddp
 cd sddp
 cp src/frontend/packages/web/.env.example src/frontend/packages/web/.env
 
-docker compose up -d sddp-db sddp-redis sddp-aspire
-make db-provision      # clean DB only; use 'make db-reset' to re-provision
+docker compose up -d --wait sddp-db sddp-redis
+docker compose up -d sddp-aspire
+make db-provision      # new, empty application database only
 make db-seed-test
-docker compose up -d sddp-api sddp-front
+docker compose up -d --build sddp-api sddp-front
 ```
 
-Host-side `npm install` is not required when you use the frontend container only.
+Open `http://localhost:9010` after startup. Evaluation accounts are defined in
+[scripts/db/provision-test.sql](scripts/db/provision-test.sql); OnBrick has separate scenario accounts.
+The Compose profile uses loopback ports and public evaluation credentials. Do not use these
+credentials or seed data in production. See [upgrade precautions](RELEASE.md#upgrade-precautions)
+before replacing an existing installation; reset commands delete data.
+
+Docker builds install the frontend dependencies and use the .NET SDK inside containers.
+Host Node.js and .NET are not required for this path.
 
 Optional — speech-to-text for conversation messages (local Whisper):
 
@@ -73,15 +82,11 @@ make whisper-warmup    # one-time model download (~460MB)
 
 ### Local Frontend Development (Optional)
 
-Use this path only if you want Vite HMR or local frontend test commands.
+After the Docker setup above, use this path for Vite HMR. Run commands from the repository root:
 
 ```bash
-cp src/frontend/packages/web/.env.example src/frontend/packages/web/.env
-
-make infra
-docker compose up -d sddp-api
 cd src/frontend
-npm install
+npm ci
 cd packages/web
 npm run dev
 ```
@@ -116,21 +121,30 @@ src/
 
 ## Documentation
 
+- [Release notes](RELEASE.md) — free-edition scope, changes and limitations
+- [Changelog](CHANGELOG.md) — version-by-version changes
+- [GitHub Releases](https://github.com/yang-gyunam/sddp/releases) — published versions and source downloads
 - [Public Guide](docs/public-guide.md) — supported setup, database, testing, and repository scope
 - [scripts/db/README.md](scripts/db/README.md) — SQL provisioning entry points
 - [src/frontend/packages/web/README.md](src/frontend/packages/web/README.md) — web package commands
 
 ## Testing
 
+From the repository root, install frontend dependencies before running local checks:
+
 ```bash
+cd src/frontend
+npm ci
+cd ../..
 make test
 make lint
-
-cd src/frontend
-npm run test:e2e
 ```
 
-In the public repository, `npm run test:e2e` runs the OnBrick showcase path only.
+`make test` runs the limited UI-control and public error-handler suites (6 files, 51 cases).
+These are not the full product tests. Backend and AI tests are not shipped.
+For the separate OnBrick browser scenario, including seed and browser prerequisites, follow
+[public validation](docs/public-guide.md#validation). Its setup clears the evaluation Redis
+instance and changes test data; use a disposable evaluation environment.
 
 ## Contributing
 

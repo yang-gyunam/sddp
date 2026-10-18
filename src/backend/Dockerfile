@@ -6,20 +6,21 @@ ARG DOTNET_ASPNET_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9@sha256:7644f99223
 
 # Build stage
 FROM ${DOTNET_SDK_IMAGE} AS build
-WORKDIR /src
+WORKDIR /workspace/src/backend
+COPY sddp.config.json /workspace/sddp.config.json
 
 # Copy project files for restore (cache-friendly layer)
-COPY Sddp.Abstractions/*.csproj ./Sddp.Abstractions/
-COPY Sddp.Domain/*.csproj ./Sddp.Domain/
-COPY Sddp.Infrastructure/*.csproj ./Sddp.Infrastructure/
-COPY Sddp.Application/*.csproj ./Sddp.Application/
-COPY Sddp.Api/*.csproj ./Sddp.Api/
+COPY src/backend/Sddp.Abstractions/*.csproj ./Sddp.Abstractions/
+COPY src/backend/Sddp.Domain/*.csproj ./Sddp.Domain/
+COPY src/backend/Sddp.Infrastructure/*.csproj ./Sddp.Infrastructure/
+COPY src/backend/Sddp.Application/*.csproj ./Sddp.Application/
+COPY src/backend/Sddp.Api/*.csproj ./Sddp.Api/
 
 # Restore dependencies (this layer stays cached unless csproj files change)
 RUN dotnet restore Sddp.Api/Sddp.Api.csproj
 
 # Copy all source code
-COPY . .
+COPY src/backend/ .
 
 # Build and publish
 RUN dotnet publish Sddp.Api/Sddp.Api.csproj -c Release -o /app

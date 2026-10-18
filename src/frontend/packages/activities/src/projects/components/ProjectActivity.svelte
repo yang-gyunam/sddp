@@ -4,6 +4,7 @@
   Main activity container for Projects
 -->
 <script lang="ts">
+  import { navigateToEntity } from '../../shared/navigation/entityNavigation';
   import { onMount, untrack } from 'svelte';
   import type {
     ProjectTreeNode,
@@ -42,13 +43,7 @@
     ProjectEffortPage,
     ProjectTraceabilityPage,
   } from './pages';
-  import {
-    navigateToSpec,
-    navigateToRequirement,
-    navigateToConversation,
-    navigateToGlossary,
-    toast,
-  } from '@sddp/shell';
+  import { toast } from '@sddp/shell';
   import { refreshTimelineFromApi } from '../actions';
 
   interface Props {
@@ -157,27 +152,8 @@
   }
 
   function handleTimelineEventClick(event: TimelineEventType) {
-    switch (event.entityType) {
-      case 'spec':
-        navigateToSpec(event.entityId);
-        break;
-      case 'requirement':
-        navigateToRequirement(event.entityId);
-        break;
-      case 'conversation':
-        navigateToConversation(event.entityId);
-        break;
-      case 'glossary':
-        navigateToGlossary(event.entityId);
-        break;
-      case 'task':
-        toast.info('Task navigation not yet implemented');
-        break;
-      case 'artifact':
-        toast.info('Artifact navigation not yet implemented');
-        break;
-      default:
-        console.warn('Unknown entity type:', event.entityType);
+    if (!navigateToEntity(event.projectId, event.entityType, event.entityId)) {
+      toast.info('This item cannot be opened without project context.');
     }
   }
 

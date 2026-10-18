@@ -37,11 +37,32 @@ import type {
   PresenceStateEvent,
 } from '../types';
 
+// SignalR serializes MessageType as a number; REST serializes it as a name.
+// Normalize once before notifying stores, views and toast listeners.
+function normalizeHubMessage(message: Message): Message {
+  if (typeof message.type !== 'number') return message;
+  const types: Message['type'][] = [
+    'Proposal',
+    'Question',
+    'Objection',
+    'Reference',
+    'Decision',
+    'AiReminder',
+    'AiSummary',
+    'AiSuggestion',
+    'Normal',
+  ];
+  return { ...message, type: types[message.type] ?? 'Normal' };
+}
+
 // ============================================
 // Types
 // ============================================
 
 export interface ConversationHubCallbacks {
+  /** AI events are untrusted refresh hints; consumers fetch authoritative run state. */
+  onAiRunPreviewEvent?: (event: unknown) => void;
+  onAiRunEvent?: (event: unknown) => void;
   onNewMessage?: (message: Message) => void;
   onMessageEdited?: (message: Message) => void;
   onMessageDeleted?: (messageId: string) => void;
@@ -113,10 +134,20 @@ export class ConversationHubService {
   private setupEventHandlers(): void {
     if (!this.connection) return;
 
+    for (const event of ['AiRunUpdated', 'AiRunCompleted', 'AiRunFailed']) {
+      this.connection.on(event, (payload: unknown) =>
+        this.invokeCallbacks('onAiRunEvent', payload)
+      );
+    }
+
+    this.connection.on('AiRunPreviewUpdated', (payload: unknown) =>
+      this.invokeCallbacks('onAiRunPreviewEvent', payload)
+    );
+
     // New message received (backend sends MessageDto with conversationId)
     this.connection.on('NewMessage', (raw: Record<string, unknown>) => {
       const message: Message = {
-        ...(raw as unknown as Message),
+        ...normalizeHubMessage(raw as unknown as Message),
         conversationId: (raw.conversationId as string) ?? '',
         topicId: (raw.topicId as string) ?? undefined,
       };
@@ -128,7 +159,8 @@ export class ConversationHubService {
     });
 
     // Message edited
-    this.connection.on('MessageEdited', (message: Message) => {
+    this.connection.on('MessageEdited', (raw: Message) => {
+      const message = normalizeHubMessage(raw);
       updateMessage(message.id, message);
       this.invokeCallbacks('onMessageEdited', message);
     });

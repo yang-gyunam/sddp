@@ -98,9 +98,13 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
     if (!response.ok) {
       const error = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       const selection = error.data as { tenantIds?: unknown } | undefined;
-      if (response.status === 409 && error.errorCode === 'TENANT_SELECTION_REQUIRED' &&
-          Array.isArray(selection?.tenantIds) && selection.tenantIds.length > 1 &&
-          selection.tenantIds.every((id): id is string => typeof id === 'string')) {
+      if (
+        response.status === 409 &&
+        error.errorCode === 'TENANT_SELECTION_REQUIRED' &&
+        Array.isArray(selection?.tenantIds) &&
+        selection.tenantIds.length > 1 &&
+        selection.tenantIds.every((id): id is string => typeof id === 'string')
+      ) {
         throw new TenantSelectionRequiredError(selection.tenantIds);
       }
       const retryAfter = response.headers?.get?.('Retry-After');

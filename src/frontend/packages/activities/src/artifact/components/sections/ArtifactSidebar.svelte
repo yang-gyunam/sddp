@@ -67,7 +67,7 @@
 <div class="flex flex-col h-full {className}">
   <!-- Header with Search and Actions -->
   <div
-    class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+    class="project-list-search flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
   >
     <div class="flex items-center gap-1 w-full">
       <!-- Search -->

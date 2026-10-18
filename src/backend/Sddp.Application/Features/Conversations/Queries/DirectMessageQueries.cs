@@ -117,7 +117,8 @@ public sealed class GetDirectMessagesQueryHandler : IRequestHandler<GetDirectMes
         foreach (var dm in dmList)
         {
             var members = membersByConversation.TryGetValue(dm.Id, out var mList) ? mList : [];
-            var otherMember = members.FirstOrDefault(m => m.UserId != request.UserId);
+            var otherMember = members.Where(m => m.UserId != request.UserId)
+                .OrderBy(m => m.Type == ParticipantType.AI).FirstOrDefault();
 
             if (otherMember is null)
             {

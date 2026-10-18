@@ -1,5 +1,7 @@
 <!-- Activity: Projects > Knowledge | Screen ID: PRJ-KNW-001 -->
 <script lang="ts">
+  import ProjectListLayout from '../../shared/components/sections/ProjectListLayout.svelte';
+  import { useDetailRoute } from '../../projects/routing/useDetailRoute.svelte';
   import { onMount, tick } from 'svelte';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { generateHTML, mergeAttributes, Node, type Editor, type JSONContent } from '@tiptap/core';
@@ -653,7 +655,11 @@
       // TipTap commands.focus schedules another animation frame, which can steal
       // focus after the user has already selected the title. Focus the mounted
       // view synchronously after Svelte updates, respecting a newer user choice.
-      if (!editing || (document.activeElement !== previousFocus && document.activeElement !== document.body)) return;
+      if (
+        !editing ||
+        (document.activeElement !== previousFocus && document.activeElement !== document.body)
+      )
+        return;
       const editor = editorRef?.getEditor();
       if (editor && !editor.isDestroyed) editor.view.focus();
     });
@@ -1036,6 +1042,17 @@
 
     searchTimer = setTimeout(() => void runSearch(requestedQuery), 250);
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/knowledge`,
+    selection: () => selectedPage?.id ?? null,
+    ready: () => !loadingTree,
+    restore: async (id) => {
+      if (id) await selectPage(id);
+      else closePage();
+      return (selectedPage?.id ?? null) === id;
+    },
+  });
 </script>
 
 <PageShell class={className}>
@@ -1067,18 +1084,20 @@
       maxSidebarWidth={SIDEBAR_DETAIL_LAYOUT.maxSidebarWidth}
     >
       {#snippet sidebar()}
-        <KnowledgeSidebar
-          {query}
-          {statusFilter}
-          counts={knowledgeCounts}
-          loading={loadingTree}
-          searchResults={filteredSearchResults}
-          pages={filteredTree}
-          selectedPageId={selectedPage?.id}
-          onSearchInput={handleSearchInput}
-          onStatusFilterChange={(status) => (statusFilter = status)}
-          onSelectPage={(pageId) => void selectPage(pageId)}
-        />
+        <ProjectListLayout lines={2}>
+          <KnowledgeSidebar
+            {query}
+            {statusFilter}
+            counts={knowledgeCounts}
+            loading={loadingTree}
+            searchResults={filteredSearchResults}
+            pages={filteredTree}
+            selectedPageId={selectedPage?.id}
+            onSearchInput={handleSearchInput}
+            onStatusFilterChange={(status) => (statusFilter = status)}
+            onSelectPage={(pageId) => void selectPage(pageId)}
+          />
+        </ProjectListLayout>
       {/snippet}
 
       {#snippet header()}

@@ -1,8 +1,9 @@
 <!-- Section: RequirementPanel — Requirements > requirement-{id} (menu-registry) -->
 <script lang="ts">
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
   import { Icon, IconButton, Button } from '@sddp/ui';
-  import { RouterService, toast, getTabState, setTabState } from '@sddp/shell';
+  import { toast, getTabState, setTabState } from '@sddp/shell';
   import RequirementList from './RequirementList.svelte';
   import RequirementDetailView from './RequirementDetailView.svelte';
   import RequirementForm from '../idioms/RequirementForm.svelte';
@@ -387,7 +388,7 @@
   }
 
   function handleConversationClick(conversationId: string): void {
-    RouterService.navigate(`/conversation/${conversationId}`);
+    navigateToEntity(projectId, 'conversation', conversationId);
   }
 </script>
 

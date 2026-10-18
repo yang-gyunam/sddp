@@ -7,7 +7,6 @@
 
   import { untrack } from 'svelte';
   import {
-    config as appConfig,
     toast,
     SingleColumnLayout,
     PageHeader,
@@ -16,14 +15,14 @@
     setTabState,
     formatDateByPreference,
   } from '@sddp/shell';
-  import { Icon, IconButton, Input, Switch, Textarea, Button, Spinner } from '@sddp/ui';
+  import { IconButton, Input, Switch, Textarea, Button, Spinner } from '@sddp/ui';
   import type { ProjectSettings, ProjectSnapshot } from '../../types';
   import { type ProjectStatus, PROJECT_STATUS_CONFIG } from '../../../projects/types';
   import { createProjectService } from '../../../projects/services';
   import { resetProjectData } from '../../../projects/services/ProjectService';
   import { getSnapshotService } from '../../services/snapshotService';
   import { createSystemConfigService } from '../../services/SystemConfigService';
-  import { getAiStatus } from '../../../ai/services/AiStatusService';
+  import { createResourceAiCapability } from '../../../ai/stores/resource-ai-capability.svelte';
   import { SettingItem, SettingGroupHeader, ConfirmResetModal } from '../idioms';
 
   interface Props {
@@ -57,11 +56,34 @@
   let showResetModal = $state(false);
   let resetLoading = $state(false);
 
-  // AI feature toggle state
-  let aiSystemEnabled = $state(true);
-  let aiProjectEnabled = $state(true);
+  const aiCapability = createResourceAiCapability(() => ({ tenantId, projectId }));
+  const aiView = $derived(aiCapability.view());
+  let aiProjectEnabled = $state<boolean | null>(null);
+  let aiPolicyError = $state(false);
+  let aiPolicyRevision = $state(0);
   let aiToggleSaving = $state(false);
-  const aiFeatureFlagEnabled = appConfig.get('enableAiFeatures');
+  $effect(() => {
+    const service = systemConfigService;
+    const canConfigure = aiView.canConfigureProject;
+    void aiPolicyRevision;
+    let current = true;
+    aiProjectEnabled = null;
+    aiPolicyError = false;
+    if (canConfigure)
+      untrack(() =>
+        service
+          .getProjectAiEnabled()
+          .then((enabled) => {
+            if (current) aiProjectEnabled = enabled;
+          })
+          .catch(() => {
+            if (current) aiPolicyError = true;
+          })
+      );
+    return () => {
+      current = false;
+    };
+  });
 
   const tabStateKey = $derived(tabId || `settings-project-${projectId}-general`);
   let restoredKey = $state<string | null>(null);
@@ -77,7 +99,6 @@
       untrack(() => {
         loadSettings();
         loadSnapshots();
-        loadAiStatus();
       });
     }
     restoredKey = tabStateKey;
@@ -266,38 +287,21 @@
     }
   }
 
-  // AI feature toggle
-  async function loadAiStatus() {
-    if (!tenantId) return;
-    if (!aiFeatureFlagEnabled) {
-      aiSystemEnabled = false;
-      aiProjectEnabled = false;
-      return;
-    }
-
-    try {
-      const status = await getAiStatus(tenantId, projectId);
-      aiSystemEnabled = status.systemEnabled;
-      aiProjectEnabled = status.projectEnabled;
-    } catch {
-      // Default to enabled on error
-      aiSystemEnabled = true;
-      aiProjectEnabled = true;
-    }
-  }
-
   async function handleAiToggle() {
-    if (!tenantId || !projectId) return;
-    if (!aiFeatureFlagEnabled) {
-      toast.info('AI features are coming soon.');
+    if (
+      !tenantId ||
+      !projectId ||
+      !aiView.canConfigureProject ||
+      aiToggleSaving ||
+      aiProjectEnabled === null
+    )
       return;
-    }
-
     aiToggleSaving = true;
     const newValue = !aiProjectEnabled;
     try {
       await systemConfigService.saveConfigValue('aiAgent', 'enabled', String(newValue));
       aiProjectEnabled = newValue;
+      aiCapability.refresh();
       toast.success(
         newValue ? 'AI features enabled for this project' : 'AI features disabled for this project'
       );
@@ -419,40 +423,41 @@
           </div>
         </SettingItem>
 
-        <!-- AI Features -->
-        <SettingGroupHeader title="AI Features" />
+        {#if aiView.visible}
+          <!-- AI Features -->
+          <SettingGroupHeader title="AI Features" />
 
-        <SettingItem
-          category="AI Features"
-          title="AI Analysis"
-          description={!aiFeatureFlagEnabled
-            ? 'Coming Soon. AI runtime is temporarily disabled due to hardware constraints in this environment.'
-            : aiSystemEnabled
-              ? 'Enable AI-powered quality analysis and automated suggestions for this project.'
-              : 'AI features are disabled by the system administrator.'}
-        >
-          <Switch
-            checked={aiProjectEnabled}
-            disabled={!aiFeatureFlagEnabled || !aiSystemEnabled || aiToggleSaving}
-            onchange={handleAiToggle}
-          />
-        </SettingItem>
+          <SettingItem category="AI Features" title="AI Analysis" description={aiView.message}>
+            <Switch
+              checked={aiProjectEnabled ?? false}
+              disabled={!aiView.canConfigureProject || aiToggleSaving || aiProjectEnabled === null}
+              onchange={handleAiToggle}
+            />
+          </SettingItem>
 
-        {#if !aiFeatureFlagEnabled}
-          <div class="ai-disabled-notice">
-            <Icon name="clock" size="sm" />
-            <span>Coming Soon: AI features are temporarily unavailable in this environment.</span>
-          </div>
-        {:else if !aiSystemEnabled}
-          <div class="ai-disabled-notice">
-            <Icon name="info" size="sm" />
-            <span
-              >AI features are disabled system-wide by the administrator. Contact your admin to
-              enable.</span
+          {#if aiPolicyError}
+            <div role="status">
+              Project AI policy could not be loaded.
+              <Button variant="ghost" size="sm" onclick={() => aiPolicyRevision++}
+                >Retry AI policy</Button
+              >
+            </div>
+          {/if}
+
+          {#if aiView.unavailable}
+            <Button variant="ghost" size="sm" onclick={aiCapability.refresh}
+              >Retry AI availability</Button
+            >
+          {/if}
+        {/if}
+        {#if aiView.distributionUnavailable}
+          <div role="status">
+            Deployment capabilities could not be loaded.
+            <Button variant="ghost" size="sm" onclick={aiCapability.refresh}
+              >Retry capabilities</Button
             >
           </div>
         {/if}
-
         <!-- Snapshots -->
         <SettingGroupHeader title="Snapshots" />
 
@@ -708,16 +713,4 @@
   }
 
   /* AI disabled notice */
-  .ai-disabled-notice {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 0.875rem;
-    margin-top: 0.25rem;
-    font-size: 0.8125rem;
-    color: var(--color-warning-700, #a16207);
-    background: var(--color-warning-50, #fffbeb);
-    border: 1px solid var(--color-warning-200, #fde68a);
-    border-radius: 6px;
-  }
 </style>

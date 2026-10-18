@@ -175,7 +175,7 @@
   aria-label="Knowledge pages"
 >
   <div
-    class="flex min-h-12 flex-shrink-0 items-center border-b border-[var(--color-border-primary)] p-2"
+    class="project-list-search flex min-h-12 flex-shrink-0 items-center border-b border-[var(--color-border-primary)] p-2"
   >
     <div class="flex w-full items-center gap-1">
       <div class="relative flex-1">
@@ -250,7 +250,7 @@
   </div>
 
   <div
-    class="flex flex-shrink-0 items-center gap-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-1.5"
+    class="project-list-heading flex flex-shrink-0 items-center gap-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-3 py-1.5"
   >
     <span class="w-4"></span>
     <span class="flex-1 text-xs font-medium uppercase text-[var(--color-text-tertiary)]">
@@ -268,7 +268,7 @@
       {#each searchResults as result (result.id)}
         <Button
           variant="unstyled"
-          class="w-full border-b border-[var(--color-border-primary)] px-3 py-2 text-left transition-colors hover:bg-[var(--color-bg-tertiary)]"
+          class="project-list-row knowledge-search-row w-full border-b border-[var(--color-border-primary)] px-3 py-2 text-left transition-colors hover:bg-[var(--color-bg-tertiary)]"
           onclick={() => onSelectPage(result.id)}
         >
           <div class="flex items-start gap-2">
@@ -318,7 +318,7 @@
                  handled once on the tree, not per row. -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <div
-              class="flex w-full cursor-pointer items-center gap-2 border-b border-[var(--color-border-primary)] px-3 py-2 text-left transition-colors
+              class="project-list-row flex w-full cursor-pointer items-center gap-2 border-b border-[var(--color-border-primary)] px-3 py-2 text-left transition-colors
                 {selectedPageId === page.id
                 ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
                 : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}"

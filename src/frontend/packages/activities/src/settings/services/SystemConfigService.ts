@@ -164,11 +164,21 @@ class SystemConfigService {
     return toSystemConfig(response);
   }
 
+  async getProjectAiEnabled(): Promise<boolean> {
+    const group = await fetchWithAuth<Record<string, { value: string | null }>>(
+      '/system/config/groups/aiAgent?includeInherited=false',
+      { tenantId: this.tenantId, projectId: this.projectId }
+    );
+    if (!group) throw new Error('Failed to fetch project AI policy');
+    return group.enabled ? group.enabled.value?.toLowerCase() === 'true' : true;
+  }
+
   /**
    * Save system configuration
    */
-  async saveConfig(config: SystemConfig): Promise<SystemConfig> {
+  async saveConfig(config: SystemConfig, includeAi = true): Promise<SystemConfig> {
     const request = toUpdateRequest(config);
+    if (!includeAi) delete request.aiAgent;
 
     const response = await fetchWithAuth<SystemConfigApiResponse>('/system/config', {
       method: 'PUT',

@@ -43,8 +43,16 @@
 </script>
 
 <LoginLayout title="Sign in to SDDP" subtitle="Spec-Driven Design Platform" {logoSrc}>
-  <LoginForm onSubmit={handleLogin} {error} {isLoading} {tenantIds}
-    onCredentialsChange={() => { tenantIds = []; submitError = null; }} />
+  <LoginForm
+    onSubmit={handleLogin}
+    {error}
+    {isLoading}
+    {tenantIds}
+    onCredentialsChange={() => {
+      tenantIds = [];
+      submitError = null;
+    }}
+  />
 
   {#snippet footer()}
     <Typography variant="body2" color="secondary">

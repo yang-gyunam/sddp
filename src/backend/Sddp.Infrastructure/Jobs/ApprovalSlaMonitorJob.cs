@@ -29,16 +29,16 @@ public class ApprovalSlaMonitorJob
         var pendingSignOffs = await (_connection.QueryAsync<PendingSignOffRow>(
             new CommandDefinition(@"
                 SELECT
-                    so.id AS sign_off_id,
-                    so.tenant_id,
-                    so.project_id,
-                    so.spec_id,
-                    so.stakeholder_id,
-                    so.requested_at,
-                    s.code AS spec_code,
-                    p.display_name AS stakeholder_name,
-                    COALESCE(sp.sla_hours, 24) AS sla_hours,
-                    COALESCE(sp.reminder_at_percent, '50,100,200') AS reminder_at_percent
+                    so.id AS ""SignOffId"",
+                    so.tenant_id AS ""TenantId"",
+                    so.project_id AS ""ProjectId"",
+                    so.spec_id AS ""SpecId"",
+                    so.stakeholder_id AS ""StakeholderId"",
+                    so.requested_at AS ""RequestedAt"",
+                    s.code AS ""SpecCode"",
+                    p.display_name AS ""StakeholderName"",
+                    COALESCE(sp.sla_hours, 24) AS ""SlaHours"",
+                    COALESCE(sp.reminder_at_percent, '50,100,200') AS ""ReminderAtPercent""
                 FROM sign_offs so
                 INNER JOIN specs s ON s.id = so.spec_id AND s.is_active = true
                 INNER JOIN users u ON u.id = so.stakeholder_id
@@ -64,7 +64,7 @@ public class ApprovalSlaMonitorJob
         var signOffIds = rows.Select(r => r.SignOffId).ToArray();
         var existingNotifications = await (_connection.QueryAsync<ExistingNotificationRow>(
             new CommandDefinition(@"
-                SELECT sign_off_id, threshold_percent
+                SELECT sign_off_id AS ""SignOffId"", threshold_percent AS ""ThresholdPercent""
                 FROM sla_notifications
                 WHERE sign_off_id = ANY(@SignOffIds)
                     AND is_active = true",
@@ -154,7 +154,7 @@ public class ApprovalSlaMonitorJob
         Guid ProjectId,
         Guid SpecId,
         Guid StakeholderId,
-        DateTimeOffset RequestedAt,
+        DateTime RequestedAt,
         string SpecCode,
         string StakeholderName,
         int SlaHours,

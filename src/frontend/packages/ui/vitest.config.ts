@@ -12,7 +12,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['src/**/*.{test,spec}.{js,ts}'],
-    passWithNoTests: true,
+    passWithNoTests: false,
     server: {
       deps: {
         // Process @testing-library/svelte .svelte.js files through Svelte compiler

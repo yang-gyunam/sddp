@@ -38,10 +38,18 @@
     <div class="member-card__member-info">
       <span class="member-card__name">{member.userName}</span>
       <div class="member-card__meta" aria-label="Produced items">
-        <span class="member-card__meta-item">Req {member.requirementsCreated}</span>
-        <span class="member-card__meta-item">Spec {member.specsCreated}</span>
-        <span class="member-card__meta-item">Gloss {member.glossaryTermsCreated}</span>
-        <span class="member-card__meta-item">Art {member.artifactsCreated}</span>
+        <span class="member-card__meta-item" title="Req {member.requirementsCreated}"
+          >Req {member.requirementsCreated}</span
+        >
+        <span class="member-card__meta-item" title="Spec {member.specsCreated}"
+          >Spec {member.specsCreated}</span
+        >
+        <span class="member-card__meta-item" title="Gloss {member.glossaryTermsCreated}"
+          >Gloss {member.glossaryTermsCreated}</span
+        >
+        <span class="member-card__meta-item" title="Art {member.artifactsCreated}"
+          >Art {member.artifactsCreated}</span
+        >
       </div>
     </div>
   </div>

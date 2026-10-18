@@ -22,6 +22,7 @@ public class SystemConfigController : BaseApiController
     private static readonly HashSet<string> ReadonlyStorageKeys = ["database", "storageUsed", "storageLimit"];
     private readonly ISender _sender;
     private readonly ILogger<SystemConfigController> _logger;
+    private readonly bool _aiInstalled;
     private readonly bool _isAuthenticationConfigEnabled;
     private readonly bool _isPerformanceConfigEnabled;
     private readonly string _authenticationConfigDisabledMessage;
@@ -30,8 +31,9 @@ public class SystemConfigController : BaseApiController
     public SystemConfigController(
         ISender sender,
         ILogger<SystemConfigController> logger,
-        IConfiguration configuration)
+        IConfiguration configuration, Sddp.Api.Configuration.DistributionInfo? distribution = null)
     {
+        _aiInstalled = (distribution ?? Sddp.Api.Configuration.DistributionInfo.Load(configuration)).AiInstalled;
         _sender = sender;
         _logger = logger;
         _isAuthenticationConfigEnabled = configuration.GetValue("FeatureFlags:SystemConfig:AuthenticationEnabled", false);
@@ -48,6 +50,7 @@ public class SystemConfigController : BaseApiController
         {
             "auth" => _isAuthenticationConfigEnabled,
             "performance" => _isPerformanceConfigEnabled,
+            "aiAgent" => _aiInstalled,
             _ => true
         };
     }
@@ -140,7 +143,8 @@ public class SystemConfigController : BaseApiController
     [HttpGet("groups/{group}")]
         [ResourceScopeExempt("The route names a config group, not a database-owned id; the header project is membership checked and UserManage is evaluated in that scope.")]
     [Authorize(Policy = "CanManageUsers")]
-    public async Task<IActionResult> GetConfigGroup(string group, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetConfigGroup(string group, CancellationToken cancellationToken = default,
+        [FromQuery] bool includeInherited = true)
     {
         var validGroups = new[] { "general", "auth", "storage", "performance", "aiAgent" };
         if (!validGroups.Contains(group))
@@ -159,7 +163,7 @@ public class SystemConfigController : BaseApiController
         var configs = await _sender.Send(new GetSystemConfigGroupQuery(
             group,
             tenantId.ToGuid() != Guid.Empty ? tenantId : null,
-            projectId.ToGuid() != Guid.Empty ? projectId : null), cancellationToken);
+            projectId.ToGuid() != Guid.Empty ? projectId : null, includeInherited), cancellationToken);
 
         return Ok(ApiResponse<Dictionary<string, SystemConfigItemDto>>.Ok(configs));
     }
@@ -234,6 +238,7 @@ public class SystemConfigController : BaseApiController
             _logger.LogInformation("Ignoring disabled performance config payload in SaveConfig");
         }
 
+        if (dto.AiAgent is not null && !IsConfigGroupEnabled("aiAgent")) return ConfigGroupDisabled("aiAgent");
         var effectiveDto = ApplyFeatureFlags(dto);
 
         var userError = RequireUserId(
@@ -445,7 +450,8 @@ public class SystemConfigController : BaseApiController
 
         var success = await _sender.Send(new ResetSystemConfigCommand(
             tenantId.ToGuid() != Guid.Empty ? tenantId : null,
-            projectId.ToGuid() != Guid.Empty ? projectId : null), cancellationToken);
+            projectId.ToGuid() != Guid.Empty ? projectId : null,
+            IncludeAi: _aiInstalled), cancellationToken);
 
         if (!success)
         {

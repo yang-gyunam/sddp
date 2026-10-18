@@ -1,5 +1,8 @@
 <!-- Activity: Projects > Nav: Specs (project-{id}-specs) | Screen ID: PRJ-SPEC-001 -->
 <script lang="ts">
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
+  import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { tick, untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import {
@@ -33,7 +36,7 @@
   import { getAuthState } from '@sddp/shell/auth';
   import type { ProjectDetail } from '../../types';
   import { createProjectService, getProjectById } from '../../services/ProjectService';
-  import { setSelectedNodePath, consumePendingEntityId, setPendingEntityId } from '../../stores';
+  import { consumePendingEntityId } from '../../stores';
   import {
     getSpecById,
     deleteSpec,
@@ -353,8 +356,10 @@
       if (!authState.user?.tenantId) return;
 
       const detail = await getSpecById(authState.user.tenantId, projectId, specId);
+      if (selectedSpecId !== specId) return;
       selectedSpec = detail;
     } catch (err) {
+      if (selectedSpecId !== specId) return;
       console.error('Failed to load spec detail:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to load spec detail');
       selectedSpec = null;
@@ -683,14 +688,23 @@
   }
 
   function handleRequirementClick(requirementId: string) {
-    setPendingEntityId(requirementId);
-    setSelectedNodePath(`${projectId}/requirements`);
+    navigateToEntity(projectId, 'requirement', requirementId);
   }
 
   function handleConversationClick(conversationId: string) {
-    setPendingEntityId(conversationId);
-    setSelectedNodePath(`${projectId}/conversations`);
+    navigateToEntity(projectId, 'conversation', conversationId);
   }
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/specs`,
+    selection: () => selectedSpecId,
+    restore: (id) => {
+      selectedSpecId = id;
+      selectedSpec = null;
+      viewMode = 'detail';
+      if (id) void loadSpecDetail(id);
+    },
+  });
 </script>
 
 <PageShell class={className}>
@@ -737,10 +751,10 @@
         maxRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.maxRightPanelWidth}
       >
         {#snippet sidebar()}
-          <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
+          <ProjectListLayout lines={2}>
             <!-- Header with Search and Actions -->
             <div
-              class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+              class="project-list-search flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
             >
               <div class="flex items-center gap-1 w-full">
                 <div class="relative flex-1">
@@ -818,7 +832,7 @@
 
             <!-- List Header -->
             <div
-              class="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
+              class="project-list-heading flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]"
             >
               <span class="w-4"></span>
               <span class="flex-1 text-xs font-medium text-[var(--color-text-tertiary)] uppercase"
@@ -885,7 +899,7 @@
                 </div>
               {/if}
             </div>
-          </div>
+          </ProjectListLayout>
         {/snippet}
 
         {#snippet rightPanel()}

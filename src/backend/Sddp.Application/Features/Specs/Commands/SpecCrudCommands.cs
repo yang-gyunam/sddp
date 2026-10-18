@@ -277,10 +277,12 @@ public sealed record DeleteSpecCommand(
 public sealed class DeleteSpecCommandHandler : IRequestHandler<DeleteSpecCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmbeddingTriggerService _embeddingTrigger;
 
-    public DeleteSpecCommandHandler(IUnitOfWork unitOfWork)
+    public DeleteSpecCommandHandler(IUnitOfWork unitOfWork, IEmbeddingTriggerService embeddingTrigger)
     {
         _unitOfWork = unitOfWork;
+        _embeddingTrigger = embeddingTrigger;
     }
 
     public async Task<bool> Handle(DeleteSpecCommand request, CancellationToken cancellationToken)
@@ -304,6 +306,8 @@ public sealed class DeleteSpecCommandHandler : IRequestHandler<DeleteSpecCommand
         spec.Deactivate();
         await (specRepo.UpdateAsync(spec, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+
+        _embeddingTrigger.TriggerSpecEmbedding(request.TenantId, request.ProjectId, request.SpecId);
 
         request.AuditLog = new AuditLogRequest(
             null,

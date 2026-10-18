@@ -136,14 +136,8 @@ public sealed class UpdateMappingSourceCommandHandler : IRequestHandler<UpdateMa
         await (repo.UpdateAsync(mapping, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
 
-        //
-        if (!string.IsNullOrEmpty(request.SourceContent))
-        {
-            _embeddingTrigger.TriggerArtifactMappingEmbedding(
-                request.TenantId.ToGuid(),
-                request.ProjectId.ToGuid(),
-                mapping.Id.ToGuid());
-        }
+        _embeddingTrigger.TriggerArtifactMappingEmbedding(
+            request.TenantId.ToGuid(), request.ProjectId.ToGuid(), mapping.Id.ToGuid());
 
         request.AuditLog = new AuditLogRequest(
             ActorId: request.UserId,
@@ -176,10 +170,12 @@ public sealed record DeleteArtifactMappingCommand(
 public sealed class DeleteArtifactMappingCommandHandler : IRequestHandler<DeleteArtifactMappingCommand, bool>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmbeddingTriggerService _embeddingTrigger;
 
-    public DeleteArtifactMappingCommandHandler(IUnitOfWork unitOfWork)
+    public DeleteArtifactMappingCommandHandler(IUnitOfWork unitOfWork, IEmbeddingTriggerService embeddingTrigger)
     {
         _unitOfWork = unitOfWork;
+        _embeddingTrigger = embeddingTrigger;
     }
 
     public async Task<bool> Handle(
@@ -200,6 +196,8 @@ public sealed class DeleteArtifactMappingCommandHandler : IRequestHandler<Delete
         mapping.SetUpdatedBy(request.UserId);
         await (repo.DeleteAsync(mapping, cancellationToken)).ConfigureAwait(false);
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
+
+        _embeddingTrigger.TriggerArtifactMappingEmbedding(request.TenantId, request.ProjectId, request.MappingId);
 
         request.AuditLog = new AuditLogRequest(
             ActorId: request.UserId,

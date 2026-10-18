@@ -1,11 +1,21 @@
 <!-- Section: TopicView — Conversations > Topic -->
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { keepMessageBottomVisible } from '../../actions/keepMessageBottomVisible';
   import { Icon, IconButton, Spinner } from '@sddp/ui';
-  import { PageBody, PageShell, toast, getAuthState } from '@sddp/shell';
+  import {
+    EnumBadge,
+    PageBody,
+    PageShell,
+    toast,
+    getAuthState,
+    type BadgeStyleConfig,
+  } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import MessageBubble from '../idioms/MessageBubble.svelte';
+  import ConversationAiRunPanel from '../../../ai/components/idioms/ConversationAiRunPanel.svelte';
+  import { createConversationAiRun } from '../../../ai/stores/conversation-ai-run.svelte';
   import MessageInput from '../idioms/MessageInput.svelte';
   import type { Message, CreateMessageRequest } from '../../types';
   import type { Topic, TopicStatus } from '../../types/conversation-entry.types';
@@ -51,6 +61,20 @@
   let messagesContainer: HTMLDivElement;
   let viewMode = $state<ConversationViewMode>(getConversationViewMode('topic'));
 
+  const aiRun = createConversationAiRun(
+    () => ({
+      tenantId,
+      projectId,
+      containerType: 'topic',
+      containerId: topic.id,
+      readonly: topic.status !== 'Open',
+    }),
+    async (isCurrent, passiveOutputId) => {
+      await loadMessages(isCurrent, true, passiveOutputId);
+      return messages;
+    }
+  );
+
   // Guard duplicate effect runs when the topic id is unchanged
   let prevTopicId = $state<string | null>(null);
 
@@ -70,27 +94,36 @@
     };
   }
 
-  async function loadMessages() {
+  async function loadMessages(
+    isCurrent = () => true,
+    propagateError = false,
+    passiveOutputId?: string
+  ) {
     if (!tenantId || !topic.forumId || !topic.id) return;
 
-    isLoadingMessages = true;
+    if (!propagateError) isLoadingMessages = true;
     try {
       const service = createConversationService(tenantId, projectId);
       const result = await service.getTopicMessages(topic.forumId, topic.id);
-      messages = result.messages.map(toMessage);
+      if (!isCurrent()) return;
+      const batch = result.messages.map(toMessage);
+      if (passiveOutputId && !batch.some((message) => message.id === passiveOutputId)) return;
+      messages = batch;
 
       // Scroll to bottom to show latest messages
       setTimeout(() => {
-        if (messagesContainer) {
+        if (!passiveOutputId && isCurrent() && messagesContainer) {
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
       }, 0);
     } catch (err) {
+      if (!isCurrent()) return;
+      if (propagateError) throw err;
       console.error('Failed to load topic messages:', err);
       toast.error('Failed to load messages');
       messages = [];
     } finally {
-      isLoadingMessages = false;
+      if (!propagateError && isCurrent()) isLoadingMessages = false;
     }
   }
 
@@ -113,16 +146,24 @@
     return unsubscribe;
   });
 
-  function getStatusColor(status: TopicStatus): string {
-    switch (status) {
-      case 'Open':
-        return 'bg-[var(--color-bg-secondary)] text-[var(--color-success-600)] border border-[var(--color-border-secondary)]';
-      case 'Closed':
-        return 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border-secondary)]';
-      default:
-        return 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border-secondary)]';
-    }
-  }
+  const topicStatusStyles: Record<TopicStatus, BadgeStyleConfig> = {
+    Open: {
+      label: 'Open',
+      description: 'Open',
+      icon: 'unlock',
+      bgColor: 'bg-transparent',
+      borderColor: 'border-transparent',
+      textColor: 'text-[var(--color-success-600)]',
+    },
+    Closed: {
+      label: 'Closed',
+      description: 'Closed',
+      icon: 'lock',
+      bgColor: 'bg-transparent',
+      borderColor: 'border-transparent',
+      textColor: 'text-[var(--color-text-secondary)]',
+    },
+  };
 
   let replyingTo = $state<Message | null>(null);
 
@@ -212,10 +253,13 @@
       <span class="text-xs text-[var(--color-text-tertiary)] truncate"
         >by {topic.author?.name ?? 'Unknown'} · {topic.messageCount} messages</span
       >
-      <span
-        class="px-2 py-1 rounded text-xs font-medium flex-shrink-0 {getStatusColor(topic.status)}"
-      >
-        {topic.status}
+      <span role="img" aria-label={topic.status} class="flex-shrink-0">
+        <EnumBadge
+          value={topic.status}
+          styles={topicStatusStyles}
+          size="sm"
+          displayMode="icon-only"
+        />
       </span>
     </DetailTitle>
     {#snippet actions()}
@@ -238,6 +282,7 @@
     <!-- Messages Area -->
     <div
       bind:this={messagesContainer}
+      use:keepMessageBottomVisible
       class="flex-1 overflow-y-auto p-3 space-y-3 bg-[var(--color-surface-50)]"
     >
       {#if isLoadingMessages}
@@ -253,6 +298,7 @@
       {:else}
         {#each messages as message, index (message.id)}
           <MessageBubble
+            {tenantId}
             {message}
             {messages}
             {viewMode}
@@ -260,6 +306,7 @@
             showToolbar={true}
             isOwn={message.sender?.id === currentUserId}
             isLast={index === messages.length - 1}
+            onAskAi={aiRun.canAsk ? aiRun.ask : undefined}
             onEdit={handleEditMessage}
             onDelete={handleDeleteMessage}
             onReply={topic.status === 'Open' ? handleReplyMessage : undefined}
@@ -267,6 +314,8 @@
         {/each}
       {/if}
     </div>
+
+    <ConversationAiRunPanel run={aiRun} />
 
     <!-- Message Input (only if topic is open) -->
     {#if topic.status === 'Open'}

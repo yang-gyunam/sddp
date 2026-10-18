@@ -1,5 +1,7 @@
 <!-- Activity: Projects > Nav: Conversations (project-{id}-conversations) | Screen ID: PRJ-DISC-001 -->
 <script lang="ts">
+  import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
+  import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { untrack } from 'svelte';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import {
@@ -359,9 +361,15 @@
   });
   const selectedParticipantCount = $derived(selectedParticipantIds.size);
 
+  let conversationLayoutWidth = $state(0);
+  let conversationSidebarWidth = $state<number>(SIDEBAR_DETAIL_LAYOUT.sidebarWidth);
+  let conversationRightWidth = $state<number>(SIDEBAR_DETAIL_LAYOUT.rightPanelWidth);
+
   /** Right panel shows Participants + TraceGraphSection for Channels and DMs only (not Forums) */
   const shouldShowRightPanel = $derived(
-    !!((selectedConversation && selectedConversation.type !== 'Forum') || selectedDm) && !createMode
+    !!((selectedConversation && selectedConversation.type !== 'Forum') || selectedDm) &&
+      !createMode &&
+      conversationLayoutWidth - conversationSidebarWidth - conversationRightWidth >= 320
   );
 
   let participantsExpanded = $state(true);
@@ -1014,6 +1022,31 @@
       window.removeEventListener('sddp:dm-concluded', handleExternalDirectMessageConcluded);
     };
   });
+  useDetailRoute({
+    tabId: () => tabId,
+    path: () => `/project/${projectId}/conversations`,
+    selection: () => selectedDmId ?? selectedConversationId,
+    ready: () => !loading,
+    restore: async (id) => {
+      selectedConversationId = null;
+      selectedDmId = null;
+      pendingSelectionId = null;
+      createMode = null;
+      if (!id) return;
+      while (
+        !allConversations.some((c) => c.id === id) &&
+        !directMessagesWithPresence.some((d) => d.id === id) &&
+        (hasMoreConversations || hasMoreDirectMessages)
+      ) {
+        await loadConversationData(false);
+      }
+      const conversation = allConversations.find((c) => c.id === id);
+      const dm = directMessagesWithPresence.find((d) => d.id === id);
+      if (conversation) handleConversationSelect(conversation);
+      else if (dm) handleDmSelect(dm);
+      else pendingSelectionId = id;
+    },
+  });
 </script>
 
 <PageShell class="h-full {className}">
@@ -1030,262 +1063,174 @@
   </PageHeader>
 
   <PageBody class="p-0" scrollable={false}>
-    <SidebarDetailLayout
-      showRightPanel={shouldShowRightPanel}
-      sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
-      minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
-      maxSidebarWidth={SIDEBAR_DETAIL_LAYOUT.maxSidebarWidth}
-      rightPanelWidth={SIDEBAR_DETAIL_LAYOUT.rightPanelWidth}
-      minRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.minRightPanelWidth}
-      maxRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.maxRightPanelWidth}
-    >
-      {#snippet sidebar()}
-        <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
-          <!-- Header with Search -->
-          <div
-            class="flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
-          >
-            <div class="relative flex-1">
-              <Icon
-                name="search"
-                size="sm"
-                class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
-              />
-              <Input
-                type="text"
-                placeholder="Search channels or DMs..."
-                value={searchQuery}
-                oninput={handleSearchInput}
-                variant="flat"
-                class="pl-8 w-full"
-                size="sm"
-              />
-            </div>
-          </div>
-
-          <div
-            class="flex-1 min-h-0 flex flex-col overflow-y-auto pb-1"
-            onscroll={handleSidebarScroll}
-          >
-            {#if loading}
-              <div class="flex-1 flex items-center justify-center">
-                <!-- <Spinner size="lg" /> -->
-              </div>
-            {:else if error}
-              <div class="px-3 py-4 text-sm text-red-500">
-                {error}
-              </div>
-            {:else}
-              <!-- All sections at the same level: CHANNELS, FORUMS, DIRECT MESSAGES -->
-              {#each filteredCategories as category (category.id)}
-                <CollapsibleGroup
-                  title={category.name}
-                  actions={category.actions}
-                  expanded={!category.isCollapsed}
-                  onToggle={() => {
-                    categories = categories.map((c) =>
-                      c.id === category.id ? { ...c, isCollapsed: !c.isCollapsed } : c
-                    );
-                  }}
-                >
-                  <div class="bg-[var(--color-bg-primary)]">
-                    {#each category.conversations as conversation (conversation.id)}
-                      <Button
-                        variant="unstyled"
-                        class="w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
-                        transition-colors duration-150
-                        border-b border-[var(--color-border-primary)]
-                        {selectedConversationId === conversation.id
-                          ? 'bg-[var(--color-accent-primary)]/10'
-                          : 'hover:bg-[var(--color-bg-tertiary)]'}"
-                        onclick={() => handleConversationSelect(conversation)}
-                      >
-                        <Icon
-                          name={conversation.type === 'Forum'
-                            ? 'list'
-                            : conversation.isPrivate
-                              ? 'lock'
-                              : 'hash'}
-                          size="sm"
-                          class="flex-shrink-0 text-[var(--color-text-tertiary)]"
-                        />
-                        <span
-                          class="flex-1 text-left text-sm truncate text-[var(--color-text-primary)]"
-                        >
-                          {conversation.name}
-                        </span>
-                        {#if (conversation.unreadCount ?? 0) > 0}
-                          <span
-                            class="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-medium
-                            rounded-full bg-[var(--color-accent-primary)] text-white"
-                          >
-                            {(conversation.unreadCount ?? 0) > 99
-                              ? '99+'
-                              : conversation.unreadCount}
-                          </span>
-                        {/if}
-                      </Button>
-                    {/each}
-                    {#if category.conversations.length === 0}
-                      <div class="px-2 py-2 text-center text-sm text-[var(--color-text-tertiary)]">
-                        No {category.name.toLowerCase()}
-                      </div>
-                    {/if}
-                  </div>
-                </CollapsibleGroup>
-              {/each}
-
-              <!-- DIRECT MESSAGES Section -->
-              <CollapsibleGroup
-                title="DIRECT MESSAGES"
-                actions={[
-                  { id: 'add-dm', icon: 'plus', label: 'New Message', onClick: handleCreateDM },
-                ]}
-                expanded={dmExpanded}
-                onToggle={() => (dmExpanded = !dmExpanded)}
-              >
-                <div class="bg-[var(--color-bg-primary)]">
-                  <DirectMessageList
-                    items={filteredDms}
-                    selectedId={selectedDmId}
-                    onSelect={handleDmSelect}
-                  />
-                </div>
-              </CollapsibleGroup>
-
-              {#if loadingMore}
-                <div class="flex items-center justify-center py-3">
-                  <Spinner size="sm" />
-                </div>
-              {/if}
-            {/if}
-          </div>
-        </div>
-      {/snippet}
-
-      <!-- Main Conversation Area (children slot) -->
-      {#if createMode === 'channel' || createMode === 'private-channel'}
-        <ConversationCreatePanel
-          icon={createMode === 'private-channel' ? 'lock' : 'hash'}
-          title={createMode === 'private-channel' ? 'New Private Channel' : 'New Channel'}
-          bind:name={createChannelName}
-          bind:description={createChannelTopic}
-          namePlaceholder={createMode === 'channel' ? 'e.g., general' : 'e.g., architecture-team'}
-          descriptionPlaceholder="What is this conversation for?"
-          descriptionLabel="Topic"
-          loading={createPanelLoading}
-          error={createPanelError}
-          isValid={isCreateFormValid}
-          onSubmit={submitCreateMode}
-          onCancel={cancelCreateMode}
-        >
-          {#if createMode === 'private-channel'}
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-[var(--color-text-primary)]"
-                  >Participants</span
-                >
-                <span class="text-xs text-[var(--color-text-tertiary)]"
-                  >{selectedParticipantCount} selected</span
-                >
-              </div>
-              <div class="relative">
+    <div class="h-full min-h-0" bind:clientWidth={conversationLayoutWidth}>
+      <SidebarDetailLayout
+        showRightPanel={shouldShowRightPanel}
+        onSidebarWidthChange={(width) => {
+          conversationSidebarWidth = width;
+        }}
+        onRightPanelWidthChange={(width) => {
+          conversationRightWidth = width;
+        }}
+        sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
+        minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
+        maxSidebarWidth={SIDEBAR_DETAIL_LAYOUT.maxSidebarWidth}
+        rightPanelWidth={SIDEBAR_DETAIL_LAYOUT.rightPanelWidth}
+        minRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.minRightPanelWidth}
+        maxRightPanelWidth={SIDEBAR_DETAIL_LAYOUT.maxRightPanelWidth}
+      >
+        {#snippet sidebar()}
+          <ProjectListLayout lines={1}>
+            <!-- Header with Search -->
+            <div
+              class="project-list-search flex-shrink-0 flex items-center p-2 min-h-12 border-b border-[var(--color-border-primary)]"
+            >
+              <div class="relative flex-1">
                 <Icon
                   name="search"
                   size="sm"
-                  class="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
                 />
                 <Input
-                  unstyled
-                  placeholder="Search participants..."
-                  bind:value={participantQuery}
-                  class="w-full pl-7 pr-2 py-1.5 text-sm rounded
-                    bg-[var(--color-bg-primary)] border border-[var(--color-border)]
-                    text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]
-                    focus:outline-none focus:border-[var(--color-accent-primary)]"
+                  type="text"
+                  placeholder="Search channels or DMs..."
+                  value={searchQuery}
+                  oninput={handleSearchInput}
+                  variant="flat"
+                  class="pl-8 w-full"
+                  size="sm"
                 />
               </div>
-              <div
-                class="max-h-48 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
-              >
-                {#if selectableParticipants.length === 0}
-                  <div class="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
-                    No matching participants.
-                  </div>
-                {:else}
-                  {#each selectableParticipants as participant (participant.id)}
-                    <Button
-                      variant="unstyled"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-bg-tertiary)] transition-colors"
-                      onclick={() => toggleParticipant(participant.user.id)}
-                    >
-                      <Checkbox
-                        unstyled
-                        class="h-4 w-4"
-                        checked={isParticipantSelected(participant.user.id)}
-                      />
-                      <div class="flex-1 min-w-0">
-                        <div class="font-medium text-[var(--color-text-primary)] truncate">
-                          {participant.user.name}
-                        </div>
-                        <div class="text-xs text-[var(--color-text-tertiary)] truncate">
-                          {participant.role}
-                        </div>
-                      </div>
-                    </Button>
-                  {/each}
-                {/if}
-              </div>
             </div>
-          {/if}
-        </ConversationCreatePanel>
-      {:else if createMode === 'topic'}
-        <ConversationCreatePanel
-          icon="list"
-          title="New Forum"
-          bind:name={createTopicTitle}
-          bind:description={createChannelTopic}
-          nameLabel="Forum Name"
-          namePlaceholder="e.g., API contract discussion"
-          showDescription={false}
-          loading={createPanelLoading}
-          error={createPanelError}
-          isValid={isCreateFormValid}
-          onSubmit={submitCreateMode}
-          onCancel={cancelCreateMode}
-        />
-      {:else if createMode === 'dm'}
-        <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
-          <!-- Header -->
-          <div
-            class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]"
-          >
-            <div class="flex items-center">
-              <Icon
-                name="message-square"
-                size="md"
-                class="text-[var(--color-text-tertiary)] mr-2"
-              />
-              <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">
-                New Direct Message
-              </h2>
-            </div>
-            <IconButton
-              icon="x"
-              variant="ghost"
-              onclick={cancelCreateMode}
-              disabled={createPanelLoading}
-              title="Cancel"
-            />
-          </div>
 
-          <!-- Body -->
-          <div class="flex-1 overflow-auto p-6">
-            <div class="max-w-xl mx-auto space-y-4">
+            <div
+              class="flex-1 min-h-0 flex flex-col overflow-y-auto pb-1"
+              onscroll={handleSidebarScroll}
+            >
+              {#if loading}
+                <div class="flex-1 flex items-center justify-center">
+                  <!-- <Spinner size="lg" /> -->
+                </div>
+              {:else if error}
+                <div class="px-3 py-4 text-sm text-red-500">
+                  {error}
+                </div>
+              {:else}
+                <!-- All sections at the same level: CHANNELS, FORUMS, DIRECT MESSAGES -->
+                {#each filteredCategories as category (category.id)}
+                  <CollapsibleGroup
+                    title={category.name}
+                    actions={category.actions}
+                    expanded={!category.isCollapsed}
+                    onToggle={() => {
+                      categories = categories.map((c) =>
+                        c.id === category.id ? { ...c, isCollapsed: !c.isCollapsed } : c
+                      );
+                    }}
+                  >
+                    <div class="bg-[var(--color-bg-primary)]">
+                      {#each category.conversations as conversation (conversation.id)}
+                        <Button
+                          variant="unstyled"
+                          class="project-list-row w-full flex items-center gap-2 px-2 py-1.5 cursor-pointer
+                        transition-colors duration-150
+                        border-b border-[var(--color-border-primary)]
+                        {selectedConversationId === conversation.id
+                            ? 'bg-[var(--color-accent-primary)]/10'
+                            : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                          onclick={() => handleConversationSelect(conversation)}
+                        >
+                          <Icon
+                            name={conversation.type === 'Forum'
+                              ? 'list'
+                              : conversation.isPrivate
+                                ? 'lock'
+                                : 'hash'}
+                            size="sm"
+                            class="flex-shrink-0 text-[var(--color-text-tertiary)]"
+                          />
+                          <span
+                            class="flex-1 text-left text-sm truncate text-[var(--color-text-primary)]"
+                          >
+                            {conversation.name}
+                          </span>
+                          {#if (conversation.unreadCount ?? 0) > 0}
+                            <span
+                              class="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-medium
+                            rounded-full bg-[var(--color-accent-primary)] text-white"
+                            >
+                              {(conversation.unreadCount ?? 0) > 99
+                                ? '99+'
+                                : conversation.unreadCount}
+                            </span>
+                          {/if}
+                        </Button>
+                      {/each}
+                      {#if category.conversations.length === 0}
+                        <div
+                          class="px-2 py-2 text-center text-sm text-[var(--color-text-tertiary)]"
+                        >
+                          No {category.name.toLowerCase()}
+                        </div>
+                      {/if}
+                    </div>
+                  </CollapsibleGroup>
+                {/each}
+
+                <!-- DIRECT MESSAGES Section -->
+                <CollapsibleGroup
+                  title="DIRECT MESSAGES"
+                  actions={[
+                    { id: 'add-dm', icon: 'plus', label: 'New Message', onClick: handleCreateDM },
+                  ]}
+                  expanded={dmExpanded}
+                  onToggle={() => (dmExpanded = !dmExpanded)}
+                >
+                  <div class="bg-[var(--color-bg-primary)]">
+                    <DirectMessageList
+                      items={filteredDms}
+                      selectedId={selectedDmId}
+                      onSelect={handleDmSelect}
+                    />
+                  </div>
+                </CollapsibleGroup>
+
+                {#if loadingMore}
+                  <div class="flex items-center justify-center py-3">
+                    <Spinner size="sm" />
+                  </div>
+                {/if}
+              {/if}
+            </div>
+          </ProjectListLayout>
+        {/snippet}
+
+        <!-- Main Conversation Area (children slot) -->
+        {#if createMode === 'channel' || createMode === 'private-channel'}
+          <ConversationCreatePanel
+            icon={createMode === 'private-channel' ? 'lock' : 'hash'}
+            title={createMode === 'private-channel' ? 'New Private Channel' : 'New Channel'}
+            bind:name={createChannelName}
+            bind:description={createChannelTopic}
+            namePlaceholder={createMode === 'channel' ? 'e.g., general' : 'e.g., architecture-team'}
+            descriptionPlaceholder="What is this conversation for?"
+            descriptionLabel="Topic"
+            loading={createPanelLoading}
+            error={createPanelError}
+            isValid={isCreateFormValid}
+            onSubmit={submitCreateMode}
+            onCancel={cancelCreateMode}
+          >
+            {#if createMode === 'private-channel'}
               <div class="space-y-2">
-                <span class="block text-sm font-medium text-[var(--color-text-primary)]">
-                  Select Member
-                </span>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-[var(--color-text-primary)]"
+                    >Participants</span
+                  >
+                  <span class="text-xs text-[var(--color-text-tertiary)]"
+                    >{selectedParticipantCount} selected</span
+                  >
+                </div>
                 <div class="relative">
                   <Icon
                     name="search"
@@ -1294,52 +1239,35 @@
                   />
                   <Input
                     unstyled
-                    placeholder="Search members..."
+                    placeholder="Search participants..."
                     bind:value={participantQuery}
                     class="w-full pl-7 pr-2 py-1.5 text-sm rounded
-                      bg-[var(--color-bg-primary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]
-                      focus:outline-none focus:border-[var(--color-accent-primary)]"
+                    bg-[var(--color-bg-primary)] border border-[var(--color-border)]
+                    text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]
+                    focus:outline-none focus:border-[var(--color-accent-primary)]"
                   />
                 </div>
                 <div
-                  class="max-h-80 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
+                  class="max-h-48 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
                 >
-                  {#if createPanelLoading}
-                    <div class="flex items-center justify-center py-6">
-                      <Spinner size="md" />
-                    </div>
-                  {:else if selectableParticipants.length === 0}
-                    <div class="px-3 py-4 text-center text-sm text-[var(--color-text-tertiary)]">
+                  {#if selectableParticipants.length === 0}
+                    <div class="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">
                       No matching participants.
                     </div>
                   {:else}
                     {#each selectableParticipants as participant (participant.id)}
                       <Button
                         variant="unstyled"
-                        class="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors
-                          hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                        onclick={() => handleDmSelectUser(participant.user.id)}
-                        disabled={createPanelLoading}
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                        onclick={() => toggleParticipant(participant.user.id)}
                       >
-                        <div class="relative flex-shrink-0">
-                          <Avatar
-                            name={participant.user.name ?? 'Unknown'}
-                            avatarUrl={participant.user.avatarUrl}
-                            size="sm"
-                          />
-                          <span
-                            class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-primary)] {onlineUsers.has(
-                              participant.user.id
-                            )
-                              ? 'bg-[var(--color-success-500)]'
-                              : 'bg-[var(--color-neutral-400)]'}"
-                          ></span>
-                        </div>
+                        <Checkbox
+                          unstyled
+                          class="h-4 w-4"
+                          checked={isParticipantSelected(participant.user.id)}
+                        />
                         <div class="flex-1 min-w-0">
-                          <div
-                            class="font-medium text-sm text-[var(--color-text-primary)] truncate"
-                          >
+                          <div class="font-medium text-[var(--color-text-primary)] truncate">
                             {participant.user.name}
                           </div>
                           <div class="text-xs text-[var(--color-text-tertiary)] truncate">
@@ -1351,219 +1279,340 @@
                   {/if}
                 </div>
               </div>
-
-              {#if createPanelError}
-                <p class="text-sm text-red-500">{createPanelError}</p>
-              {/if}
-            </div>
-          </div>
-        </div>
-      {:else if selectedConversation && selectedConversation.type === 'Forum'}
-        <ForumView
-          tenantId={tenantId ?? ''}
-          {projectId}
-          conversationId={selectedConversation.id}
-          conversationName={selectedConversation.name}
-          class="h-full"
-        />
-      {:else if selectedConversation}
-        <ChannelView
-          conversationId={selectedConversation.id}
-          conversationName={selectedConversation.name}
-          conversationDescription={selectedConversation.description}
-          headerIcon="hash"
-          sourceType={selectedConversationSource}
-          conversationType={selectedConversation.type}
-          tenantId={tenantId ?? undefined}
-          {projectId}
-          channelStatus={selectedConversation.channelStatus}
-          allowRequirementExtract={selectedConversationSource === 'channel'}
-          hideParticipantPanel={true}
-          onStatusChange={(status) =>
-            handleConversationStatusChange(selectedConversation.id, status)}
-          onMembersChanged={(conversationId, members) => {
-            if (conversationId !== selectedConversationId) return;
-            currentUserId = getAuthState().user?.id ?? null;
-            channelParticipants = members;
-          }}
-          onClose={() => {
-            selectedConversationId = null;
-          }}
-          class="h-full"
-        />
-      {:else if selectedDm}
-        <ChannelView
-          conversationId={selectedDm.id}
-          conversationName={selectedDm.name}
-          headerIcon="message-circle"
-          sourceType="conversation"
-          conversationType="DirectMessage"
-          tenantId={tenantId ?? undefined}
-          {projectId}
-          channelStatus={selectedDm.channelStatus}
-          allowRequirementExtract={false}
-          hideParticipantPanel={true}
-          onStatusChange={(status) => handleDirectMessageStatusChange(selectedDm.id, status)}
-          onMembersChanged={(convId, members) => {
-            if (convId !== selectedDmId) return;
-            currentUserId = getAuthState().user?.id ?? null;
-            channelParticipants = members;
-          }}
-          onClose={() => {
-            selectedDmId = null;
-          }}
-          class="h-full"
-        />
-      {:else}
-        <!-- Overview -->
-        <PageShell class="h-full">
-          <PageHeader title="Overview" />
-          <PageBody padded={false} class="p-3 space-y-3">
-            <CardGrid cols={4} gap="md">
-              <StatCard title="Unread" value={totalUnreadCount} icon="bell" />
-              <StatCard title="Channels" value={channelCount} icon="hash" />
-              <StatCard title="Forums" value={forumCount} icon="message-square" />
-              <StatCard title="DMs" value={dmCount} icon="user" />
-            </CardGrid>
-
-            <p class="text-sm text-[var(--color-text-secondary)] text-center">
-              Select a channel, forum, or DM from the sidebar to start chatting.
-            </p>
-          </PageBody>
-        </PageShell>
-      {/if}
-
-      {#snippet rightPanel()}
-        <div class="flex flex-col h-full bg-[var(--color-bg-secondary)] overflow-y-auto">
-          <!-- Participants Section -->
-          <CollapsibleGroup
-            title="Participants ({activeParticipants.length})"
-            actions={canInvite
-              ? [
-                  {
-                    id: 'invite',
-                    icon: 'plus',
-                    label: 'Invite Members',
-                    onClick: toggleInviteSearch,
-                  },
-                ]
-              : []}
-            expanded={participantsExpanded}
-            onToggle={() => (participantsExpanded = !participantsExpanded)}
-          >
-            <!-- Inline Invite Search -->
-            {#if showInviteSearch}
-              <div class="px-2 pt-2 pb-1 border-b border-[var(--color-border)]">
-                <SearchField
-                  bind:value={inviteSearchQuery}
-                  placeholder="Search users by name or email..."
-                  debounceMs={0}
-                  onSearch={handleInviteSearchInput}
-                  size="sm"
+            {/if}
+          </ConversationCreatePanel>
+        {:else if createMode === 'topic'}
+          <ConversationCreatePanel
+            icon="list"
+            title="New Forum"
+            bind:name={createTopicTitle}
+            bind:description={createChannelTopic}
+            nameLabel="Forum Name"
+            namePlaceholder="e.g., API contract discussion"
+            showDescription={false}
+            loading={createPanelLoading}
+            error={createPanelError}
+            isValid={isCreateFormValid}
+            onSubmit={submitCreateMode}
+            onCancel={cancelCreateMode}
+          />
+        {:else if createMode === 'dm'}
+          <div class="flex flex-col h-full bg-[var(--color-bg-primary)]">
+            <!-- Header -->
+            <div
+              class="flex items-center justify-between min-h-12 px-4 border-b border-[var(--color-border-primary)]"
+            >
+              <div class="flex items-center">
+                <Icon
+                  name="message-square"
+                  size="md"
+                  class="text-[var(--color-text-tertiary)] mr-2"
                 />
-                {#if inviteSearching}
-                  <div class="flex justify-center py-3"><Spinner size="sm" /></div>
-                {:else if inviteSearchResults.length > 0}
-                  <div class="mt-1 max-h-[160px] overflow-y-auto">
-                    {#each inviteSearchResults as user (user.id)}
-                      <Button
-                        variant="unstyled"
-                        class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left
-                          hover:bg-[var(--color-bg-tertiary)] transition-colors
-                          {sendingUserId === user.id ? 'opacity-50 pointer-events-none' : ''}"
-                        onclick={() => handleSelectInviteUser(user)}
-                        disabled={sendingUserId === user.id}
-                      >
-                        <Avatar name={user.displayName} isAI={user.isAi} size="sm" />
-                        <div class="flex-1 min-w-0">
-                          <span class="text-sm text-[var(--color-text-primary)] truncate block"
-                            >{user.displayName}</span
-                          >
-                          <span class="text-xs text-[var(--color-text-tertiary)] truncate block"
-                            >{user.email}</span
-                          >
-                        </div>
-                        {#if sendingUserId === user.id}
-                          <Spinner size="sm" />
-                        {/if}
-                      </Button>
-                    {/each}
+                <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">
+                  New Direct Message
+                </h2>
+              </div>
+              <IconButton
+                icon="x"
+                variant="ghost"
+                onclick={cancelCreateMode}
+                disabled={createPanelLoading}
+                title="Cancel"
+              />
+            </div>
+
+            <!-- Body -->
+            <div class="flex-1 overflow-auto p-6">
+              <div class="max-w-xl mx-auto space-y-4">
+                <div class="space-y-2">
+                  <span class="block text-sm font-medium text-[var(--color-text-primary)]">
+                    Select Member
+                  </span>
+                  <div class="relative">
+                    <Icon
+                      name="search"
+                      size="sm"
+                      class="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                    />
+                    <Input
+                      unstyled
+                      placeholder="Search members..."
+                      bind:value={participantQuery}
+                      class="w-full pl-7 pr-2 py-1.5 text-sm rounded
+                      bg-[var(--color-bg-primary)] border border-[var(--color-border)]
+                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]
+                      focus:outline-none focus:border-[var(--color-accent-primary)]"
+                    />
                   </div>
-                {:else if inviteSearchQuery.length >= 2}
-                  <div class="text-xs text-[var(--color-text-tertiary)] mt-2 mb-1 text-center">
-                    No users found
+                  <div
+                    class="max-h-80 overflow-y-auto border border-[var(--color-border-secondary)] rounded-lg divide-y divide-[var(--color-border-secondary)]"
+                  >
+                    {#if createPanelLoading}
+                      <div class="flex items-center justify-center py-6">
+                        <Spinner size="md" />
+                      </div>
+                    {:else if selectableParticipants.length === 0}
+                      <div class="px-3 py-4 text-center text-sm text-[var(--color-text-tertiary)]">
+                        No matching participants.
+                      </div>
+                    {:else}
+                      {#each selectableParticipants as participant (participant.id)}
+                        <Button
+                          variant="unstyled"
+                          class="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors
+                          hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                          onclick={() => handleDmSelectUser(participant.user.id)}
+                          disabled={createPanelLoading}
+                        >
+                          <div class="relative flex-shrink-0">
+                            <Avatar
+                              name={participant.user.name ?? 'Unknown'}
+                              avatarUrl={participant.user.avatarUrl}
+                              size="sm"
+                            />
+                            <span
+                              class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-primary)] {onlineUsers.has(
+                                participant.user.id
+                              )
+                                ? 'bg-[var(--color-success-500)]'
+                                : 'bg-[var(--color-neutral-400)]'}"
+                            ></span>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <div
+                              class="font-medium text-sm text-[var(--color-text-primary)] truncate"
+                            >
+                              {participant.user.name}
+                            </div>
+                            <div class="text-xs text-[var(--color-text-tertiary)] truncate">
+                              {participant.role}
+                            </div>
+                          </div>
+                        </Button>
+                      {/each}
+                    {/if}
                   </div>
+                </div>
+
+                {#if createPanelError}
+                  <p class="text-sm text-red-500">{createPanelError}</p>
                 {/if}
               </div>
-            {/if}
+            </div>
+          </div>
+        {:else if selectedConversation && selectedConversation.type === 'Forum'}
+          {#each [selectedConversation] as displayed (displayed.id)}
+            <ForumView
+              tenantId={tenantId ?? ''}
+              {projectId}
+              conversationId={displayed.id}
+              conversationName={displayed.name}
+              class="h-full"
+            />
+          {/each}
+        {:else if selectedConversation}
+          {#each [selectedConversation] as displayed (displayed.id)}
+            <ChannelView
+              conversationId={displayed.id}
+              conversationName={displayed.name}
+              conversationDescription={displayed.description}
+              headerIcon="hash"
+              sourceType={selectedConversationSource}
+              conversationType={displayed.type}
+              tenantId={tenantId ?? undefined}
+              {projectId}
+              channelStatus={displayed.channelStatus}
+              allowRequirementExtract={selectedConversationSource === 'channel'}
+              hideParticipantPanel={true}
+              onStatusChange={(status) => handleConversationStatusChange(displayed.id, status)}
+              onMembersChanged={(conversationId, members) => {
+                if (conversationId !== selectedConversationId) return;
+                currentUserId = getAuthState().user?.id ?? null;
+                channelParticipants = members;
+              }}
+              onClose={() => {
+                selectedConversationId = null;
+              }}
+              class="h-full"
+            />
+          {/each}
+        {:else if selectedDm}
+          {#each [selectedDm] as displayed (displayed.id)}
+            <ChannelView
+              conversationId={displayed.id}
+              conversationName={displayed.name}
+              headerIcon="message-circle"
+              sourceType="conversation"
+              conversationType="DirectMessage"
+              tenantId={tenantId ?? undefined}
+              {projectId}
+              channelStatus={displayed.channelStatus}
+              allowRequirementExtract={false}
+              hideParticipantPanel={true}
+              onStatusChange={(status) => handleDirectMessageStatusChange(displayed.id, status)}
+              onMembersChanged={(convId, members) => {
+                if (convId !== selectedDmId) return;
+                currentUserId = getAuthState().user?.id ?? null;
+                channelParticipants = members;
+              }}
+              onClose={() => {
+                selectedDmId = null;
+              }}
+              class="h-full"
+            />
+          {/each}
+        {:else}
+          <!-- Overview -->
+          <PageShell class="h-full">
+            <PageHeader title="Overview" />
+            <PageBody padded={false} class="p-3 space-y-3">
+              <CardGrid cols={4} gap="md">
+                <StatCard title="Unread" value={totalUnreadCount} icon="bell" />
+                <StatCard title="Channels" value={channelCount} icon="hash" />
+                <StatCard title="Forums" value={forumCount} icon="message-square" />
+                <StatCard title="DMs" value={dmCount} icon="user" />
+              </CardGrid>
 
-            <div class="px-2 py-2">
-              {#each activeParticipants as participant (participant.id)}
-                <div
-                  class="group relative flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors"
-                >
-                  <div class="relative flex-shrink-0">
-                    <Avatar
-                      name={participant.user.name ?? 'Unknown'}
-                      avatarUrl={participant.user.avatarUrl}
-                      isAI={participant.type === 'AI'}
-                      size="sm"
-                    />
-                    <span
-                      class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-secondary)] {onlineUsers.has(
-                        participant.user.id
-                      )
-                        ? 'bg-[var(--color-success-500)]'
-                        : 'bg-[var(--color-neutral-400)]'}"
-                    ></span>
-                  </div>
-                  <span class="text-sm text-[var(--color-text-primary)] truncate flex-1">
-                    {participant.user.name ?? 'Unknown'}{#if participant.user.id === currentUserId}
-                      <span class="text-[var(--color-text-tertiary)]">(you)</span>{/if}
-                  </span>
-                  {#if participant.type === 'AI'}
-                    <Icon name="bot" size="xs" class="text-[var(--color-accent-text)]" />
+              <p class="text-sm text-[var(--color-text-secondary)] text-center">
+                Select a channel, forum, or DM from the sidebar to start chatting.
+              </p>
+            </PageBody>
+          </PageShell>
+        {/if}
+
+        {#snippet rightPanel()}
+          <div class="flex flex-col h-full bg-[var(--color-bg-secondary)] overflow-y-auto">
+            <!-- Participants Section -->
+            <CollapsibleGroup
+              title="Participants ({activeParticipants.length})"
+              actions={canInvite
+                ? [
+                    {
+                      id: 'invite',
+                      icon: 'plus',
+                      label: 'Invite Members',
+                      onClick: toggleInviteSearch,
+                    },
+                  ]
+                : []}
+              expanded={participantsExpanded}
+              onToggle={() => (participantsExpanded = !participantsExpanded)}
+            >
+              <!-- Inline Invite Search -->
+              {#if showInviteSearch}
+                <div class="px-2 pt-2 pb-1 border-b border-[var(--color-border)]">
+                  <SearchField
+                    bind:value={inviteSearchQuery}
+                    placeholder="Search users by name or email..."
+                    debounceMs={0}
+                    onSearch={handleInviteSearchInput}
+                    size="sm"
+                  />
+                  {#if inviteSearching}
+                    <div class="flex justify-center py-3"><Spinner size="sm" /></div>
+                  {:else if inviteSearchResults.length > 0}
+                    <div class="mt-1 max-h-[160px] overflow-y-auto">
+                      {#each inviteSearchResults as user (user.id)}
+                        <Button
+                          variant="unstyled"
+                          class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left
+                          hover:bg-[var(--color-bg-tertiary)] transition-colors
+                          {sendingUserId === user.id ? 'opacity-50 pointer-events-none' : ''}"
+                          onclick={() => handleSelectInviteUser(user)}
+                          disabled={sendingUserId === user.id}
+                        >
+                          <Avatar name={user.displayName} isAI={user.isAi} size="sm" />
+                          <div class="flex-1 min-w-0">
+                            <span class="text-sm text-[var(--color-text-primary)] truncate block"
+                              >{user.displayName}</span
+                            >
+                            <span class="text-xs text-[var(--color-text-tertiary)] truncate block"
+                              >{user.email}</span
+                            >
+                          </div>
+                          {#if sendingUserId === user.id}
+                            <Spinner size="sm" />
+                          {/if}
+                        </Button>
+                      {/each}
+                    </div>
+                  {:else if inviteSearchQuery.length >= 2}
+                    <div class="text-xs text-[var(--color-text-tertiary)] mt-2 mb-1 text-center">
+                      No users found
+                    </div>
                   {/if}
-                  {#if selectedDm ? participant.user.id === currentUserId : !isOwnerRole(participant.role) && (isConversationOwner || participant.user.id === currentUserId)}
-                    <Button
-                      variant="unstyled"
-                      class="absolute right-1 top-1/2 -translate-y-1/2
+                </div>
+              {/if}
+
+              <div class="px-2 py-2">
+                {#each activeParticipants as participant (participant.id)}
+                  <div
+                    class="group relative flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                  >
+                    <div class="relative flex-shrink-0">
+                      <Avatar
+                        name={participant.user.name ?? 'Unknown'}
+                        avatarUrl={participant.user.avatarUrl}
+                        isAI={participant.type === 'AI'}
+                        size="sm"
+                      />
+                      <span
+                        class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg-secondary)] {onlineUsers.has(
+                          participant.user.id
+                        )
+                          ? 'bg-[var(--color-success-500)]'
+                          : 'bg-[var(--color-neutral-400)]'}"
+                      ></span>
+                    </div>
+                    <span class="text-sm text-[var(--color-text-primary)] truncate flex-1">
+                      {participant.user.name ??
+                        'Unknown'}{#if participant.user.id === currentUserId}
+                        <span class="text-[var(--color-text-tertiary)]">(you)</span>{/if}
+                    </span>
+                    {#if participant.type === 'AI'}
+                      <Icon name="bot" size="xs" class="text-[var(--color-accent-text)]" />
+                    {/if}
+                    {#if selectedDm ? participant.user.id === currentUserId : !isOwnerRole(participant.role) && (isConversationOwner || participant.user.id === currentUserId)}
+                      <Button
+                        variant="unstyled"
+                        class="absolute right-1 top-1/2 -translate-y-1/2
                         w-5 h-5 flex items-center justify-center rounded
                         text-[var(--color-text-tertiary)] hover:text-[var(--color-error-500)]
                         hover:bg-[var(--color-error-50)] transition-colors"
-                      title={participant.user.id === currentUserId
-                        ? selectedDm
-                          ? 'Leave conversation'
-                          : 'Leave channel'
-                        : 'Remove member'}
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveParticipant(participant);
-                      }}
-                    >
-                      <Icon name="x" size="xs" />
-                    </Button>
-                  {/if}
-                </div>
-              {/each}
-              {#if activeParticipants.length === 0}
-                <p class="text-xs text-[var(--color-text-tertiary)] text-center py-2">
-                  No participants
-                </p>
-              {/if}
-            </div>
-          </CollapsibleGroup>
+                        title={participant.user.id === currentUserId
+                          ? selectedDm
+                            ? 'Leave conversation'
+                            : 'Leave channel'
+                          : 'Remove member'}
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveParticipant(participant);
+                        }}
+                      >
+                        <Icon name="x" size="xs" />
+                      </Button>
+                    {/if}
+                  </div>
+                {/each}
+                {#if activeParticipants.length === 0}
+                  <p class="text-xs text-[var(--color-text-tertiary)] text-center py-2">
+                    No participants
+                  </p>
+                {/if}
+              </div>
+            </CollapsibleGroup>
 
-          <!-- TraceGraphSection (Primary Flow + Related Items) -->
-          {#if selectedConversation}
-            <TraceGraphSection
-              entityType="Conversation"
-              entityId={selectedConversation.id}
-              {projectId}
-            />
-          {/if}
-        </div>
-      {/snippet}
-    </SidebarDetailLayout>
+            <!-- TraceGraphSection (Primary Flow + Related Items) -->
+            {#if selectedConversation}
+              <TraceGraphSection
+                entityType="Conversation"
+                entityId={selectedConversation.id}
+                {projectId}
+              />
+            {/if}
+          </div>
+        {/snippet}
+      </SidebarDetailLayout>
+    </div>
   </PageBody>
 </PageShell>

@@ -4,11 +4,29 @@
 
 .PHONY: help infra api web start stop status build test lint db-provision db-seed-test db-reset db-reset-full demo-onbrick whisper-warmup security-scan security-scan-staged sbom
 
+# Only explicit Make/shell inputs are shared with Compose; dotenv is not Make syntax.
+SDDP_MAKE_SHARED_KEYS := POSTGRES_USER POSTGRES_DB SDDP_STORAGE_TABLESPACE_NAME SDDP_STORAGE_TABLESPACE_PATH SDDP_STORAGE_QUOTA_GB
+SDDP_MAKE_EXPLICIT_KEYS := $(foreach key,$(SDDP_MAKE_SHARED_KEYS),$(if $(filter command environment,$(origin $(key))),$(key)))
+
 POSTGRES_USER ?= sddp
 POSTGRES_DB   ?= sddp
 SDDP_STORAGE_TABLESPACE_NAME ?= sddp_data_ts
 SDDP_STORAGE_TABLESPACE_PATH ?= /var/lib/postgresql/tablespaces/sddp_data
 SDDP_STORAGE_QUOTA_GB ?= 20
+
+# Fail at parse time, before any recipe (including parallel prerequisite execution).
+ifneq ($(filter infra start stop status db-provision db-seed-test db-reset db-reset-full demo-onbrick,$(MAKECMDGOALS)),)
+SDDP_MAKE_ENV_KEYS := $(shell if [ -f .env ]; then sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=.*/\2/p' .env; fi)
+SDDP_MAKE_MISSING_KEYS := $(filter-out $(SDDP_MAKE_EXPLICIT_KEYS),$(filter $(SDDP_MAKE_SHARED_KEYS),$(SDDP_MAKE_ENV_KEYS)))
+ifneq ($(strip $(SDDP_MAKE_MISSING_KEYS)),)
+$(error Export shared .env settings or pass make KEY=value before running this target: $(SDDP_MAKE_MISSING_KEYS))
+endif
+SDDP_MAKE_EMPTY_KEYS := $(foreach key,$(SDDP_MAKE_SHARED_KEYS),$(if $(strip $($(key))),,$(key)))
+ifneq ($(strip $(SDDP_MAKE_EMPTY_KEYS)),)
+$(error Shared Make settings must not be empty: $(SDDP_MAKE_EMPTY_KEYS))
+endif
+export $(SDDP_MAKE_SHARED_KEYS)
+endif
 
 help:
 	@echo "SDDP Public Development Commands"
@@ -85,7 +103,7 @@ build:
 	cd src/frontend && npm run build
 
 test:
-	cd src/frontend/packages/web && npm test
+	cd src/frontend && npm test
 
 lint:
 	cd src/frontend/packages/web && npm run lint && npm run type-check
@@ -123,7 +141,7 @@ db-reset:
 	@echo "DB reset complete! (run 'make db-seed-test' for shared fixtures)"
 
 db-reset-full:
-	@echo "This will remove all Docker volumes for this project (DB/Redis/Ollama/Gitea). Press Ctrl+C to cancel, Enter to continue..."
+	@echo "This will remove all Docker volumes for this project (DB/Redis/Gitea/API files). Press Ctrl+C to cancel, Enter to continue..."
 	@read _
 	docker compose down -v
 	docker compose up -d sddp-db sddp-redis

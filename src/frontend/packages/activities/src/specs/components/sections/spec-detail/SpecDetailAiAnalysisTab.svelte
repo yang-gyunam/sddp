@@ -24,7 +24,10 @@
   };
 
   interface Props {
-    aiFeatureFlagEnabled: boolean;
+    aiCanRead: boolean;
+    aiCanExecute: boolean;
+    aiStatusMessage: string;
+    onRetryAi: () => void;
     isReadOnly: boolean;
     analysisLoading: boolean;
     qualityReport: AiReport | null;
@@ -45,7 +48,10 @@
   }
 
   let {
-    aiFeatureFlagEnabled,
+    aiCanRead,
+    aiCanExecute,
+    aiStatusMessage,
+    onRetryAi,
     isReadOnly,
     analysisLoading,
     qualityReport,
@@ -66,16 +72,19 @@
   }: Props = $props();
 </script>
 
-{#if !aiFeatureFlagEnabled}
-  <div class="rounded-lg border border-[var(--color-warning-200)] bg-[var(--color-warning-50)] p-5">
+{#if !aiCanRead}
+  <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-warning-10)] p-5">
     <div class="flex items-center gap-2">
       <Icon name="cpu" size="sm" />
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">AI Analysis</span>
-      <Badge variant="warning" size="sm">Coming Soon</Badge>
     </div>
-    <p class="mt-2 text-sm text-[var(--color-text-muted)]">AI..</p>
+    <p class="mt-2 text-sm text-[var(--color-text-muted)]" role="status">{aiStatusMessage}</p>
+    <Button variant="ghost" size="sm" onclick={onRetryAi}>Refresh AI availability</Button>
   </div>
 {:else}
+  {#if !aiCanExecute}<p class="text-sm text-[var(--color-text-muted)]" role="status">
+      {aiStatusMessage}
+    </p>{/if}
   <div class="grid gap-4 lg:grid-cols-2">
     <!-- Quality Analysis -->
     <div
@@ -96,7 +105,7 @@
             variant="secondary"
             size="sm"
             onclick={() => onRunAnalysis('Quality')}
-            disabled={qualityTriggering || isProcessing(qualityReport?.status)}
+            disabled={!aiCanExecute || qualityTriggering || isProcessing(qualityReport?.status)}
           >
             {#if qualityTriggering || isProcessing(qualityReport?.status)}
               <Spinner size="lg" />
@@ -256,7 +265,7 @@
             variant="secondary"
             size="sm"
             onclick={() => onRunAnalysis('Impact')}
-            disabled={impactTriggering || isProcessing(impactReport?.status)}
+            disabled={!aiCanExecute || impactTriggering || isProcessing(impactReport?.status)}
           >
             {#if impactTriggering || isProcessing(impactReport?.status)}
               <Spinner size="lg" />
