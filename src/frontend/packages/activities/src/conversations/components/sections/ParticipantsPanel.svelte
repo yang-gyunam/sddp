@@ -1,6 +1,9 @@
 <!-- Section: ParticipantsPanel — Conversations > Channel/Forum/Topic/Global, Projects > Conversations -->
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import MemberHistoryIndicator from '../idioms/MemberHistoryIndicator.svelte';
+  import MemberParticipantActions from '../idioms/MemberParticipantActions.svelte';
+  import { getMessageAuthor } from '../../utils/message-author';
+  import { onDestroy, untrack } from 'svelte';
   import { Icon, Button, SearchField, Spinner } from '@sddp/ui';
   import { CollapsibleGroup, Avatar, formatRelativeTime, toast } from '@sddp/shell';
   import type {
@@ -16,12 +19,15 @@
     type InvitableUser,
   } from '../../services/ConversationService';
   import { getConversationHubService } from '../../services/ConversationHubService';
+  import type { createProjectParticipantExtension } from '../../../projects/stores/project-participant-extension.svelte';
 
   interface Props {
     channel: ChannelDetail | null;
     currentUserId?: string | null;
     tenantId?: string;
+    projectId?: string;
     conversationId?: string;
+    memberExtension?: ReturnType<typeof createProjectParticipantExtension>;
     pinnedMessages?: Message[];
     relatedTopics?: ChannelSummary[];
     linkedRequirements?: LinkedRequirement[];
@@ -40,7 +46,9 @@
     channel,
     currentUserId = null,
     tenantId = '',
+    projectId = '',
     conversationId = '',
+    memberExtension,
     pinnedMessages = [],
     relatedTopics = [],
     linkedRequirements = [],
@@ -80,7 +88,38 @@
   );
 
   // Show invite action if owner AND has tenantId+conversationId (can search invitable users)
-  const canInvite = $derived(isConversationOwner && !!tenantId && !!conversationId);
+  const canInviteUsers = $derived(isConversationOwner && !!tenantId && !!conversationId);
+  const canManageMembers = $derived(!isReadOnly && !!memberExtension?.canManage);
+  const canInvite = $derived(!isReadOnly && (canInviteUsers || canManageMembers));
+  const additionalParticipants = $derived(memberExtension?.participants ?? []);
+  const inviteCandidates = $derived([
+    ...(canInviteUsers
+      ? inviteSearchResults.map((user) => ({
+          key: `user:${user.id}`,
+          displayName: user.displayName,
+          subtitle: user.email,
+          isAi: user.isAi,
+          select: () => handleSelectInviteUser(user),
+        }))
+      : []),
+    ...(canManageMembers
+      ? (memberExtension?.candidates(inviteSearchQuery) ?? []).map((member) => ({
+          key: `member:${member.id}`,
+          displayName: member.displayName,
+          subtitle: 'AI',
+          isAi: false,
+          select: () => handleAddMember(member.id, member.displayName),
+        }))
+      : []),
+  ]);
+  let inviteRequest = 0;
+  let disposed = false;
+  onDestroy(() => {
+    disposed = true;
+  });
+  const inviteScope = $derived(
+    JSON.stringify([tenantId, projectId, currentUserId, conversationId])
+  );
 
   // Online users from ConversationHub presence tracking
   let onlineUsers = $state<Set<string>>(getConversationStoreState().onlineUsers);
@@ -107,37 +146,44 @@
       inviteSearchQuery = '';
       inviteSearchResults = [];
       sendingUserId = null;
+      if (memberExtension && !memberExtension.loading) void memberExtension.refresh();
     }
   }
 
   function handleInviteSearchInput(query: string) {
+    if (disposed || !showInviteSearch) return;
     inviteSearchQuery = query;
+    const request = ++inviteRequest;
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
-    if (!query || query.length < 2) {
-      inviteSearchResults = [];
-      return;
-    }
+    inviteSearchResults = [];
+    inviteSearching = false;
+    if (query.trim().length < 2 || !canInviteUsers) return;
+    inviteSearching = true;
     searchDebounceTimer = setTimeout(() => {
-      untrack(() => searchInvitableUsers(query));
+      untrack(() => searchInvitableUsers(query.trim(), request));
     }, 300);
   }
 
-  async function searchInvitableUsers(query: string) {
-    if (!tenantId || !conversationId) return;
-    inviteSearching = true;
+  async function searchInvitableUsers(query: string, request: number) {
+    if (disposed || !tenantId || !conversationId || request !== inviteRequest) return;
+    const scope = inviteScope;
+    const isCurrent = () => !disposed && request === inviteRequest && scope === inviteScope;
     try {
-      const service = createConversationService(tenantId);
-      inviteSearchResults = await service.getInvitableUsers(conversationId, query);
+      const service = createConversationService(tenantId, projectId);
+      const users = await service.getInvitableUsers(conversationId, query);
+      if (isCurrent()) inviteSearchResults = users;
     } catch {
-      inviteSearchResults = [];
+      if (isCurrent()) inviteSearchResults = [];
     } finally {
-      inviteSearching = false;
+      if (isCurrent()) inviteSearching = false;
     }
   }
 
   async function handleSelectInviteUser(user: InvitableUser) {
-    if (sendingUserId || !conversationId) return;
-    sendingUserId = user.id;
+    if (sendingUserId || !conversationId || !canInviteUsers || isReadOnly) return;
+    const scope = inviteScope;
+    const isCurrent = () => !disposed && scope === inviteScope;
+    sendingUserId = `user:${user.id}`;
     try {
       if (onSendInvitation) {
         await onSendInvitation(user.id, user.displayName);
@@ -146,22 +192,50 @@
         const convName = channel?.topic ?? 'Channel';
         await hubService.sendInvitation(conversationId, user.id, convName);
       }
+      if (!isCurrent()) return;
       toast.success(`Invitation sent to ${user.displayName}`);
       inviteSearchResults = inviteSearchResults.filter((u) => u.id !== user.id);
     } catch {
-      toast.error(`Failed to send invitation to ${user.displayName}`);
+      if (isCurrent()) toast.error(`Failed to send invitation to ${user.displayName}`);
     } finally {
-      sendingUserId = null;
+      if (isCurrent()) sendingUserId = null;
     }
   }
 
-  // Close invite search when conversation changes
-  let prevConversationId = $state('');
-  $effect(() => {
-    if (conversationId && conversationId !== prevConversationId) {
-      prevConversationId = conversationId;
-      if (showInviteSearch) showInviteSearch = false;
+  async function handleAddMember(memberId: string, displayName: string) {
+    if (sendingUserId || !canManageMembers) return;
+    const scope = inviteScope;
+    sendingUserId = `member:${memberId}`;
+    try {
+      if ((await memberExtension?.add(memberId)) && !disposed && scope === inviteScope)
+        toast.success(`${displayName} added`);
+    } finally {
+      if (!disposed && scope === inviteScope) sendingUserId = null;
     }
+  }
+
+  async function handleRemoveMember(memberId: string, displayName: string) {
+    if (!canManageMembers) return;
+    const scope = inviteScope;
+    if ((await memberExtension?.remove(memberId)) && !disposed && scope === inviteScope)
+      toast.success(`${displayName} removed`);
+  }
+
+  $effect(() => {
+    void inviteScope;
+    untrack(() => {
+      inviteRequest++;
+      clearTimeout(searchDebounceTimer ?? undefined);
+      showInviteSearch = false;
+      inviteSearchQuery = '';
+      inviteSearchResults = [];
+      inviteSearching = false;
+      sendingUserId = null;
+    });
+    return () => {
+      inviteRequest++;
+      clearTimeout(searchDebounceTimer ?? undefined);
+    };
   });
 </script>
 
@@ -170,7 +244,8 @@
     <div class="flex-1 overflow-y-auto">
       <!-- Participants Section -->
       <CollapsibleGroup
-        title="Participants ({participants.length})"
+        title="Participants ({participants.length + additionalParticipants.length})"
+        allowOverflow
         actions={canInvite
           ? [{ id: 'invite', icon: 'plus', label: 'Invite Members', onClick: toggleInviteSearch }]
           : []}
@@ -189,16 +264,17 @@
             />
             {#if inviteSearching}
               <div class="flex justify-center py-3"><Spinner size="sm" /></div>
-            {:else if inviteSearchResults.length > 0}
+            {/if}
+            {#if inviteCandidates.length > 0}
               <div class="mt-1 max-h-[160px] overflow-y-auto">
-                {#each inviteSearchResults as user (user.id)}
+                {#each inviteCandidates as user (user.key)}
                   <Button
                     variant="unstyled"
                     class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left
                     hover:bg-[var(--color-bg-tertiary)] transition-colors
-                    {sendingUserId === user.id ? 'opacity-50 pointer-events-none' : ''}"
-                    onclick={() => handleSelectInviteUser(user)}
-                    disabled={sendingUserId === user.id}
+                    {sendingUserId === user.key ? 'opacity-50 pointer-events-none' : ''}"
+                    onclick={user.select}
+                    disabled={sendingUserId === user.key}
                   >
                     <Avatar name={user.displayName} isAI={user.isAi} size="sm" />
                     <div class="flex-1 min-w-0">
@@ -206,16 +282,16 @@
                         >{user.displayName}</span
                       >
                       <span class="text-xs text-[var(--color-text-tertiary)] truncate block"
-                        >{user.email}</span
+                        >{user.subtitle}</span
                       >
                     </div>
-                    {#if sendingUserId === user.id}
+                    {#if sendingUserId === user.key}
                       <Spinner size="sm" />
                     {/if}
                   </Button>
                 {/each}
               </div>
-            {:else if inviteSearchQuery.length >= 2}
+            {:else if inviteSearchQuery.length >= 2 && !inviteSearching}
               <div class="text-xs text-[var(--color-text-tertiary)] mt-2 mb-1 text-center">
                 No users found
               </div>
@@ -223,9 +299,17 @@
           </div>
         {/if}
 
-        <div class="px-2 py-2">
+        {#if memberExtension?.error}
+          <div role="alert" class="px-2 py-2 text-xs text-[var(--color-error-500)]">
+            {memberExtension.error}
+            <Button variant="ghost" size="sm" onclick={() => memberExtension?.refresh()}
+              >Retry participants</Button
+            >
+          </div>
+        {/if}
+        <div class="px-2 py-2" role="list" aria-label="Conversation participants">
           {#each participants as participant (participant.id)}
-            <div class="group relative">
+            <div class="group/participant relative" role="listitem">
               <Button
                 variant="unstyled"
                 class="w-full flex items-center gap-2 px-2 py-1.5 rounded
@@ -258,7 +342,10 @@
               {#if !isReadOnly && onRemoveMember && (isDirectMessageProp ? participant.user.id === currentUserId : !isOwnerRole(participant.role) && (isConversationOwner || participant.user.id === currentUserId))}
                 <Button
                   variant="unstyled"
-                  class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100
+                  class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none
+                  group-hover/participant:opacity-100 group-hover/participant:pointer-events-auto
+                  focus-visible:opacity-100 focus-visible:pointer-events-auto
+                  [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto
                   w-5 h-5 flex items-center justify-center rounded
                   text-[var(--color-text-tertiary)] hover:text-[var(--color-error-500)]
                   hover:bg-[var(--color-error-50)] transition-all"
@@ -272,6 +359,38 @@
                 >
                   <Icon name="x" size="xs" />
                 </Button>
+              {/if}
+            </div>
+          {/each}
+          {#each additionalParticipants as member (member.id)}
+            <div
+              role="listitem"
+              class="group/participant relative flex items-center gap-2 pl-2 pr-7 py-1.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors"
+            >
+              <div class="relative flex-shrink-0">
+                <Avatar name={member.displayName} size="sm" />
+                <MemberHistoryIndicator history={member.history} />
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="block text-sm text-[var(--color-text-primary)] truncate"
+                  >{member.displayName}</span
+                >
+              </div>
+              <span class="text-xs text-[var(--color-text-tertiary)]">AI</span>
+              {#if canManageMembers}
+                <div class="absolute inset-y-0 right-1 flex items-center">
+                  <MemberParticipantActions
+                    displayName={member.displayName}
+                    prepare={!member.history ||
+                    ['failed', 'unprepared'].includes(member.history.status)
+                      ? () => memberExtension?.retryPreparation(member.id)
+                      : undefined}
+                    prepareLabel={member.history?.status === 'failed'
+                      ? 'Retry history preparation'
+                      : 'Prepare history'}
+                    remove={() => handleRemoveMember(member.id, member.displayName)}
+                  />
+                </div>
               {/if}
             </div>
           {/each}
@@ -300,7 +419,7 @@
                 <div class="flex items-center gap-1 mb-1">
                   <Icon name="pin" size="xs" class="text-[var(--color-warning-500)]" />
                   <span class="text-xs font-medium text-[var(--color-text-secondary)]">
-                    {message.sender?.name ?? 'Unknown'}
+                    {getMessageAuthor(message)?.name ?? 'Unknown'}
                   </span>
                 </div>
                 <p class="text-xs text-[var(--color-text-primary)] line-clamp-2">

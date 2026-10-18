@@ -44,3 +44,5 @@ is an in-place migration script. An automatic in-place upgrade bundle is not inc
 
 For non-default DB/storage values, export the shared settings before Make commands. See
 [Make and Compose settings](../../docs/public-guide.md#shared-make-and-compose-settings). Make does not load `.env`.
+
+Private AI usage DDL 33 / migration V015 are intentionally absent from the free bundle. No AI usage ledger or dashboard API is exported.

@@ -58,7 +58,6 @@
     setSelectedProject,
     createProjectService,
     subscribeTimeline,
-    loadTimelineByProject,
     type ProjectTreeNode,
     type ProjectPageType,
     type TimelineEvent,
@@ -94,6 +93,7 @@
   import { useShellSelectionSync } from './hooks/useShellSelectionSync.svelte';
   import { useRealtimeBridge } from './hooks/useRealtimeBridge.svelte';
   import { useAppBootstrap } from './hooks/useAppBootstrap.svelte';
+  import { createConversationPathOpener } from './lib/openConversationPath';
 
   interface DashboardMenuItem {
     id: string;
@@ -223,6 +223,21 @@
     onOpenDirectMessageByContext: realtimeBridge.openDirectMessageByContext,
     onHandleDMConcludedById: realtimeBridge.handleDirectMessageConcludedById,
     onOpenTabWithComponent: openTabWithComponent,
+  });
+  const openConversationPath = createConversationPathOpener({
+    getContext: () => {
+      const user = getAuthState().user;
+      return {
+        tenantId: user?.tenantId ?? '',
+        userId: user?.id ?? '',
+        path: navigationService.normalizePath(window.location.pathname),
+      };
+    },
+    openTab: openTabWithComponent,
+    showError: (path, id) => openAccessDeniedTab(
+      'Conversation unavailable', 'message-square', path, `conversation-${id}`,
+      'Could not open this conversation. It may be unavailable or you may no longer have access. Reload to try again.'
+    ),
   });
 
   // Cleanup references (set after auth-dependent initialization)
@@ -391,7 +406,7 @@
         if (tid) await loadGlobalConversationsSidebar(tid);
 
         // Restore the URL the user originally accessed
-        bootstrap.navigateToReturnUrl();
+        await bootstrap.navigateToReturnUrl();
 
         // Replace the returnUrl history entry so browser back won't return to it
         window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
@@ -436,7 +451,7 @@
     if (tid) await loadGlobalConversationsSidebar(tid);
 
     // Restore the URL the user originally tried to access
-    bootstrap.navigateToReturnUrl();
+    await bootstrap.navigateToReturnUrl();
 
     // Replace the login screen history entry so browser back won't return to it
     window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
@@ -497,11 +512,6 @@
     try {
       const projects = await service.getProjectsWithBadges();
       setProjects(projects);
-
-      // Load timeline for all projects in this tenant
-      loadTimelineByProject(user.tenantId).catch((err) => {
-        console.error('Failed to load timeline:', err);
-      });
 
       // Connect SignalR hubs for real-time updates
       realtimeBridge.connect();
@@ -656,7 +666,7 @@
    * Entity tabs opened via URL path are ALWAYS readonly.
    * Editable entity views only exist within project context pages (sidebar + detail panel).
    */
-  function openTabFromPath(path: string): boolean {
+  async function openTabFromPath(path: string): Promise<boolean> {
     const canonicalPath = navigationService.normalizePath(path);
 
     // Project paths: /project/{projectId}/{nodeType}
@@ -819,6 +829,11 @@
     // All entity tabs opened via URL are ALWAYS readonly (system-enforced).
     const parsed = navigationService.parsePath(canonicalPath);
     if (!parsed) return false;
+    // Resolve Channel scope without consulting the legacy sidebar/channel caches.
+    if (parsed.type === 'conversation' || parsed.type === 'space') {
+      await openConversationPath(canonicalPath, parsed.id);
+      return true;
+    }
 
     const shortId = truncate(parsed.id, 8, '…');
     // Look up conversation name from all available data sources:
@@ -830,8 +845,8 @@
       ...sidebarState.privateChannels,
       ...sidebarState.topics,
     ].find((c) => c.id === parsed.id);
-    const channelEntry = !convEntry
-      ? conversationState.channels?.find((c) => c.id === parsed.id)
+    const channelEntry = !convEntry && Array.isArray(conversationState.channels)
+      ? conversationState.channels.find((c) => c.id === parsed.id)
       : null;
     const convName = convEntry?.name || channelEntry?.topic;
     // All entity views from URL path are readonly
@@ -847,18 +862,6 @@
           readonlyProps
         );
         return true;
-      case 'conversation':
-      case 'space': {
-        // legacy fallback
-        const convTitle = convName || shortId;
-        openTabWithComponent(convTitle, 'hash', canonicalPath, `conversation-${parsed.id}`, {
-          additionalProps: {
-            conversationType: 'Channel',
-            channelStatus: convEntry?.channelStatus ?? null,
-          },
-        });
-        return true;
-      }
       case 'forum': {
         const forumTitle = convName || shortId;
         openTabWithComponent(forumTitle, 'list', canonicalPath, `forum-${parsed.id}`);

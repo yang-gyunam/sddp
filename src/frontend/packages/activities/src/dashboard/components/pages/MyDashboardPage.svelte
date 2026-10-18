@@ -30,6 +30,7 @@
     EffortTrackerWidget,
   } from '../sections';
   import { StatCard } from '../../../shared/components/idioms';
+  import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { LineChart } from '../idioms';
   import { getDashboardService } from '../../services';
   import {
@@ -201,6 +202,11 @@
 
   function handleNotificationClick(notification: NotificationItem) {
     markAsRead(notification.id);
+
+    if (notification.type === 'ai_member_reply' && notification.entityId) {
+      navigateToEntity(undefined, 'conversation', notification.entityId);
+      return;
+    }
 
     const dmConversationId =
       notification.type === 'dm_invite_accepted' ? notification.entityId : null;

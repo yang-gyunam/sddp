@@ -17,7 +17,7 @@
     PageShell,
     SidebarDetailLayout,
     Avatar,
-    UserListItem,
+    RichListItem,
   } from '@sddp/shell';
   import { Icon, IconButton, Button, Spinner, SearchField } from '@sddp/ui';
   import type { ProjectMember } from '../../../projects/types/project.types';
@@ -178,7 +178,10 @@
   async function handleInvited(userId: string, role: string) {
     if (!effectiveTenantId || !projectId) return;
     try {
-      const newMember = await projectService.addProjectMember(projectId, { userId, role });
+      const newMember = await projectService.addProjectMember(projectId, {
+        userId,
+        role,
+      });
       members = [...members, newMember];
       closePanel();
       toast.success('Member added successfully');
@@ -226,7 +229,9 @@
 
 <PageShell>
   {#if loading}
-    <div class="flex-1 flex items-center justify-center pb-28"><Spinner size="lg" /></div>
+    <div class="flex-1 flex items-center justify-center pb-28">
+      <Spinner size="lg" />
+    </div>
   {:else if error}
     <div class="flex-1 flex items-center justify-center pb-28">
       <div class="p-12 text-center text-sm text-[var(--color-error-600)]">
@@ -263,8 +268,9 @@
           <!-- Member List -->
           <div class="flex-1 overflow-y-auto pb-1">
             {#each membersWithPresence as member (member.userId)}
-              <UserListItem
-                user={{ displayName: member.displayName, email: member.role }}
+              <RichListItem
+                title={member.displayName}
+                description={member.role}
                 selected={selectedMemberId === member.userId}
                 onclick={() => selectMember(member)}
                 density="compact"
@@ -296,7 +302,7 @@
                     ></span>
                   </div>
                 {/snippet}
-              </UserListItem>
+              </RichListItem>
             {:else}
               <div class="p-8 text-center text-sm text-[var(--color-text-tertiary)]">
                 <Icon name="circle-user-round" size="xl" class="mx-auto mb-2 opacity-50" />

@@ -1,15 +1,18 @@
-# SDDP v0.4.0 — Free Edition
+# SDDP v0.4.1 — Free Edition
 
-Release files prepared on 2026-10-03. This document describes the free public distribution.
+Release files prepared on 2026-10-18. This document describes the free public distribution.
 It does not announce a hosted service deployment or include separately distributed AI modules.
 
 ## Changes
 
-- Browser back/forward navigation and item URLs now preserve project context and multiple panels.
-- Related-item links use project-scoped routes. Dark-theme surfaces, theme labels and list row heights are more consistent.
-- The frontend status bar and API report the same release version.
-- The transitive devalue dependency is updated to 5.9.4; Svelte remains at 5.56.6.
-- Public provisioning omits AI settings, providers, models and endpoints. AI settings remain hidden even if an AI flag is set without a module.
+- The ASP.NET Core runtime is updated to 10.0.13 with a pinned image digest.
+- ProseMirror and affected transitive dependencies are updated within the existing package ranges.
+- Shared conversation and snapshot integration retains free-edition compatibility. Disabled AI UI adapters preserve normal non-AI operation.
+- The frontend status bar and API report the same release version. Public builds, tests, fresh-database/API behavior and edition boundaries are checked locally.
+- Public provisioning continues to omit AI settings, providers, models and endpoints. AI settings remain hidden even if an AI flag is set without a module.
+
+- OnBrick seed data now initializes artifact/glossary update owners and empty glossary lists, preventing project detail HTTP500. Existing demo databases have a targeted [repair procedure](docs/public-guide.md#validation).
+- The release gate now requires both real OnBrick smoke tests, exact project statistics and legacy audit repair checks on disposable services.
 
 See [CHANGELOG.md](CHANGELOG.md) for version-by-version changes.
 
@@ -36,7 +39,7 @@ and the example DB/JWT/admin/demo credentials are public values, not production 
 
 ## Upgrade precautions
 
-**v0.4.0 does not support automatic in-place upgrades from existing installations.**
+**v0.4.1 does not support automatic in-place upgrades from existing installations.**
 Use a separate, reviewed migration plan to preserve existing data; a clean installation is not a migration.
 
 Back up both the database and API files; follow [API data preservation](docs/deploy/api-data.md).
@@ -56,13 +59,15 @@ After `npm ci` in `src/frontend`, run `make build`, `make test` and `make lint`.
 (6 files, 51 cases), once, with missing tests treated as an error. It is not the complete
 internal product suite; backend/internal AI tests are not shipped.
 
-OnBrick browser tests require evaluation services, scenario seed data, a Playwright browser
-and a graphical desktop. Their setup clears evaluation Redis and the tests write data. Follow
-[public validation](docs/public-guide.md#validation); the unit results do not claim an OnBrick run.
+The two OnBrick smoke tests require evaluation services, scenario seed data and Chromium.
+The headless smoke configuration avoids shared setup and Redis flushes; the release gate runs
+it on disposable services in addition to the unit suite. It verifies Spec creation/readback and
+Channel content, not the entire multi-day scenario. Follow [public validation](docs/public-guide.md#validation).
 
 ## Known limitations
 
-The 2026-10-03 npm runtime audit reported no High/Critical findings and retained one Moderate
-DOMPurify finding plus one dependent Low Monaco finding. This is a dated dependency audit,
-not proof that the application is free of vulnerabilities. No model-quality claim applies to
-the free edition. Published docs and tests describe the limited scope above.
+The 2026-10-18 npm audit reported no High/Critical findings and retained seven Moderate
+findings across all dependencies, including two runtime findings in the Monaco/DOMPurify
+dependency chain. This is a dated dependency audit, not proof that the application is free
+of vulnerabilities. No model-quality claim applies to the free edition. Published docs and
+tests describe the limited scope above.

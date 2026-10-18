@@ -3,6 +3,7 @@
   Displays a single message with type-based styling
 -->
 <script lang="ts">
+  import { getMessageAuthor } from '../../utils/message-author';
   import { Icon, Button, Textarea } from '@sddp/ui';
   import {
     SurfaceCard,
@@ -44,6 +45,7 @@
     onDelete?: (message: Message) => void;
     onReply?: (message: Message) => void;
     onAskAi?: (message: Message) => void;
+    onRequestMemberReply?: (message: Message) => void;
     messages?: Message[];
     currentUserRole?: string;
   }
@@ -63,6 +65,7 @@
     onDelete,
     onReply,
     onAskAi,
+    onRequestMemberReply,
     messages = [],
     currentUserRole = 'Member',
   }: Props = $props();
@@ -128,11 +131,23 @@
   );
   const canReply = $derived(!!onReply);
   const canAskAi = $derived(!!onAskAi && !AI_MESSAGE_TYPES.includes(message.type));
-  const hasActions = $derived(canEdit || canDelete || canReply || canAskAi);
+  const canRequestMemberReply = $derived(
+    !!onRequestMemberReply &&
+      isOwn &&
+      !message.aiMemberId &&
+      !AI_MESSAGE_TYPES.includes(message.type)
+  );
+  const hasActions = $derived(
+    canEdit || canDelete || canReply || canAskAi || canRequestMemberReply
+  );
 
   // Find the message being replied to
   const replyToMessage = $derived(
-    message.replyToId ? (messages.find((m) => m.id === message.replyToId) ?? null) : null
+    message.replyToId
+      ? (messages.find(
+          (m) => m.id === message.replyToId && m.conversationId === message.conversationId
+        ) ?? null)
+      : null
   );
 
   // Close menu on outside click
@@ -224,15 +239,47 @@
         ? 'max-w-[72%]'
         : 'max-w-[88%]'
   );
+  const isMemberReply = $derived(!!message.aiMemberId || message.author?.kind === 'memberAgent');
+  const memberSources = $derived.by(() => {
+    if (!isMemberReply) return [];
+    const ids = [
+      ...new Set(
+        (message.references ?? []).flatMap((reference) => {
+          const match =
+            /^message:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
+              reference
+            );
+          return match ? [match[1]!.toLowerCase()] : [];
+        })
+      ),
+    ].slice(0, 32);
+    return ids.map((id) => ({
+      id,
+      source: messages.find(
+        (item) => item.id.toLowerCase() === id && item.conversationId === message.conversationId
+      ),
+    }));
+  });
+  const domainReferences = $derived(
+    (message.references ?? []).filter(
+      (reference) => !isMemberReply || !reference.toLowerCase().startsWith('message:')
+    )
+  );
   const automaticAnalysis = $derived(parseAutomaticAnalysis(message.type, message.content));
   const isAiMessage = $derived(AI_MESSAGE_TYPES.includes(message.type));
-  const senderAvatar = $derived(parseAvatarUrl(message.sender?.avatarUrl));
-  const avatarText = $derived(isAiMessage ? 'AI' : getAvatarInitials(message.sender?.name ?? ''));
+  const displayAuthor = $derived(getMessageAuthor(message));
+  const genericAiAuthor = $derived(
+    isAiMessage && !message.aiMemberId && message.author?.kind !== 'memberAgent'
+  );
+  const senderAvatar = $derived(parseAvatarUrl(displayAuthor?.avatarUrl));
+  const avatarText = $derived(
+    genericAiAuthor ? 'AI' : getAvatarInitials(displayAuthor?.name ?? '')
+  );
 
   const avatarBgStyle = $derived(
-    isAiMessage ? '' : `background-color: ${getAvatarHexColor(message.sender?.name ?? '')}`
+    genericAiAuthor ? '' : `background-color: ${getAvatarHexColor(displayAuthor?.name ?? '')}`
   );
-  const avatarBgClass = $derived(isAiMessage ? AI_AVATAR_COLOR : '');
+  const avatarBgClass = $derived(genericAiAuthor ? AI_AVATAR_COLOR : '');
   const slackBorderClass = $derived(
     isAiMessage
       ? 'border-dotted border-[var(--color-accent-primary)]'
@@ -263,8 +310,8 @@
   );
 
   const referenceItems = $derived.by(() => {
-    if (!message.references || message.references.length === 0) return [];
-    return message.references
+    if (domainReferences.length === 0) return [];
+    return domainReferences
       .filter((ref) => ref && ref.trim().length > 0)
       .map((ref) => parseReference(ref));
   });
@@ -388,6 +435,84 @@
   {/if}
 {/snippet}
 
+{#snippet memberReplyContext()}
+  {#if isMemberReply}
+    <section
+      aria-label="AI reply context"
+      class="mt-2 pt-2 border-t border-[var(--color-border-secondary)] text-xs text-[var(--color-text-muted)]"
+    >
+      <p>Check this AI reply against its source messages.</p>
+      <details class="mt-1">
+        <summary>Reply context and sources</summary>
+        <p>Accuracy has not been verified. Source links do not prove every claim.</p>
+        <p>
+          Undecided and information not found mean different things. Check the sources to
+          distinguish them.
+        </p>
+        {#if memberSources.length}
+          <p class="mt-2">Sources selected for this reply ({memberSources.length})</p>
+          <p>Showing current messages; they may have changed since this reply.</p>
+          <ol>
+            {#each memberSources as entry, index (entry.id)}
+              <li class="mt-2">
+                <span>Source {index + 1}</span>
+                {#if entry.source}
+                  {#if entry.source.isEdited}<p>Source message edited.</p>{/if}
+                  <pre
+                    class="mt-1 whitespace-pre-wrap break-words font-inherit max-h-80 overflow-auto">{entry
+                      .source.content}</pre>
+                {:else}
+                  <p>
+                    Source unavailable in the current view. Load earlier messages or check your
+                    access.
+                  </p>
+                {/if}
+              </li>
+            {/each}
+          </ol>
+        {:else}
+          <p>
+            No source links were saved with this reply. This does not mean that no evidence exists.
+          </p>
+        {/if}
+        {#if replyToMessage}
+          <details class="mt-1">
+            <summary>View request message</summary>
+            <p>
+              Current request message; it may have changed since this reply. The request is context,
+              not proof of the answer.
+            </p>
+            {#if replyToMessage.isEdited}<p>Request message edited.</p>{/if}
+            <pre
+              class="mt-1 whitespace-pre-wrap break-words font-inherit max-h-80 overflow-auto">{replyToMessage.content}</pre>
+          </details>
+        {:else}
+          <p>
+            Request message unavailable in the current view. Load earlier messages or check your
+            access. This does not mean the information is absent or undecided.
+          </p>
+        {/if}
+      </details>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet memberReplyAction()}
+  {#if canRequestMemberReply}
+    <Button
+      variant="unstyled"
+      class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] text-left"
+      onclick={(event) => {
+        event.stopPropagation();
+        showMenu = false;
+        onRequestMemberReply?.(message);
+      }}
+    >
+      <Icon name="sparkles" size="xs" /> Request AI member reply
+    </Button>
+  {/if}
+{/snippet}
+
 {#if viewMode === 'log'}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -418,6 +543,7 @@
           rounded-md shadow-lg py-1 min-w-[120px]"
         >
           {@render askAiAction()}
+          {@render memberReplyAction()}
           {#if canReply}
             <Button
               variant="unstyled"
@@ -466,7 +592,7 @@
 
     <div class="w-16 flex-shrink-0 text-right">
       <div class="text-xs text-[var(--color-text-secondary)] font-medium">
-        {message.sender?.name ?? 'Unknown'}
+        {displayAuthor?.name ?? 'Unknown'}
       </div>
       <div class="text-[0.6875rem] text-[var(--color-text-muted)]">{formattedTime}</div>
     </div>
@@ -493,7 +619,9 @@
         {#if replyToMessage}
           <div class="reply-quote mb-1">
             <Icon name="corner-up-left" size="xs" class="reply-quote__icon" />
-            <span class="reply-quote__author">{replyToMessage.sender?.name ?? 'Unknown'}</span>
+            <span class="reply-quote__author"
+              >{getMessageAuthor(replyToMessage)?.name ?? 'Unknown'}</span
+            >
             <span class="reply-quote__text"
               >{replyToMessage.content.length > 80
                 ? replyToMessage.content.slice(0, 80) + '…'
@@ -664,10 +792,11 @@
               {@html renderMarkdown(message.content)}
             </div>
           {/if}
+          {@render memberReplyContext()}
           {#if isAiMessage}
             <ConversationEvidence
               messageId={message.id}
-              references={message.references ?? []}
+              references={domainReferences}
               compactUnresolved={!!automaticAnalysis}
               {projectId}
               {tenantId}
@@ -764,6 +893,7 @@
           rounded-md shadow-lg py-1 min-w-[120px]"
         >
           {@render askAiAction()}
+          {@render memberReplyAction()}
           {#if canReply}
             <Button
               variant="unstyled"
@@ -813,7 +943,7 @@
     <div class="flex items-center gap-2 text-xs mb-2">
       <Icon name={style.icon} size="xs" class={style.textColor} />
       <span class="text-sm font-medium text-[var(--color-text-primary)]">
-        {message.sender?.name ?? 'Unknown'}
+        {displayAuthor?.name ?? 'Unknown'}
       </span>
       <span class="text-[var(--color-text-muted)]">{formattedTime}</span>
       <span class="px-1.5 py-0.5 rounded border {style.borderColor} {style.textColor}">
@@ -836,7 +966,9 @@
     {#if replyToMessage}
       <div class="reply-quote mb-2">
         <Icon name="corner-up-left" size="xs" class="reply-quote__icon" />
-        <span class="reply-quote__author">{replyToMessage.sender?.name ?? 'Unknown'}</span>
+        <span class="reply-quote__author"
+          >{getMessageAuthor(replyToMessage)?.name ?? 'Unknown'}</span
+        >
         <span class="reply-quote__text"
           >{replyToMessage.content.length > 80
             ? replyToMessage.content.slice(0, 80) + '…'
@@ -1010,10 +1142,11 @@
           {@html renderMarkdown(message.content)}
         </div>
       {/if}
+      {@render memberReplyContext()}
       {#if isAiMessage}
         <ConversationEvidence
           messageId={message.id}
-          references={message.references ?? []}
+          references={domainReferences}
           compactUnresolved={!!automaticAnalysis}
           {projectId}
           {tenantId}
@@ -1116,109 +1249,110 @@
         ? 'items-start'
         : 'items-end'}"
     >
-      <!-- Header: actions have their own slot outside the bubble. -->
-      <div class="flex items-start gap-2 mb-1 w-full {isOwn ? '' : 'flex-row-reverse'}">
-        <div
-          class="flex flex-1 min-w-0 flex-wrap items-center gap-x-2 gap-y-1 {isOwn
-            ? ''
-            : 'flex-row-reverse'}"
-        >
-          <span class="text-sm font-medium text-[var(--color-text-primary)]">
-            {message.sender?.name ?? 'Unknown'}
+      <!-- Keep the timestamp and actions together beside the author. -->
+      <div
+        class="flex min-w-0 w-full flex-wrap items-center gap-x-2 gap-y-1 mb-1 {isOwn
+          ? ''
+          : 'flex-row-reverse'}"
+      >
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">
+          {displayAuthor?.name ?? 'Unknown'}
+        </span>
+        <MessageTypeIcon type={message.type} size="sm" />
+        {#if isAiMessage}
+          <span
+            aria-label="AI-generated message"
+            class="px-1.5 py-0.5 rounded border border-dotted border-[var(--color-accent-primary)] text-[0.625rem] uppercase text-[var(--color-accent-text)]"
+          >
+            AI
           </span>
-          <MessageTypeIcon type={message.type} size="sm" />
-          {#if isAiMessage}
-            <span
-              aria-label="AI-generated message"
-              class="px-1.5 py-0.5 rounded border border-dotted border-[var(--color-accent-primary)] text-[0.625rem] uppercase text-[var(--color-accent-text)]"
-            >
-              AI
-            </span>
-          {/if}
+        {/if}
+        <div class="inline-flex shrink-0 items-center gap-2 {isOwn ? '' : 'flex-row-reverse'}">
           <span class="text-xs text-[var(--color-text-muted)]">
             {formattedTime}
           </span>
-          {#if message.isEdited}
-            <span class="text-xs text-[var(--color-text-muted)] italic">(edited)</span>
-          {/if}
-        </div>
-        <div class="relative shrink-0">
-          <!-- Actions menu button (hover) -->
-          {#if hasActions && !isEditing && !showDeleteConfirm}
-            <Button
-              variant="unstyled"
-              type="button"
-              class="{showMenu
-                ? 'opacity-100'
-                : 'opacity-0'} group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100
-              w-6 h-6 flex items-center justify-center rounded
-              bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-              text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]
-              shadow-sm transition-all z-10"
-              title="Message actions"
-              aria-expanded={showMenu}
-              onclick={handleMenuToggle}
-            >
-              <Icon name="more-horizontal" size="xs" />
-            </Button>
-
-            <!-- Dropdown menu -->
-            {#if showMenu}
-              <div
-                class="absolute top-full mt-1 {isOwn ? 'right-0' : 'left-0'} z-20
-              bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-              rounded-md shadow-lg py-1 min-w-[120px]"
+          <div class="relative shrink-0">
+            <!-- Actions menu button (hover) -->
+            {#if hasActions && !isEditing && !showDeleteConfirm}
+              <Button
+                variant="unstyled"
+                type="button"
+                class="{showMenu
+                  ? 'opacity-100'
+                  : 'opacity-0'} group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100
+                w-6 h-6 flex items-center justify-center rounded
+                bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
+                text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]
+                shadow-sm transition-all z-10"
+                title="Message actions"
+                aria-expanded={showMenu}
+                onclick={handleMenuToggle}
               >
-                {@render askAiAction()}
-                {#if canReply}
-                  <Button
-                    variant="unstyled"
-                    type="button"
-                    class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
-                    hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      handleReply();
-                    }}
-                  >
-                    <Icon name="corner-up-left" size="xs" />
-                    Reply
-                  </Button>
-                {/if}
-                {#if canEdit}
-                  <Button
-                    variant="unstyled"
-                    type="button"
-                    class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
-                    hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      handleStartEdit();
-                    }}
-                  >
-                    <Icon name="pencil" size="xs" />
-                    Edit
-                  </Button>
-                {/if}
-                {#if canDelete}
-                  <Button
-                    variant="unstyled"
-                    type="button"
-                    class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-error-600)]
-                    hover:bg-[var(--color-error-50)] transition-colors text-left"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      handleStartDelete();
-                    }}
-                  >
-                    <Icon name="trash-2" size="xs" />
-                    Delete
-                  </Button>
-                {/if}
-              </div>
+                <Icon name="more-horizontal" size="xs" />
+              </Button>
+
+              <!-- Dropdown menu -->
+              {#if showMenu}
+                <div
+                  class="absolute top-full mt-1 {isOwn ? 'left-0' : 'right-0'} z-20
+                bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
+                rounded-md shadow-lg py-1 min-w-[120px]"
+                >
+                  {@render askAiAction()}
+                  {@render memberReplyAction()}
+                  {#if canReply}
+                    <Button
+                      variant="unstyled"
+                      type="button"
+                      class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
+                      hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleReply();
+                      }}
+                    >
+                      <Icon name="corner-up-left" size="xs" />
+                      Reply
+                    </Button>
+                  {/if}
+                  {#if canEdit}
+                    <Button
+                      variant="unstyled"
+                      type="button"
+                      class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)]
+                      hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit();
+                      }}
+                    >
+                      <Icon name="pencil" size="xs" />
+                      Edit
+                    </Button>
+                  {/if}
+                  {#if canDelete}
+                    <Button
+                      variant="unstyled"
+                      type="button"
+                      class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-error-600)]
+                      hover:bg-[var(--color-error-50)] transition-colors text-left"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleStartDelete();
+                      }}
+                    >
+                      <Icon name="trash-2" size="xs" />
+                      Delete
+                    </Button>
+                  {/if}
+                </div>
+              {/if}
             {/if}
-          {/if}
+          </div>
         </div>
+        {#if message.isEdited}
+          <span class="text-xs text-[var(--color-text-muted)] italic">(edited)</span>
+        {/if}
       </div>
 
       <!-- Bubble -->
@@ -1231,7 +1365,9 @@
         {#if replyToMessage}
           <div class="reply-quote mb-1.5">
             <Icon name="corner-up-left" size="xs" class="reply-quote__icon" />
-            <span class="reply-quote__author">{replyToMessage.sender?.name ?? 'Unknown'}</span>
+            <span class="reply-quote__author"
+              >{getMessageAuthor(replyToMessage)?.name ?? 'Unknown'}</span
+            >
             <span class="reply-quote__text"
               >{replyToMessage.content.length > 80
                 ? replyToMessage.content.slice(0, 80) + '…'
@@ -1408,10 +1544,11 @@
           {/if}
 
           <!-- References -->
+          {@render memberReplyContext()}
           {#if isAiMessage}
             <ConversationEvidence
               messageId={message.id}
-              references={message.references ?? []}
+              references={domainReferences}
               compactUnresolved={!!automaticAnalysis}
               {projectId}
               {tenantId}

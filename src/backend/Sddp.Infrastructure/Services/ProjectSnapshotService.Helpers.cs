@@ -10,14 +10,11 @@ namespace Sddp.Infrastructure.Services;
 public partial class ProjectSnapshotService
 {
     private async Task<List<Dictionary<string, object?>>> QueryRowsAsync(
-        string sql, object param)
+        string sql, object param, IDbTransaction transaction)
     {
-        var rows = await (_connection.QueryAsync(sql, param)).ConfigureAwait(false);
-        return rows.Select(row =>
-        {
-            var dict = (IDictionary<string, object?>)row;
-            return new Dictionary<string, object?>(dict);
-        }).ToList();
+        var rows = await _connection.QueryAsync<string>(
+            $"SELECT row_to_json(snapshot_row)::text FROM ({sql}) snapshot_row", param, transaction).ConfigureAwait(false);
+        return rows.Select(row => JsonSerializer.Deserialize<Dictionary<string, object?>>(row)!).ToList();
     }
 
     private async Task<List<Guid>> QueryIdsAsync(
@@ -60,51 +57,33 @@ public partial class ProjectSnapshotService
 
     private async Task InsertRowsAsync(
         string table, List<Dictionary<string, object?>> rows,
-        string? nullifySelfRefCol, IDbTransaction transaction)
+        string? nullifySelfRefCol, IDbTransaction transaction, bool legacyJson)
     {
         if (rows.Count == 0) return;
-
-        // Use the first row to determine columns
-        var columns = rows[0].Keys.ToList();
-
-        foreach (var row in rows)
+        var metadata = (await _connection.QueryAsync<(string Name, string Type)>(
+            "SELECT column_name AS Name, udt_name AS Type FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=@table",
+            new { table }, transaction).ConfigureAwait(false)).ToDictionary(column => column.Name, column => column.Type);
+        foreach (var original in rows)
         {
-            var colNames = new List<string>();
-            var paramNames = new List<string>();
-            var parameters = new DynamicParameters();
-            var paramIndex = 0;
-
-            foreach (var col in columns)
+            var row = new Dictionary<string, object?>(original);
+            foreach (var scopeColumn in new[] { "tenant_id", "project_id" })
+                if (metadata.ContainsKey(scopeColumn) && !row.ContainsKey(scopeColumn))
+                    throw new InvalidOperationException($"Missing snapshot scope: {table}.{scopeColumn}.");
+            foreach (var column in row.Keys.ToArray())
             {
-                if (!row.ContainsKey(col)) continue;
-
-                var val = row[col];
-                var paramName = $"@p{paramIndex}";
-
-                // Nullify self-ref on first pass
-                if (col == nullifySelfRefCol)
-                    val = null;
-
-                // Handle JsonElement deserialization
-                val = NormalizeValue(val);
-
-                colNames.Add(col);
-                paramNames.Add(paramName);
-                parameters.Add(paramName, val);
-                paramIndex++;
+                if (!metadata.TryGetValue(column, out var type))
+                    throw new InvalidOperationException($"Unknown snapshot column: {table}.{column}.");
+                if (legacyJson && type is "json" or "jsonb")
+                {
+                    var text = row[column] is JsonElement { ValueKind: JsonValueKind.String } value
+                        ? value.GetString() : row[column] as string;
+                    if (text is not null) row[column] = JsonSerializer.Deserialize<JsonElement>(text);
+                }
             }
-
-            var sql = $"INSERT INTO {table} ({string.Join(", ", colNames)}) VALUES ({string.Join(", ", paramNames)}) ON CONFLICT DO NOTHING";
-
-            try
-            {
-                await (_connection.ExecuteAsync(sql, parameters, transaction)).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to insert row into {Table}", table);
-                // Continue with other rows
-            }
+            if (nullifySelfRefCol is not null && row.ContainsKey(nullifySelfRefCol)) row[nullifySelfRefCol] = null;
+            var columns = string.Join(", ", row.Keys.Select(column => "\"" + column.Replace("\"", "\"\"") + "\""));
+            await _connection.ExecuteAsync($"INSERT INTO {table} ({columns}) SELECT {columns} FROM jsonb_populate_recordset(NULL::{table}, @Json::jsonb)",
+                new { Json = JsonSerializer.Serialize(new[] { row }) }, transaction).ConfigureAwait(false);
         }
     }
 
@@ -112,19 +91,8 @@ public partial class ProjectSnapshotService
         string table, List<Dictionary<string, object?>> rows,
         string selfRefCol, IDbTransaction transaction)
     {
-        foreach (var row in rows)
-        {
-            if (!row.TryGetValue(selfRefCol, out var selfRefVal) || selfRefVal is null)
-                continue;
-
-            var normalizedVal = NormalizeValue(selfRefVal);
-            if (normalizedVal is null) continue;
-
-            var idVal = NormalizeValue(row["id"]);
-
-            var sql = $"UPDATE {table} SET {selfRefCol} = @SelfRef WHERE id = @Id";
-            await (_connection.ExecuteAsync(sql, new { SelfRef = normalizedVal, Id = idVal }, transaction)).ConfigureAwait(false);
-        }
+        await _connection.ExecuteAsync($"UPDATE {table} target SET {selfRefCol}=saved.{selfRefCol} FROM jsonb_populate_recordset(NULL::{table}, @Json::jsonb) saved WHERE target.id=saved.id",
+            new { Json = JsonSerializer.Serialize(rows) }, transaction).ConfigureAwait(false);
     }
 
     internal static object? NormalizeValue(object? val)

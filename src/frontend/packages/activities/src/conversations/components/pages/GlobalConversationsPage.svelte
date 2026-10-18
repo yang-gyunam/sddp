@@ -54,6 +54,7 @@
     ParticipantsPanel,
   } from '../sections';
   import ChannelView from '../sections/ChannelView.svelte';
+  import { createProjectParticipantExtension } from '../../../projects/stores/project-participant-extension.svelte';
 
   interface Props {
     tenantId?: string;
@@ -91,7 +92,6 @@
   let selectedConversation = $state<ConversationSummary | null>(null);
   let selectedConversationId = $state<string | null>(null);
   let searchQuery = $state('');
-  let lastLoadedConversationId = $state<string | null>(null);
 
   // Create mode state
   type CreateMode = 'channel' | 'forum' | 'dm' | null;
@@ -196,6 +196,12 @@
     if (selectedConversation.type === 'dm') return 'dm' as const;
     return isForumSelected ? ('forum' as const) : ('channel' as const);
   });
+  const memberExtension = createProjectParticipantExtension(() => ({
+    tenantId,
+    projectId: selectedConversation?.projectId ?? '',
+    conversationId: selectedConversationKind === 'channel' ? (selectedConversation?.id ?? '') : '',
+    userId: currentUserId,
+  }));
 
   $effect(() => {
     if (!activeConversationTabId) return;
@@ -463,16 +469,33 @@
     };
   });
 
-  // Load participants when conversation changes (for right-panel ParticipantsPanel)
+  const participantScope = $derived(
+    JSON.stringify([
+      tenantId,
+      currentUserId,
+      selectedConversationId,
+      selectedConversation?.projectId,
+    ])
+  );
+  let participantRequest = 0;
+  // Both human and AI metadata must remain within the selected account and conversation.
   $effect(() => {
-    if (!selectedConversationId || selectedConversationId === lastLoadedConversationId) return;
-    lastLoadedConversationId = selectedConversationId;
-    currentChannel = null;
-    untrack(() => loadConversationParticipants(selectedConversationId!));
+    void participantScope;
+    untrack(() => {
+      currentChannel = null;
+      if (selectedConversationId) void loadConversationParticipants(selectedConversationId);
+    });
+    return () => {
+      participantRequest++;
+    };
   });
 
   async function loadConversationParticipants(conversationId: string) {
     if (!tenantId) return;
+    const scope = participantScope;
+    const request = ++participantRequest;
+    const name = selectedConversation?.name ?? 'Channel';
+    const isCurrent = () => request === participantRequest && scope === participantScope;
     loading = true;
 
     const conversationService = createConversationService(
@@ -482,9 +505,10 @@
 
     try {
       const members = await conversationService.getConversationMembers(conversationId);
+      if (!isCurrent()) return;
       currentChannel = {
         id: conversationId,
-        topic: selectedConversation?.name ?? 'Channel',
+        topic: name,
         status: 'Active',
         participantCount: members.length,
         messageCount: 0,
@@ -493,9 +517,9 @@
         participants: members,
       };
     } catch {
-      currentChannel = null;
+      if (isCurrent()) currentChannel = null;
     } finally {
-      loading = false;
+      if (isCurrent()) loading = false;
     }
   }
 
@@ -858,6 +882,8 @@
             channel={currentChannel}
             {currentUserId}
             {tenantId}
+            projectId={selectedConversation?.projectId ?? ''}
+            {memberExtension}
             conversationId={selectedConversationId ?? ''}
             onRemoveMember={handleRemoveParticipant}
             onSendInvitation={handleSendInvitation}

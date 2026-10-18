@@ -63,6 +63,8 @@ export interface ConversationHubCallbacks {
   /** AI events are untrusted refresh hints; consumers fetch authoritative run state. */
   onAiRunPreviewEvent?: (event: unknown) => void;
   onAiRunEvent?: (event: unknown) => void;
+  /** Scoped message hint; never a trusted message body or a human message event. */
+  onMessageAvailable?: (event: unknown) => void;
   onNewMessage?: (message: Message) => void;
   onMessageEdited?: (message: Message) => void;
   onMessageDeleted?: (messageId: string) => void;
@@ -139,6 +141,10 @@ export class ConversationHubService {
         this.invokeCallbacks('onAiRunEvent', payload)
       );
     }
+
+    this.connection.on('ConversationMessageAvailable', (payload: unknown) =>
+      this.invokeCallbacks('onMessageAvailable', payload)
+    );
 
     this.connection.on('AiRunPreviewUpdated', (payload: unknown) =>
       this.invokeCallbacks('onAiRunPreviewEvent', payload)

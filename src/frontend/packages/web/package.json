@@ -1,7 +1,7 @@
 {
   "name": "@sddp/web",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,svelte,css,html}\"",
     "test": "vitest run --config vitest.unit.config.ts",
     "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:e2e:smoke": "playwright test --config=playwright.smoke.config.ts",
     "test:e2e": "playwright test --config=playwright.showcase.config.ts",
     "test:e2e:ui": "playwright test --ui --config=playwright.showcase.config.ts",
     "test:e2e:L0": "playwright test L0/",

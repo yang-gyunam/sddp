@@ -14,7 +14,12 @@
     contradicts: 'Conflicts',
     extends: 'Extends',
     unrelated: 'Unrelated',
+    uncertain: 'Uncertain — more information needed',
   };
+  const hasUncertain = $derived(
+    analysis.kind === 'reminder' &&
+      analysis.relatedDecisions.some((decision) => decision.relationship === 'uncertain')
+  );
 </script>
 
 <section
@@ -48,7 +53,9 @@
       </p>
     </div>
     <p class="text-xs text-[var(--color-text-secondary)]">
-      {analysis.hasConflicts ? 'AI reported a conflict.' : 'AI reported no conflicts.'}
+      {#if analysis.hasConflicts}AI reported a conflict.
+      {:else if !hasUncertain}AI reported no conflicts.{/if}
+      {#if hasUncertain}Some relationships could not be determined. Review the missing information.{/if}
     </p>
     <div>
       <h4 class="text-xs font-semibold text-[var(--color-text-secondary)]">Related decisions</h4>

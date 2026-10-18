@@ -505,10 +505,12 @@ public sealed record GetPinnedConversationMessagesQuery(
 public sealed class GetPinnedConversationMessagesQueryHandler : IRequestHandler<GetPinnedConversationMessagesQuery, IEnumerable<ConversationMessageDto>?>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMessageAuthorResolver? _authors;
 
-    public GetPinnedConversationMessagesQueryHandler(IUnitOfWork unitOfWork)
+    public GetPinnedConversationMessagesQueryHandler(IUnitOfWork unitOfWork, IMessageAuthorResolver? authors = null)
     {
         _unitOfWork = unitOfWork;
+        _authors = authors;
     }
 
     public async Task<IEnumerable<ConversationMessageDto>?> Handle(GetPinnedConversationMessagesQuery request, CancellationToken cancellationToken)
@@ -554,6 +556,10 @@ public sealed class GetPinnedConversationMessagesQueryHandler : IRequestHandler<
             .Take(request.Limit)
             .ToList();
 
+        var authors = _authors is null ? new Dictionary<Guid, MessageAuthorDto>()
+            : await _authors.ResolveAsync(request.TenantId.ToGuid(), conversation.ProjectId?.ToGuid(),
+                request.ConversationId.ToGuid(), ordered.Select(m => m.Id.ToGuid()).ToArray(), cancellationToken);
+
         var users = await (userRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
         var userMap = users.ToDictionary(u => u.Id, u => u);
 
@@ -561,7 +567,7 @@ public sealed class GetPinnedConversationMessagesQueryHandler : IRequestHandler<
         {
             var user = userMap.TryGetValue(m.SenderId, out var u) ? u : null;
             var sender = new UserRefDto(m.SenderId.ToString(), user?.DisplayName ?? "Unknown", user?.AvatarUrl);
-            return ConversationMapping.MapConversationMessageDto(m, sender);
+            return ConversationMapping.MapConversationMessageDto(m, sender, authors.GetValueOrDefault(m.Id.ToGuid()));
         });
     }
 }

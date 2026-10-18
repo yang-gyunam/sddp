@@ -5,8 +5,8 @@
    * Right panel for viewing and inviting project members
    */
 
-  import { untrack } from 'svelte';
-  import { formatDateTime, getAuthState } from '@sddp/shell';
+  import { untrack, type Snippet } from 'svelte';
+  import { Avatar, formatDateTime, getAuthState } from '@sddp/shell';
   import { Icon, IconButton, Select, Button, SearchField, Spinner } from '@sddp/ui';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import type { ProjectMember } from '../../../projects/types/project.types';
@@ -17,27 +17,38 @@
   const MAX_PROJECT_MEMBERS = 10;
 
   type PanelMode = 'view' | 'invite';
+  type MemberDetails = Pick<ProjectMember, 'displayName' | 'isOnline'> & {
+    userId?: string;
+    role: string | null;
+    lastActivityAt?: string | null;
+  };
 
   interface Props {
     mode: PanelMode;
-    member: ProjectMember | null;
-    memberCount: number;
-    existingMemberIds: string[];
+    member?: MemberDetails | null;
+    memberCount?: number;
+    existingMemberIds?: string[];
     onClose: () => void;
-    onInvited: (userId: string, role: string) => void | Promise<void>;
-    onRoleChanged: (userId: string, newRole: string) => void;
-    onRemoved: (userId: string) => void;
-    onDeactivated: (userId: string) => void;
+    headerActions?: Snippet;
+    onInvited?: (userId: string, role: string) => void | Promise<void>;
+    onRoleChanged?: (userId: string, newRole: string) => void;
+    onRoleSelected?: (newRole: string) => void | Promise<void>;
+    roleChangeDisabled?: boolean;
+    onRemoved?: (userId: string) => void;
+    onDeactivated?: (userId: string) => void;
   }
 
   let {
     mode,
-    member,
-    memberCount,
-    existingMemberIds,
+    member = null,
+    memberCount = 0,
+    existingMemberIds = [],
     onClose,
+    headerActions,
     onInvited,
     onRoleChanged,
+    onRoleSelected,
+    roleChangeDisabled = false,
     onRemoved,
     onDeactivated,
   }: Props = $props();
@@ -55,6 +66,8 @@
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const isAtLimit = $derived(memberCount >= MAX_PROJECT_MEMBERS);
+  const systemRole = $derived(!!member?.role && isSystemRole(member.role));
+  const roleLabel = $derived(member?.role ? getRoleLabel(member.role) : '-');
 
   // Reset invite form when mode becomes invite
   $effect(() => {
@@ -121,7 +134,7 @@
   }
 
   async function handleInvite() {
-    if (!validateInviteForm()) return;
+    if (!onInvited || !validateInviteForm()) return;
 
     loading = true;
     try {
@@ -132,30 +145,36 @@
   }
 
   function handleRoleChange(newRole: string) {
-    if (!member) return;
+    if (roleChangeDisabled || systemRole) return;
+    if (onRoleSelected) {
+      void onRoleSelected(newRole);
+      return;
+    }
+    if (!member?.userId || !onRoleChanged) return;
     onRoleChanged(member.userId, newRole);
   }
 
   function handleDeactivate() {
-    if (!member) return;
+    if (!member?.userId || !onDeactivated) return;
     if (!confirm(`Deactivate ${member.displayName}? They will lose project access.`)) return;
     onDeactivated(member.userId);
   }
 
   function handleRemove() {
-    if (!member) return;
+    if (!member?.userId || !onRemoved) return;
     if (!confirm(`Remove ${member.displayName} from the project? This action cannot be undone.`))
       return;
     onRemoved(member.userId);
   }
 
-  function formatDateStr(dateStr?: string): string {
+  function formatDateStr(dateStr?: string | null): string {
+    if (dateStr === null) return '-';
     if (!dateStr) return 'Never';
     return formatDateTime(dateStr, { month: 'short', year: undefined });
   }
 </script>
 
-<div class="panel">
+<section class="panel" aria-label={mode === 'view' ? 'Member details' : 'Add member'}>
   {#if mode === 'view' && member}
     <DetailHeader>
       {#snippet leading()}
@@ -163,19 +182,21 @@
       {/snippet}
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">Member Details</span>
       {#snippet actions()}
-        {#if !isSystemRole(member.role)}
+        {#if headerActions}
+          {@render headerActions()}
+        {:else if !systemRole && member.userId}
           <IconButton
             icon="lock"
             variant="warn"
             onclick={handleDeactivate}
-            disabled={loading}
+            disabled={loading || !onDeactivated}
             title="Deactivate member"
           />
           <IconButton
             icon="trash"
             variant="danger"
             onclick={handleRemove}
-            disabled={loading}
+            disabled={loading || !onRemoved}
             title="Remove member"
           />
         {/if}
@@ -275,7 +296,7 @@
     {:else if mode === 'view' && member}
       <!-- View Mode -->
       <div class="member-header">
-        <div class="member-avatar">{member.displayName.charAt(0).toUpperCase()}</div>
+        <Avatar name={member.displayName} size="lg" />
         <div class="member-info">
           <h4 class="member-name">{member.displayName}</h4>
           <div class="member-status-row">
@@ -283,15 +304,13 @@
             <span class="status-text">{member.isOnline ? 'Online' : 'Offline'}</span>
           </div>
         </div>
-        <span class="role-badge" class:system={isSystemRole(member.role)}
-          >{getRoleLabel(member.role)}</span
-        >
+        <span class="role-badge" class:system={systemRole}>{roleLabel}</span>
       </div>
 
       <div class="detail-grid">
         <div class="detail-item">
           <span class="detail-label">Role</span>
-          <span class="detail-value">{getRoleLabel(member.role)}</span>
+          <span class="detail-value">{roleLabel}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">Last Activity</span>
@@ -300,7 +319,7 @@
       </div>
 
       <!-- Role Change (system roles cannot be reassigned — see isSystemRole) -->
-      {#if !isSystemRole(member.role)}
+      {#if !systemRole}
         <div class="role-section">
           <h4 class="section-title">Change Role</h4>
           <div class="role-options">
@@ -308,6 +327,8 @@
               <Button
                 variant="unstyled"
                 class="role-option {member.role === role.value ? 'active' : ''}"
+                disabled={roleChangeDisabled ||
+                  (!onRoleSelected && (!member.userId || !onRoleChanged))}
                 onclick={() => handleRoleChange(role.value)}
               >
                 {role.label}
@@ -318,7 +339,7 @@
       {/if}
     {/if}
   </div>
-</div>
+</section>
 
 <style>
   @import '../../styles/detail-panel.css';
@@ -379,20 +400,6 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-  }
-
-  .member-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-accent-primary, #3b82f6);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 600;
-    flex-shrink: 0;
   }
 
   .member-info {

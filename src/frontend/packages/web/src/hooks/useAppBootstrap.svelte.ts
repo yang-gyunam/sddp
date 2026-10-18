@@ -37,7 +37,7 @@ type OpenDmFromNotificationDetail = {
 };
 
 export interface AppBootstrapParams {
-  onOpenTabFromPath: (path: string) => boolean;
+  onOpenTabFromPath: (path: string) => boolean | Promise<boolean>;
   onOpenDirectMessageByContext: (
     conversationId: string,
     participantName: string,
@@ -75,12 +75,12 @@ export function useAppBootstrap(params: AppBootstrapParams) {
     }
   }
 
-  function navigateToReturnUrl() {
+  async function navigateToReturnUrl() {
     const path = getReturnUrlFromQuery();
     if (!path) return;
     clearReturnUrlFromQuery();
     RouterService.replace(path);
-    params.onOpenTabFromPath(path.split('?')[0] ?? path);
+    await params.onOpenTabFromPath(path.split('?')[0] ?? path);
   }
 
   function handleDeepLinkRedirect() {

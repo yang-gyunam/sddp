@@ -3,6 +3,7 @@
   Unified chat input with textarea, send button, bottom toolbar, and markdown toolbar/context menu
 -->
 <script lang="ts">
+  import { getMessageAuthor } from '../../utils/message-author';
   import { untrack } from 'svelte';
   import { Icon, Button, IconButton, Spinner, Textarea } from '@sddp/ui';
   import { ContextMenu, renderMarkdown, toast } from '@sddp/shell';
@@ -468,7 +469,9 @@
           class="text-[var(--color-accent-text)] flex-shrink-0"
         />
         <span class="text-xs text-[var(--color-text-secondary)]">
-          Replying to <span class="font-semibold">{replyTo.sender?.name ?? 'Unknown'}</span>
+          Replying to <span class="font-semibold"
+            >{getMessageAuthor(replyTo)?.name ?? 'Unknown'}</span
+          >
         </span>
         <span class="text-xs text-[var(--color-text-muted)] truncate flex-1 min-w-0">
           {replyTo.content.length > 60 ? replyTo.content.slice(0, 60) + '…' : replyTo.content}

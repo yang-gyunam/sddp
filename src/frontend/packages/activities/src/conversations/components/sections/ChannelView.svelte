@@ -11,6 +11,8 @@
   import ConversationAiRunPanel from '../../../ai/components/idioms/ConversationAiRunPanel.svelte';
   import { createConversationAiRun } from '../../../ai/stores/conversation-ai-run.svelte';
   import MessageInput from '../idioms/MessageInput.svelte';
+  import { createMemberConversationReplies } from '../../../ai/stores/member-conversation-replies.svelte';
+  import { createProjectParticipantExtension } from '../../../projects/stores/project-participant-extension.svelte';
   import { ConversationHeader } from '../idioms';
   import ParticipantsPanel from './ParticipantsPanel.svelte';
   import { getAuthState } from '@sddp/shell/auth';
@@ -104,6 +106,12 @@
   let nextCursor = $state<string | null>(null);
   let hasMore = $state(false);
   let currentUserId = $state<string | null>(null);
+  const memberExtension = createProjectParticipantExtension(() => ({
+    tenantId: tenantId ?? getAuthState().user?.tenantId ?? '',
+    projectId: projectId ?? '',
+    conversationId: !hideParticipantPanel && conversationType === 'Channel' ? conversationId : '',
+    userId: currentUserId ?? '',
+  }));
   let messagesContainer: HTMLDivElement;
   let viewMode = $state<ConversationViewMode>(getConversationViewMode('chat'));
   let hubConnected = $state(false);
@@ -223,7 +231,9 @@
 
   // Deduplicate messages by ID (real-time hub can deliver duplicates)
   const uniqueMessages = $derived(
-    messages.filter((msg, idx, arr) => arr.findIndex((m) => m.id === msg.id) === idx)
+    messages
+      .filter((msg, idx, arr) => arr.findIndex((m) => m.id === msg.id) === idx)
+      .map((message) => memberReplies.decorate(message))
   );
 
   /** Whether status controls should be shown (Channels via sourceType or conversationType, DMs via conversationType) */
@@ -246,6 +256,23 @@
     }),
     async (isCurrent, passiveOutputId) => {
       await loadMessages(true, isCurrent, true, passiveOutputId);
+      return messages;
+    }
+  );
+
+  const memberReplies = createMemberConversationReplies(
+    () => ({
+      tenantId: tenantId ?? getAuthState().user?.tenantId ?? '',
+      projectId: projectId ?? '',
+      conversationId:
+        conversationType === 'Channel' ||
+        (conversationType === undefined && sourceType === 'channel')
+          ? conversationId
+          : '',
+      readonly: isChannelReadOnly,
+    }),
+    async (isCurrent, outputIds) => {
+      await loadMessages(true, isCurrent, true, outputIds);
       return messages;
     }
   );
@@ -386,6 +413,7 @@
       id: message.id,
       conversationId: message.conversationId,
       sender: message.sender,
+      author: message.author,
       type: message.type,
       content: message.content,
       references: message.references ?? [],
@@ -500,9 +528,10 @@
     reset = false,
     isCurrent = () => true,
     propagateError = false,
-    passiveOutputId?: string
+    passiveOutputId?: string | readonly string[]
   ): Promise<void> {
     const targetConversationId = conversationId;
+    const outputIds = typeof passiveOutputId === 'string' ? [passiveOutputId] : passiveOutputId;
     if (!propagateError) {
       loading = true;
       error = null;
@@ -520,7 +549,7 @@
         }
         const batch = page.messages.map(mapConversationMessage).reverse();
         if (passiveOutputId) {
-          if (!batch.some((message) => message.id === passiveOutputId)) return;
+          if (outputIds?.length && !batch.some((message) => outputIds.includes(message.id))) return;
           const existing = new Set(messages.map((message) => message.id));
           messages = [...messages, ...batch.filter((message) => !existing.has(message.id))];
         } else {
@@ -537,7 +566,7 @@
         }
         const batch = mapChannelMessages(page.messages).reverse();
         if (passiveOutputId) {
-          if (!batch.some((message) => message.id === passiveOutputId)) return;
+          if (outputIds?.length && !batch.some((message) => outputIds.includes(message.id))) return;
           const existing = new Set(messages.map((message) => message.id));
           messages = [...messages, ...batch.filter((message) => !existing.has(message.id))];
         } else {
@@ -575,11 +604,13 @@
         if (!messages.some((item) => item.id === mapped.id)) {
           messages = [...messages, mapped];
         }
+        void memberReplies.sent(mapped);
       } else {
         const created = await service.postMessage(conversationId, message);
         if (!messages.some((item) => item.id === created.id)) {
           messages = [...messages, created];
         }
+        void memberReplies.sent(created);
       }
 
       // Always scroll to bottom for own messages
@@ -917,12 +948,16 @@
             <MessageBubble
               {tenantId}
               {message}
+              messages={uniqueMessages}
               {viewMode}
               {projectId}
               isOwn={currentUserId ? message.sender?.id === currentUserId : false}
               isLast={index === uniqueMessages.length - 1}
               onExtractRequirement={canExtractRequirement ? handleExtractRequirement : undefined}
               onAskAi={aiRun.canAsk ? aiRun.ask : undefined}
+              onRequestMemberReply={memberReplies.canRequest(message)
+                ? memberReplies.requestSaved
+                : undefined}
               onEdit={!isChannelReadOnly ? handleEditMessage : undefined}
               onDelete={!isChannelReadOnly ? handleDeleteMessage : undefined}
               {currentUserRole}
@@ -941,6 +976,56 @@
       </div>
 
       <ConversationAiRunPanel run={aiRun} />
+      {#if memberReplies.status}<p
+          role="status"
+          class="px-4 py-2 text-xs text-[var(--color-text-secondary)]"
+        >
+          {memberReplies.status}
+        </p>{/if}
+      {#if memberReplies.statusItems.length}
+        <details class="px-4 py-2 text-xs text-[var(--color-text-secondary)]">
+          <summary>AI reply status</summary>
+          <p>
+            Recent and tracked requests. Completed means generation finished, not verified accuracy.
+          </p>
+          <ul aria-label="AI reply statuses">
+            {#each memberReplies.statusItems as reply (reply.id)}
+              <li class="py-1">
+                <span>{reply.displayName}: {reply.label}</span>
+                {#if reply.delivery}<span> {reply.delivery}</span>{/if}
+                {#if reply.errorCode}<span> ({reply.errorCode})</span>{/if}
+              </li>
+            {/each}
+          </ul>
+        </details>
+      {/if}
+      {#each memberReplies.cancellableReplies as reply (reply.id)}
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={memberReplies.isCancelling(reply.id)}
+          onclick={() => memberReplies.cancel(reply.id)}
+        >
+          {memberReplies.isCancelling(reply.id) ? 'Cancelling' : 'Cancel'}
+          {reply.displayName} reply
+        </Button>
+      {/each}
+      {#if memberReplies.error}<p
+          role="alert"
+          class="px-4 py-2 text-xs text-[var(--color-error-600)]"
+        >
+          {memberReplies.error}
+        </p>{/if}
+      {#if memberReplies.canRetryRequest}
+        <Button variant="ghost" size="sm" onclick={memberReplies.retryRequest}
+          >Retry AI request</Button
+        >
+      {/if}
+      {#if memberReplies.canRetryDelivery}
+        <Button variant="ghost" size="sm" onclick={memberReplies.retryDelivery}>
+          Reload AI member replies
+        </Button>
+      {/if}
 
       <!-- Message Input (hidden for concluded/readonly channels) -->
       {#if !isChannelReadOnly}
@@ -985,6 +1070,8 @@
           channel={channelDetail}
           {currentUserId}
           tenantId={tenantId ?? ''}
+          projectId={projectId ?? ''}
+          {memberExtension}
           {conversationId}
           {linkedRequirements}
           {isDirectMessage}

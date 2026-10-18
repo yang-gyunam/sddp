@@ -168,10 +168,12 @@ public sealed record GetConversationMessagesCommand(
 public sealed class GetConversationMessagesCommandHandler : IRequestHandler<GetConversationMessagesCommand, ConversationMessagesPageDto?>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMessageAuthorResolver? _authors;
 
-    public GetConversationMessagesCommandHandler(IUnitOfWork unitOfWork)
+    public GetConversationMessagesCommandHandler(IUnitOfWork unitOfWork, IMessageAuthorResolver? authors = null)
     {
         _unitOfWork = unitOfWork;
+        _authors = authors;
     }
 
     public async Task<ConversationMessagesPageDto?> Handle(GetConversationMessagesCommand request, CancellationToken cancellationToken)
@@ -218,6 +220,10 @@ public sealed class GetConversationMessagesCommandHandler : IRequestHandler<GetC
         var hasMore = sortedMessages.Count > request.Limit;
         var resultMessages = sortedMessages.Take(request.Limit).ToList();
 
+        var authors = _authors is null ? new Dictionary<Guid, MessageAuthorDto>()
+            : await _authors.ResolveAsync(request.TenantId.ToGuid(), conversation.ProjectId?.ToGuid(),
+                request.ConversationId.ToGuid(), resultMessages.Select(m => m.Id.ToGuid()).ToArray(), cancellationToken);
+
         var users = await (userRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
         var userMap = users.ToDictionary(u => u.Id, u => u);
 
@@ -225,7 +231,7 @@ public sealed class GetConversationMessagesCommandHandler : IRequestHandler<GetC
         {
             var user = userMap.TryGetValue(m.SenderId, out var u) ? u : null;
             var sender = new UserRefDto(m.SenderId.ToString(), user?.DisplayName ?? "Unknown", user?.AvatarUrl);
-            return ConversationMapping.MapConversationMessageDto(m, sender);
+            return ConversationMapping.MapConversationMessageDto(m, sender, authors.GetValueOrDefault(m.Id.ToGuid()));
         });
 
         var nextCursor = hasMore && resultMessages.Any()

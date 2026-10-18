@@ -394,9 +394,9 @@ VALUES
 -- =============================================================================
 INSERT INTO glossary_terms (
     id, tenant_id, project_id, term, definition,
-    category_code_id, abbreviation, synonyms,
+    category_code_id, abbreviation, synonyms, usage_examples, related_term_ids,
     defined_by, status_code_id, version,
-    created_by, created_at
+    created_by, updated_by, created_at
 )
 VALUES
     -- PG: Payment Gateway
@@ -408,10 +408,12 @@ VALUES
      '00000000-0000-0000-0006-000010000003',  -- ABBREVIATION
      'PG',
      'Payment Gateway, electronic payment processing, payment relay',
+     '[]'::jsonb, '[]'::jsonb,
      '00000000-0000-0000-0005-000000000302',  -- Soojin
      '00000000-0000-0000-0006-000009000002',  -- ACTIVE
      '1.0.0',
      '00000000-0000-0000-0005-000000000302',
+     '00000000-0000-0000-0005-000000000302',  -- Initial audit owner
      '2026-02-12 10:00:00+09'),
 
     -- Refund
@@ -423,10 +425,12 @@ VALUES
      '00000000-0000-0000-0006-000010000002',  -- BUSINESS
      NULL,
      'Refund, payment reversal, reimbursement',
+     '[]'::jsonb, '[]'::jsonb,
      '00000000-0000-0000-0005-000000000302',  -- Soojin
      '00000000-0000-0000-0006-000009000002',  -- ACTIVE
      '1.0.0',
      '00000000-0000-0000-0005-000000000302',
+     '00000000-0000-0000-0005-000000000302',  -- Initial audit owner
      '2026-02-12 10:30:00+09');
 
 -- =============================================================================
@@ -437,7 +441,7 @@ INSERT INTO artifact_trackings (
     artifact_path, artifact_type, artifact_category,
     content_hash, generator_version, template_version,
     entity_name,
-    created_by, created_at
+    created_by, updated_by, created_at
 )
 VALUES
     ('00000000-0000-0000-007a-000000000001',
@@ -452,6 +456,7 @@ VALUES
      '1.0.0',
      'PaymentService',
      '00000000-0000-0000-0005-000000000303',  -- Hyunwoo
+     '00000000-0000-0000-0005-000000000303',  -- Initial audit owner
      '2026-02-10 14:00:00+09');
 
 COMMIT;

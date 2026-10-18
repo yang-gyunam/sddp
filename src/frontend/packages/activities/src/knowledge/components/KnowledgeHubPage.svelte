@@ -157,6 +157,7 @@
   let editSlug = $state('');
   let editTags = $state('');
   let changeSummary = $state('');
+  let savedChangeSummary = $state('');
   let editorHtml = $state('');
   let editorJson = $state<JSONContent>({ type: 'doc', content: [] });
   let editorRef:
@@ -168,6 +169,7 @@
     | undefined = $state();
 
   let createTitle = $state('');
+  let createBasicExpanded = $state(true);
   let createParentId = $state('__root__');
   let createTemplate = $state<KnowledgeTemplate>('blank');
 
@@ -205,6 +207,32 @@
       ? workspaceState.primary.mode
       : workspaceState.primary.kind
   );
+  // Summary belongs to a revision, not the editable page draft.
+  $effect(() => {
+    const scopedProjectId = projectId;
+    const pageId = selectedPage?.id;
+    const revision = selectedPage?.revision;
+    if (editing || !pageId || revision === undefined) return;
+
+    let cancelled = false;
+    savedChangeSummary = 'Loading change summary…';
+    void (async () => {
+      try {
+        const version = await getKnowledgeVersion(scopedProjectId, pageId, revision, true);
+        if (!cancelled) {
+          savedChangeSummary = version.changeSummary?.trim()
+            ? version.changeSummary
+            : 'No change summary provided.';
+        }
+      } catch {
+        if (!cancelled) savedChangeSummary = 'Could not load change summary.';
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  });
+
   const showHistory = $derived(workspaceState.history.kind !== 'closed');
   const versionsLoading = $derived(workspaceState.history.kind === 'loading');
   const capabilities = createProjectCapabilityStore();
@@ -613,6 +641,7 @@
     createParentId =
       selectedPage && selectedPage.status !== 'Archived' ? selectedPage.id : '__root__';
     createTitle = '';
+    createBasicExpanded = true;
     createTemplate = 'blank';
     selectedPage = null;
     workspaceState = {
@@ -1266,14 +1295,13 @@
         {:else if creating}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
             <div class="space-y-5">
-              <CollapsibleGroup title="Basic Information" variant="plain" expanded>
-                <div class="flex max-w-3xl flex-col gap-4 pl-5 pt-2 pb-3">
-                  <Select
-                    bind:value={createParentId}
-                    options={createParentOptions}
-                    label="Parent"
-                  />
-                  <Select bind:value={createTemplate} options={templateOptions} label="Template" />
+              <CollapsibleGroup
+                title="Basic Information"
+                variant="plain"
+                expanded={createBasicExpanded}
+                onToggle={() => (createBasicExpanded = !createBasicExpanded)}
+              >
+                <div class="flex flex-col gap-4 pl-5 pt-2 pb-3">
                   <Input
                     id={'knowledge-create-title-' + projectId}
                     bind:value={createTitle}
@@ -1285,13 +1313,25 @@
                       if (event.key === 'Enter' && createTitle.trim()) void createPage();
                     }}
                   />
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <Select
+                      bind:value={createParentId}
+                      options={createParentOptions}
+                      label="Parent"
+                    />
+                    <Select
+                      bind:value={createTemplate}
+                      options={templateOptions}
+                      label="Template"
+                    />
+                  </div>
                 </div>
               </CollapsibleGroup>
             </div>
           </div>
         {:else if selectedPage}
           <article class="flex-1 min-h-0 overflow-y-auto">
-            <div class="mx-auto max-w-5xl p-4">
+            <div class="p-4">
               {#if workspaceState.conflict.kind === 'active'}
                 <KnowledgeConflictSection
                   conflict={workspaceState.conflict}
@@ -1309,6 +1349,7 @@
                 bind:editSlug
                 bind:editTags
                 bind:changeSummary
+                {savedChangeSummary}
                 {editorHtml}
                 bind:editorRef
                 {moving}

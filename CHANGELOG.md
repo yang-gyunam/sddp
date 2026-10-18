@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.1] - 2026-10-18
+
+### Security and compatibility
+
+- Update the ASP.NET Core runtime to 10.0.13 with a pinned image digest.
+- Update ProseMirror and affected transitive dependencies within the existing package ranges.
+- Keep shared conversation and snapshot integration compatible with the free edition, including disabled AI UI adapters.
+- Verify public builds, tests, fresh-database/API behavior and edition boundaries locally.
+
+### OnBrick corrections
+
+- Initialize the sample artifact/glossary audit owners and empty glossary lists and provide a scoped, idempotent repair for existing OnBrick data that causes project detail HTTP500.
+- Fix required Spec input, unique test data and Channel loading/accessibility selectors.
+- Require both real OnBrick smoke tests and project statistics/legacy repair checks in the release gate.
+
+### Known limitations
+
+- The 2026-10-18 dependency audit retained seven Moderate findings, including two runtime findings, with no High/Critical findings.
+- This free source distribution does not include AI/LLM modules or an automatic in-place upgrade bundle.
+
+See [release notes](RELEASE.md) for installation, upgrade precautions and validation scope.
+
 ## [v0.4.0] - 2026-10-03
 
 ### Fixed

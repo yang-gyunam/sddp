@@ -14,37 +14,23 @@ public partial class ProjectSnapshotService
     // ========================================================================
 
     private async Task<ProjectSnapshotData> ExtractProjectDataAsync(
-        GlobalUniqueId tenantId, GlobalUniqueId projectId)
+        GlobalUniqueId tenantId, GlobalUniqueId projectId, IDbTransaction transaction)
     {
-        var data = new ProjectSnapshotData();
+        var data = new ProjectSnapshotData { FormatVersion = 2 };
         var tid = (Guid)tenantId;
         var pid = (Guid)projectId;
 
         // Project record itself (name, description, status, etc.)
         var projectRows = await (QueryRowsAsync(
             "SELECT * FROM projects WHERE id = @ProjectId AND tenant_id = @TenantId",
-            new { ProjectId = pid, TenantId = tid })).ConfigureAwait(false);
+            new { ProjectId = pid, TenantId = tid }, transaction)).ConfigureAwait(false);
         if (projectRows.Count > 0) data.Tables["projects"] = projectRows;
 
         // Direct project_id tables
         foreach (var table in DirectProjectTables)
         {
-            string sql;
-            if (table == "conversations")
-            {
-                // Only project-scoped conversations
-                sql = $"SELECT * FROM {table} WHERE project_id = @ProjectId AND is_active = TRUE";
-            }
-            else if (table == "embeddings")
-            {
-                sql = $"SELECT id, tenant_id, project_id, source_type, source_id, chunk_index, chunk_text, conversation_id, spec_version, message_type, created_at, updated_at, is_active FROM {table} WHERE project_id = @ProjectId AND is_active = TRUE";
-            }
-            else
-            {
-                sql = $"SELECT * FROM {table} WHERE project_id = @ProjectId";
-            }
-
-            var rows = await (QueryRowsAsync(sql, new { ProjectId = pid })).ConfigureAwait(false);
+            var sql = $"SELECT * FROM {table} WHERE project_id = @ProjectId";
+            var rows = await QueryRowsAsync(sql, new { ProjectId = pid }, transaction).ConfigureAwait(false);
             if (rows.Count > 0) data.Tables[table] = rows;
         }
 
@@ -63,36 +49,45 @@ public partial class ProjectSnapshotService
                     colName = "conversation_id";
 
                 var sql = $"SELECT * FROM {table} WHERE {colName} = ANY(@Ids)";
-                var rows = await (QueryRowsAsync(sql, new { Ids = conversationIds.ToArray() })).ConfigureAwait(false);
+                var rows = await (QueryRowsAsync(sql, new { Ids = conversationIds.ToArray() }, transaction)).ConfigureAwait(false);
                 if (rows.Count > 0) data.Tables[table] = rows;
             }
 
             // Messages: via conversation_id
             var msgSql = "SELECT * FROM messages WHERE conversation_id = ANY(@Ids)";
-            var msgRows = await (QueryRowsAsync(msgSql, new { Ids = conversationIds.ToArray() })).ConfigureAwait(false);
+            var msgRows = await (QueryRowsAsync(msgSql, new { Ids = conversationIds.ToArray() }, transaction)).ConfigureAwait(false);
 
             // Topics: via forum IDs
             var forumIds = GetIds(data, "forums");
             if (forumIds.Count > 0)
             {
                 var topicSql = "SELECT * FROM topics WHERE forum_id = ANY(@Ids)";
-                var topicRows = await (QueryRowsAsync(topicSql, new { Ids = forumIds.ToArray() })).ConfigureAwait(false);
+                var topicRows = await (QueryRowsAsync(topicSql, new { Ids = forumIds.ToArray() }, transaction)).ConfigureAwait(false);
                 if (topicRows.Count > 0) data.Tables["topics"] = topicRows;
 
                 // Messages: via topic_id
                 var topicIds = topicRows
-                    .Where(r => r.ContainsKey("id") && r["id"] is Guid)
-                    .Select(r => (Guid)r["id"]!)
+                    .Select(r => SnapshotId(r, "id"))
                     .ToList();
                 if (topicIds.Count > 0)
                 {
                     var topicMsgSql = "SELECT * FROM messages WHERE topic_id = ANY(@Ids)";
-                    var topicMsgRows = await (QueryRowsAsync(topicMsgSql, new { Ids = topicIds.ToArray() })).ConfigureAwait(false);
+                    var topicMsgRows = await (QueryRowsAsync(topicMsgSql, new { Ids = topicIds.ToArray() }, transaction)).ConfigureAwait(false);
                     msgRows.AddRange(topicMsgRows);
+                    foreach (var table in new[] { "user_conversation_settings", "user_read_statuses" })
+                    {
+                        var rows = await QueryRowsAsync($"SELECT * FROM {table} WHERE conversation_id = ANY(@Ids)",
+                            new { Ids = topicIds.ToArray() }, transaction).ConfigureAwait(false);
+                        if (rows.Count > 0)
+                        {
+                            if (!data.Tables.TryGetValue(table, out var existing)) data.Tables[table] = rows;
+                            else existing.AddRange(rows);
+                        }
+                    }
                 }
             }
 
-            if (msgRows.Count > 0) data.Tables["messages"] = msgRows;
+            if (msgRows.Count > 0) data.Tables["messages"] = msgRows.DistinctBy(row => SnapshotId(row, "id")).ToList();
         }
 
         // Spec child tables
@@ -102,7 +97,7 @@ public partial class ProjectSnapshotService
             foreach (var table in SpecChildTables)
             {
                 var sql = $"SELECT * FROM {table} WHERE spec_id = ANY(@Ids)";
-                var rows = await (QueryRowsAsync(sql, new { Ids = specIds.ToArray() })).ConfigureAwait(false);
+                var rows = await (QueryRowsAsync(sql, new { Ids = specIds.ToArray() }, transaction)).ConfigureAwait(false);
                 if (rows.Count > 0) data.Tables[table] = rows;
             }
         }
@@ -114,7 +109,7 @@ public partial class ProjectSnapshotService
             foreach (var table in EntityMetaChildTables)
             {
                 var sql = $"SELECT * FROM {table} WHERE entity_metadata_id = ANY(@Ids)";
-                var rows = await (QueryRowsAsync(sql, new { Ids = entityMetaIds.ToArray() })).ConfigureAwait(false);
+                var rows = await (QueryRowsAsync(sql, new { Ids = entityMetaIds.ToArray() }, transaction)).ConfigureAwait(false);
                 if (rows.Count > 0) data.Tables[table] = rows;
             }
         }
@@ -126,7 +121,7 @@ public partial class ProjectSnapshotService
             foreach (var table in TaskChildTables)
             {
                 var sql = $"SELECT * FROM {table} WHERE task_id = ANY(@Ids)";
-                var rows = await (QueryRowsAsync(sql, new { Ids = taskIds.ToArray() })).ConfigureAwait(false);
+                var rows = await (QueryRowsAsync(sql, new { Ids = taskIds.ToArray() }, transaction)).ConfigureAwait(false);
                 if (rows.Count > 0) data.Tables[table] = rows;
             }
         }
@@ -138,11 +133,12 @@ public partial class ProjectSnapshotService
             foreach (var table in SignOffChildTables)
             {
                 var sql = $"SELECT * FROM {table} WHERE sign_off_id = ANY(@Ids)";
-                var rows = await (QueryRowsAsync(sql, new { Ids = signOffIds.ToArray() })).ConfigureAwait(false);
+                var rows = await (QueryRowsAsync(sql, new { Ids = signOffIds.ToArray() }, transaction)).ConfigureAwait(false);
                 if (rows.Count > 0) data.Tables[table] = rows;
             }
         }
 
+        ValidateSnapshotScope(data, tenantId, projectId);
         return data;
     }
 
@@ -212,8 +208,8 @@ public partial class ProjectSnapshotService
         if (conversationIds.Count > 0)
         {
             await (ExecuteDelete("conversation_members", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
-            await (ExecuteDelete("user_conversation_settings", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
-            await (ExecuteDelete("user_read_statuses", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
+            await (ExecuteDelete("user_conversation_settings", "conversation_id", conversationIds.Concat(topicIds).Distinct().ToList(), transaction)).ConfigureAwait(false);
+            await (ExecuteDelete("user_read_statuses", "conversation_id", conversationIds.Concat(topicIds).Distinct().ToList(), transaction)).ConfigureAwait(false);
         }
 
         // Level 3: sign_offs, alternatives
@@ -263,29 +259,14 @@ public partial class ProjectSnapshotService
         // Restore the project record itself (UPDATE, not DELETE/INSERT — it's the FK root)
         if (data.Tables.TryGetValue("projects", out var projectRows) && projectRows.Count > 0)
         {
-            var projectRow = projectRows[0];
-            var projectId = NormalizeValue(projectRow["id"]);
-
-            var setClauses = new List<string>();
-            var parameters = new DynamicParameters();
-            parameters.Add("@ProjectId", projectId);
-
-            // Restorable columns (exclude id, tenant_id, created_at which shouldn't change)
-            var restorableColumns = new[] { "name", "description", "status", "repo_url", "repo_branch", "artifact_root_path", "sync_interval_minutes", "last_synced_at" };
-            var idx = 0;
-            foreach (var col in restorableColumns)
+            var row = projectRows[0];
+            var restorable = new[] { "name", "description", "status", "status_code_id", "repo_url", "repo_branch", "artifact_root_path", "sync_interval_minutes", "last_synced_at" };
+            var columns = restorable.Where(row.ContainsKey).ToArray();
+            if (columns.Length > 0)
             {
-                if (!projectRow.ContainsKey(col)) continue;
-                var paramName = $"@pProj{idx}";
-                setClauses.Add($"{col} = {paramName}");
-                parameters.Add(paramName, NormalizeValue(projectRow[col]));
-                idx++;
-            }
-
-            if (setClauses.Count > 0)
-            {
-                var sql = $"UPDATE projects SET {string.Join(", ", setClauses)}, updated_at = NOW() WHERE id = @ProjectId";
-                await (_connection.ExecuteAsync(sql, parameters, transaction)).ConfigureAwait(false);
+                var sets = string.Join(", ", columns.Select(column => $"\"{column}\" = saved.\"{column}\""));
+                await _connection.ExecuteAsync($"UPDATE projects p SET {sets}, updated_at = NOW() FROM jsonb_populate_record(NULL::projects, @Json::jsonb) saved WHERE p.id = saved.id AND p.tenant_id = saved.tenant_id",
+                    new { Json = JsonSerializer.Serialize(row) }, transaction).ConfigureAwait(false);
             }
         }
 
@@ -326,12 +307,12 @@ public partial class ProjectSnapshotService
             if (SelfRefColumns.TryGetValue(table, out var selfRefCol))
             {
                 // 2-pass: first insert with self-ref = NULL, then update
-                await (InsertRowsAsync(table, rows, selfRefCol, transaction)).ConfigureAwait(false);
+                await (InsertRowsAsync(table, rows, selfRefCol, transaction, data.FormatVersion == 1)).ConfigureAwait(false);
                 await (UpdateSelfRefsAsync(table, rows, selfRefCol, transaction)).ConfigureAwait(false);
             }
             else
             {
-                await (InsertRowsAsync(table, rows, null, transaction)).ConfigureAwait(false);
+                await (InsertRowsAsync(table, rows, null, transaction, data.FormatVersion == 1)).ConfigureAwait(false);
             }
         }
     }
@@ -350,6 +331,8 @@ public partial class ProjectSnapshotService
 
         try
         {
+            await LockProjectAsync(tenantId, projectId, transaction, cancellationToken).ConfigureAwait(false);
+            await ExtractProjectDataAsync(tenantId, projectId, transaction).ConfigureAwait(false);
             // Count rows before deletion for reporting
             var pid = (Guid)projectId;
             var tableCounts = new Dictionary<string, int>();
@@ -370,6 +353,8 @@ public partial class ProjectSnapshotService
                     tableCounts[table] = count;
             }
 
+            foreach (var extension in _extensions)
+                await extension.DeleteAsync(_connection, transaction, tenantId, projectId, true, cancellationToken).ConfigureAwait(false);
             // Execute cascade delete (preserves project_members)
             await (DeleteProjectDataForResetAsync(tenantId, projectId, transaction)).ConfigureAwait(false);
 
@@ -441,8 +426,8 @@ public partial class ProjectSnapshotService
         if (conversationIds.Count > 0)
         {
             await (ExecuteDelete("conversation_members", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
-            await (ExecuteDelete("user_conversation_settings", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
-            await (ExecuteDelete("user_read_statuses", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
+            await (ExecuteDelete("user_conversation_settings", "conversation_id", conversationIds.Concat(topicIds).Distinct().ToList(), transaction)).ConfigureAwait(false);
+            await (ExecuteDelete("user_read_statuses", "conversation_id", conversationIds.Concat(topicIds).Distinct().ToList(), transaction)).ConfigureAwait(false);
         }
 
         if (specIds.Count > 0)
@@ -525,8 +510,8 @@ public partial class ProjectSnapshotService
             if (forumIds.Count > 0)
                 await (ExecuteDelete("topics", "forum_id", forumIds, transaction)).ConfigureAwait(false);
             await (ExecuteDelete("conversation_members", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
-            await (ExecuteDelete("user_conversation_settings", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
-            await (ExecuteDelete("user_read_statuses", "conversation_id", conversationIds, transaction)).ConfigureAwait(false);
+            await (ExecuteDelete("user_conversation_settings", "conversation_id", conversationIds.Concat(topicIds).Distinct().ToList(), transaction)).ConfigureAwait(false);
+            await (ExecuteDelete("user_read_statuses", "conversation_id", conversationIds.Concat(topicIds).Distinct().ToList(), transaction)).ConfigureAwait(false);
 
             // TPT children
             await (ExecuteDelete("channels", "id", conversationIds, transaction)).ConfigureAwait(false);

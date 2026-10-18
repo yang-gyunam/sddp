@@ -1,5 +1,6 @@
 <!-- Section: MessageStream — Conversations (internal, used by ChannelView/TopicView) -->
 <script lang="ts">
+  import { getMessageAuthor } from '../../utils/message-author';
   import { Icon, Button, Badge, IconButton, Spinner, Textarea } from '@sddp/ui';
   import { formatTime } from '@sddp/shell';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
@@ -189,14 +190,14 @@
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-bg-tertiary)]
                   flex items-center justify-center text-sm font-medium"
               >
-                {(message.sender?.name ?? '?').charAt(0).toUpperCase()}
+                {(getMessageAuthor(message)?.name ?? '?').charAt(0).toUpperCase()}
               </div>
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-baseline gap-2">
                   <span class="font-medium text-[var(--color-text-primary)]">
-                    {message.sender?.name ?? 'Unknown'}
+                    {getMessageAuthor(message)?.name ?? 'Unknown'}
                   </span>
                   <span class="text-xs text-[var(--color-text-tertiary)]">
                     {formatTime(message.createdAt, { hour: '2-digit', minute: '2-digit' })}

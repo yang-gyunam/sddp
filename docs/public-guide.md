@@ -126,25 +126,46 @@ make lint
 `make test` runs 6 files / 51 cases covering UI controls and the public error handler, once.
 Backend and AI tests are not shipped; this limited suite is not full product acceptance.
 
-For the OnBrick browser scenario, use a disposable evaluation stack prepared above, load the
-OnBrick seed, and leave the API running. A graphical desktop is required because this command
-uses a headed browser. From the repository root:
+The release gate also runs both OnBrick smoke tests on a disposable PostgreSQL/Redis/API
+stack and the built frontend. It checks Spec creation/readback/cleanup, seeded Channel access
+and messages, project detail statistics, and repair of the legacy missing artifact/glossary audit owners.
+Chromium is required; missing browsers or skipped/flaky tests fail the gate.
+
+To repeat only these two tests against your prepared evaluation stack (load the OnBrick seed
+first), run from the repository root, adjusting both URLs to your stack:
 
 ```bash
 cd src/frontend
 npx playwright install chromium
-E2E_USE_EXTERNAL_WEB=1 E2E_WEB_BASE_URL=http://localhost:9010 npm run test:e2e
+E2E_WEB_BASE_URL=http://localhost:9010 E2E_API_BASE=http://localhost:9010/api \
+  npm run test:e2e:smoke -w @sddp/web
 ```
 
-This uses the Docker frontend and API. `npm run test:e2e` selects only the OnBrick scenario;
-it does not seed OnBrick or run the L0 suite. Its global setup clears **all keys in the Compose
-Redis instance** and creates/updates an E2E project; the tests also write application data.
-The command is available but a complete OnBrick run is not claimed by the limited unit results.
+This headless configuration has no global setup, Redis flush, or shared saved login. It creates
+one uniquely named Spec and deactivates that same Spec after readback; seeded records remain.
+It does not seed or repair the database automatically. Results use `test-results/onbrick-smoke`
+and `test-results/onbrick-smoke.json`; set `ONBRICK_OUTPUT_DIR` and `ONBRICK_REPORT` to preserve
+separate runs.
 
-Without `E2E_USE_EXTERNAL_WEB=1`, Playwright starts or reuses the API at port 5001 and Vite
-at port 3500; starting a local API requires the .NET SDK and its local configuration.
-The optional `src/frontend/packages/web/scripts/run-e2e-showcase.sh` wrapper additionally requires an
-already running API and Vite at port 3500. It is not the Docker-frontend command above.
+Existing OnBrick installations seeded before this fix may return HTTP500 on project detail
+because the sample artifact and two glossary rows have NULL `updated_by`, and the glossary
+list fields are NULL. Back up the database, then run the scoped,
+idempotent repair from the repository root:
+
+```bash
+docker compose exec -T sddp-db psql -v ON_ERROR_STOP=1 -U sddp -d sddp \
+  < scripts/demo/onbrick-repair-audit.sql
+```
+
+It fills only the missing update owners of three known OnBrick sample rows from their creators,
+and initializes missing `usage_examples` / `related_term_ids` in the two glossary rows to empty arrays.
+It preserves valid update owners, timestamps and all other rows. Do **not** replay
+`onbrick-seed.sql` to repair existing data: that seed deletes the tenant's demo content.
+The fix does not repair arbitrary corrupt audit data from other sources.
+
+The older headed `npm run test:e2e` showcase remains available. Its global setup clears all
+keys in the Compose Redis instance and creates/updates an E2E project. Use that command only
+with disposable services; it is not used by the release gate.
 
 ## Contribution Model
 

@@ -52,6 +52,16 @@ export interface Message {
   conversationId: string;
   topicId?: string;
   sender: UserRef;
+  /** Member author resolved from the persisted member reply record. */
+  aiMemberId?: string;
+  /** Historical display identity; sender remains the execution identity. */
+  author?: {
+    kind: string;
+    id: string;
+    name: string;
+    role?: string | null;
+    promptVersion?: string | null;
+  } | null;
   type: MessageType;
   content: string;
   references: string[] | null;

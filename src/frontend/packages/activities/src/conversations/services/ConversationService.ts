@@ -125,6 +125,7 @@ export interface ConversationMessageDto {
   conversationId: string;
   channelId?: string;
   sender: UserRef;
+  author?: Message['author'];
   type: Message['type'];
   content: string;
   references: string[];

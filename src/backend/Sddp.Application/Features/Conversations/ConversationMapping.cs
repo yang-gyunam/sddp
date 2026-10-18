@@ -54,7 +54,7 @@ internal static class ConversationMapping
             IsActive: member.IsActive);
     }
 
-    internal static ConversationMessageDto MapConversationMessageDto(Message message, UserRefDto sender)
+    internal static ConversationMessageDto MapConversationMessageDto(Message message, UserRefDto sender, MessageAuthorDto? author = null)
     {
         return new ConversationMessageDto(
             Id: message.Id.ToString(),
@@ -66,6 +66,7 @@ internal static class ConversationMapping
             ReplyToId: message.ReplyToId?.ToString(),
             IsEdited: message.IsEdited,
             CreatedAt: message.CreatedAt.ToDateTimeOffset(),
-            UpdatedAt: message.UpdatedAt.ToDateTimeOffset());
+            UpdatedAt: message.UpdatedAt.ToDateTimeOffset(),
+            Author: author);
     }
 }

@@ -17,7 +17,7 @@ export type ReminderDisplay = {
     source: string;
     summary: string;
     relevance: string;
-    relationship: 'aligns' | 'contradicts' | 'extends' | 'unrelated';
+    relationship: 'aligns' | 'contradicts' | 'extends' | 'unrelated' | 'uncertain';
   }[];
 };
 export type AutomaticAnalysisDisplay = SummaryDisplay | ReminderDisplay;
@@ -58,7 +58,9 @@ export function parseAutomaticAnalysis(
         (item) =>
           shape(item, ['source', 'summary', 'relevance', 'relationship']) &&
           Object.values(item).every(text) &&
-          ['aligns', 'contradicts', 'extends', 'unrelated'].includes(item.relationship as string)
+          ['aligns', 'contradicts', 'extends', 'unrelated', 'uncertain'].includes(
+            item.relationship as string
+          )
       ) &&
       value.hasConflicts ===
         value.relatedDecisions.some(

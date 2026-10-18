@@ -179,11 +179,21 @@ export function setNotificationsLoading(loading: boolean): void {
 }
 
 export function addNotification(item: NotificationItem): void {
-  dashboardStore.update((state) => ({
-    ...state,
-    notifications: [item, ...state.notifications],
-    unreadCount: state.unreadCount + (item.isRead ? 0 : 1),
-  }));
+  dashboardStore.update((state) => {
+    const existing = state.notifications.find((notification) => notification.id === item.id);
+    if (!existing) return {
+      ...state,
+      notifications: [item, ...state.notifications],
+      unreadCount: state.unreadCount + (item.isRead ? 0 : 1),
+    };
+    const updated = { ...existing, ...item, isRead: existing.isRead || item.isRead };
+    return {
+      ...state,
+      notifications: state.notifications.map((notification) =>
+        notification.id === item.id ? updated : notification),
+      unreadCount: Math.max(0, state.unreadCount - (!existing.isRead && updated.isRead ? 1 : 0)),
+    };
+  });
 }
 
 export function markNotificationRead(id: string): void {

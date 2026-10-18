@@ -22,8 +22,14 @@ export class RouterService {
     // A restored tab must not overwrite a directly opened URL during subscription.
     this.isNavigating = true;
     try {
+      let previousIdentity = '';
       this.unsubscribeTab = globalActiveTab.subscribe((tab) => {
-        if (!tab || this.isNavigating) return;
+        const identity = tab ? `${tab.id}:${tab.path || '/'}` : '';
+        const changed = identity !== previousIdentity;
+        previousIdentity = identity;
+        // Content/read-state updates are not navigation. In particular, they must
+        // not cancel an async destination lookup by restoring the source URL.
+        if (!tab || this.isNavigating || !changed) return;
         const path = tab.path || '/';
         const search =
           this.pending?.path === path ? this.pending.search : this.searches.get(tab.id) || '';

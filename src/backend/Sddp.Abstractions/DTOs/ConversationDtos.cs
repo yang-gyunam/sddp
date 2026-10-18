@@ -83,6 +83,9 @@ public record ConversationSearchResultDto(
     string? Description,
     ConversationType ConversationType);
 
+/// <summary>Historical display identity; Sender remains the execution identity.</summary>
+public sealed record MessageAuthorDto(string Kind, string Id, string Name, string? Role = null, string? PromptVersion = null);
+
 public record ConversationMessageDto(
     string Id,
     string ConversationId,
@@ -93,7 +96,8 @@ public record ConversationMessageDto(
     string? ReplyToId,
     bool IsEdited,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    MessageAuthorDto? Author = null);
 
 public record ConversationMessagesPageDto(
     IEnumerable<ConversationMessageDto> Messages,
