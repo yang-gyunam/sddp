@@ -7,6 +7,7 @@ export {
   openSidebar,
   closeSidebar,
   setSidebarWidth,
+  setSidebarSingleExpand,
   setActiveSidebarPanel,
   togglePanel,
   openPanel,
@@ -106,3 +107,18 @@ export {
   installTabClosePromptDecider,
 } from './tab-close-prompt.store';
 export type { TabClosePromptState } from './tab-close-prompt.store';
+
+export {
+  requestConfirmation,
+  requestChoice,
+  confirmationStore,
+  answerConfirmation,
+  installConfirmationHost,
+} from './confirmation.store';
+export type {
+  ConfirmationOptions,
+  ConfirmationChoice,
+  ChoiceRequest,
+  ConfirmationPromptState,
+} from './confirmation.store';
+export { createConfirmation } from './confirmation';

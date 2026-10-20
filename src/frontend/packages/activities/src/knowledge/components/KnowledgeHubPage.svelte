@@ -12,6 +12,7 @@
   import { TableHeader } from '@tiptap/extension-table-header';
   import { Badge, Button, CardGrid, Icon, IconButton, Input, Select, Spinner } from '@sddp/ui';
   import {
+    createConfirmation,
     CollapsibleGroup,
     PageBody,
     PageHeader,
@@ -563,7 +564,16 @@
   }
 
   async function selectPage(pageId: string, force = false): Promise<void> {
-    if (!force && dirty && !window.confirm('Discard unsaved changes?')) return;
+    if (
+      !force &&
+      dirty &&
+      !(await confirmAction('Discard unsaved changes?', {
+        title: 'Discard changes',
+        confirmLabel: 'Discard changes',
+        variant: 'danger',
+      }))
+    )
+      return;
     const requestGeneration = ++pageRequestGeneration;
     const requestedProjectId = projectId;
     loadingPage = true;
@@ -634,9 +644,17 @@
     );
   }
 
-  function beginCreatePage(): void {
+  async function beginCreatePage(): Promise<void> {
     if (!canCreate) return;
-    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+    if (
+      dirty &&
+      !(await confirmAction('Discard unsaved changes?', {
+        title: 'Discard changes',
+        confirmLabel: 'Discard changes',
+        variant: 'danger',
+      }))
+    )
+      return;
     invalidatePageRequest();
     createParentId =
       selectedPage && selectedPage.status !== 'Archived' ? selectedPage.id : '__root__';
@@ -661,8 +679,16 @@
     createTemplate = 'blank';
   }
 
-  function closePage(): void {
-    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+  async function closePage(): Promise<void> {
+    if (
+      dirty &&
+      !(await confirmAction('Discard unsaved changes?', {
+        title: 'Discard changes',
+        confirmLabel: 'Discard changes',
+        variant: 'danger',
+      }))
+    )
+      return;
     invalidatePageRequest();
     selectedPage = null;
     workspaceState = createKnowledgeWorkspaceState();
@@ -694,9 +720,17 @@
     });
   }
 
-  function cancelEdit(): void {
+  async function cancelEdit(): Promise<void> {
     if (!selectedPage) return;
-    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+    if (
+      dirty &&
+      !(await confirmAction('Discard unsaved changes?', {
+        title: 'Discard changes',
+        confirmLabel: 'Discard changes',
+        variant: 'danger',
+      }))
+    )
+      return;
     editTitle = selectedPage.title;
     editSlug = selectedPage.slug;
     editTags = selectedPage.tags.join(', ');
@@ -794,11 +828,15 @@
     }
   }
 
-  function useServerConflictVersion(): void {
+  async function useServerConflictVersion(): Promise<void> {
     const conflict = workspaceState.conflict;
     if (
       conflict.kind !== 'active' ||
-      !window.confirm('Discard your local edits and load the server version?')
+      !(await confirmAction('Discard your local edits and load the server version?', {
+        title: 'Discard changes',
+        confirmLabel: 'Discard changes',
+        variant: 'danger',
+      }))
     ) {
       return;
     }
@@ -868,9 +906,16 @@
 
   async function archivePage(): Promise<void> {
     if (!canArchive || !selectedPage) return;
-    const includeDescendants = window.confirm(
-      'Archive descendant pages too? Choose Cancel to archive only this page.'
-    );
+    const archiveScope = await chooseAction({
+      title: 'Archive page',
+      message: `Archive "${selectedPage.title}"? Choose whether to include its descendant pages.`,
+      choices: [
+        { value: 'page', label: 'Archive this page', variant: 'secondary' },
+        { value: 'descendants', label: 'Archive with descendants', variant: 'danger' },
+      ],
+    });
+    if (archiveScope === null) return;
+    const includeDescendants = archiveScope === 'descendants';
     saving = true;
     try {
       const page = await archiveKnowledgePage(
@@ -1014,7 +1059,13 @@
 
   async function restoreVersion(revision: number): Promise<void> {
     if (!canUpdate || !selectedPage || historyPageId !== selectedPage.id) return;
-    if (!window.confirm(`Restore revision ${revision} as a new revision?`)) return;
+    if (
+      !(await confirmAction(`Restore revision ${revision} as a new revision?`, {
+        title: 'Restore revision',
+        confirmLabel: 'Restore',
+      }))
+    )
+      return;
     saving = true;
     try {
       const page = await restoreKnowledgeVersion(
@@ -1082,6 +1133,9 @@
       return (selectedPage?.id ?? null) === id;
     },
   });
+  const { confirmAction, chooseAction } = createConfirmation(
+    () => `${projectId}/${selectedPage?.id}/${selectedPage?.revision}`
+  );
 </script>
 
 <PageShell class={className}>

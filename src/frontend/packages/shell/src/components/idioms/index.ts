@@ -22,6 +22,7 @@ export { default as OutputContent } from './OutputContent.svelte';
 
 // Tab Close Prompt
 export { default as TabClosePrompt } from './TabClosePrompt.svelte';
+export { default as ConfirmationPrompt } from './ConfirmationPrompt.svelte';
 
 // Toast Components
 export { default as Toast } from './Toast.svelte';

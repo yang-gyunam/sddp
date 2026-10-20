@@ -37,6 +37,7 @@ const {
   ProjectGlossaryPage,
   ProjectKnowledgePage,
   ProjectArtifactsPage,
+  ProjectFilesPage,
   ProjectEffortPage,
   ProjectTraceabilityPage,
 } = activityComponents;
@@ -92,7 +93,7 @@ const MENU_PATTERNS = {
   newGlossary: /^new-glossary$/,
   // Project page patterns (e.g., "project-{uuid}-dashboard")
   projectPage:
-    /^project-(.+)-(dashboard|conversations|requirements|specs|tasks|glossary|knowledge|artifacts|effort|traceability)$/,
+    /^project-(.+)-(dashboard|conversations|requirements|specs|tasks|glossary|knowledge|artifacts|files|effort|traceability)$/,
   // Dashboard patterns
   dashboardMy: /^dashboard-(overview|my-tasks|recent|notifications)$/,
   // Task activity patterns
@@ -227,6 +228,7 @@ const PROJECT_PAGE_COMPONENTS: Record<string, unknown> = {
   glossary: ProjectGlossaryPage,
   knowledge: ProjectKnowledgePage,
   artifacts: ProjectArtifactsPage,
+  files: ProjectFilesPage,
   effort: ProjectEffortPage,
   traceability: ProjectTraceabilityPage,
 };

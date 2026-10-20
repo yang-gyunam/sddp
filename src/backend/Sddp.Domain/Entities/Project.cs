@@ -1,5 +1,6 @@
 using Sddp.Abstractions.Base;
 using Sddp.Abstractions.Enums;
+using Sddp.Abstractions.Exceptions;
 using Sddp.Abstractions.ValueObjects;
 
 namespace Sddp.Domain.Entities;
@@ -64,6 +65,54 @@ public class Project : EntityBase
     /// Last synchronization time
     /// </summary>
     public Timestamp? LastSyncedAt { get; private set; }
+
+    public GlobalUniqueId? GitConnectionId { get; private set; }
+    public string? RepositoryVisibility { get; private set; }
+    public void SelectGitConnection(GlobalUniqueId? id)
+    {
+        if (GitConnectionId == id) return;
+        GitConnectionId = id;
+        InvalidateRepositoryAccess();
+    }
+    public void InvalidateRepositoryAccess()
+    { RepositoryCheckedAt = null; RepositoryVersion++; MarkAsModified(); }
+    public void RecordRepositoryVisibility(bool isPrivate)
+    { RepositoryVisibility = isPrivate ? "private" : "public"; }
+
+    public int RepositoryVersion { get; private set; }
+    public DateTimeOffset? RepositoryCheckedAt { get; private set; }
+    public DateTimeOffset? RepositoryConfirmedAt { get; private set; }
+
+    public void CheckRepositoryVersion(int expectedVersion)
+    {
+        if (RepositoryVersion != expectedVersion)
+            throw new ConflictException("Repository settings changed. Refresh and review the current settings.");
+    }
+
+    public void RecordRepositoryCheck(DateTimeOffset now)
+    {
+        RepositoryCheckedAt = now;
+        RepositoryVersion++;
+        MarkAsModified();
+    }
+
+    public void ConfirmRepository(DateTimeOffset now)
+    {
+        if (RepositoryConfirmedAt.HasValue) return;
+        if (string.IsNullOrWhiteSpace(RepoUrl) || RepositoryCheckedAt is not { } checkedAt
+            || checkedAt < now.AddMinutes(-15))
+            throw new ConflictException("Check the repository connection before confirming it. Connection checks are valid for 15 minutes.");
+        RepositoryConfirmedAt = now;
+        RepositoryVersion++;
+        MarkAsModified();
+    }
+
+    public void RequireConfirmedRepository()
+    {
+        if (!RepositoryConfirmedAt.HasValue)
+            throw new SddpException("REPOSITORY_CONFIRMATION_REQUIRED",
+                "Confirm the Git repository in Settings → Project → General before saving file relationships.");
+    }
 
     /// <summary>
     /// Project members
@@ -159,10 +208,22 @@ public class Project : EntityBase
 
     public void UpdateRepository(string repoUrl, string? repoBranch, string artifactRootPath, int syncIntervalMinutes)
     {
+        if (Status.IsReadOnly())
+            throw new ConflictException("Repository settings cannot be changed while the project is read-only.");
+        var branch = string.IsNullOrWhiteSpace(repoBranch) ? RepoBranch : repoBranch.Trim();
+        var changed = RepoUrl != repoUrl || RepoBranch != branch || ArtifactRootPath != artifactRootPath;
+        if (changed && RepositoryConfirmedAt.HasValue)
+            throw new ConflictException("The repository is confirmed. Changing its URL, branch or artifact root requires a repository migration.");
         RepoUrl = repoUrl;
-        RepoBranch = string.IsNullOrWhiteSpace(repoBranch) ? RepoBranch : repoBranch.Trim();
+        RepoBranch = branch;
         ArtifactRootPath = artifactRootPath;
         SyncIntervalMinutes = syncIntervalMinutes > 0 ? syncIntervalMinutes : SyncIntervalMinutes;
+        if (changed)
+        {
+            RepositoryCheckedAt = null;
+            LastSyncedAt = null;
+        }
+        RepositoryVersion++;
         MarkAsModified();
     }
 

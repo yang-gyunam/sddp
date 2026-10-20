@@ -167,11 +167,11 @@ demo-onbrick:
 
 security-scan:
 	@echo "Running gitleaks scan..."
-	gitleaks detect --source . --config .gitleaks.toml --verbose
+	gitleaks detect --source . --config .gitleaks.toml --verbose --redact=100
 
 security-scan-staged:
 	@echo "Running gitleaks on staged files..."
-	gitleaks protect --staged --config .gitleaks.toml --verbose
+	gitleaks protect --staged --config .gitleaks.toml --verbose --redact=100
 
 sbom:
 	@echo "Generating SBOM (CycloneDX)..."

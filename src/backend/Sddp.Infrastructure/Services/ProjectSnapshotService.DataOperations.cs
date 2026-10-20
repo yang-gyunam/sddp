@@ -260,7 +260,10 @@ public partial class ProjectSnapshotService
         if (data.Tables.TryGetValue("projects", out var projectRows) && projectRows.Count > 0)
         {
             var row = projectRows[0];
-            var restorable = new[] { "name", "description", "status", "status_code_id", "repo_url", "repo_branch", "artifact_root_path", "sync_interval_minutes", "last_synced_at" };
+            // Repository coordinates, credentials and verification state are one operational
+            // configuration. Restoring only historical coordinates would invalidate the current
+            // connection, so snapshots restore business data without changing any Git settings.
+            var restorable = new[] { "name", "description", "status", "status_code_id" };
             var columns = restorable.Where(row.ContainsKey).ToArray();
             if (columns.Length > 0)
             {

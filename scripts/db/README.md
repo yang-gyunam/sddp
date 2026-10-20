@@ -15,6 +15,8 @@ make demo-onbrick      # DESTRUCTIVE: deletes all Compose project volumes first
 - `provision-base.sql`: schema, indexes, storage setup, and base data
 - `provision-test.sql`: shared public test accounts, tenants, and project membership
 - `provision.sql`: runs `provision-base.sql` and `provision-test.sql` in order
+- `upgrade-0.5.0.sql`: manual additive upgrade from public 0.4.0/0.4.1, including V016/V017 and runtime grants
+- `migrations/V016__project_repository_confirmation.sql`, `migrations/V017__git_connections.sql`: included by that upgrade entrypoint
 - `scripts/demo/onbrick-seed.sql`: optional OnBrick showcase seed
 
 These files are copied into the generated public output as the release DB entrypoints.
@@ -41,8 +43,10 @@ restore and deletion paths reference them. This does not install AI functionalit
 `provision-base.sql` rejects a non-empty application database. `provision.sql` also loads the
 public evaluation accounts, so it is an evaluation-only wrapper. None of these entrypoints
 is an in-place migration script. An automatic in-place upgrade bundle is not included.
+For existing 0.4.0/0.4.1 databases, follow the separate
+[manual 0.5.0 upgrade procedure](../../docs/deploy/repository-050.md).
 
 For non-default DB/storage values, export the shared settings before Make commands. See
 [Make and Compose settings](../../docs/public-guide.md#shared-make-and-compose-settings). Make does not load `.env`.
 
-Private AI usage DDL 33 / migration V015 are intentionally absent from the free bundle. No AI usage ledger or dashboard API is exported.
+Only the reviewed Free database assets are included in this distribution.

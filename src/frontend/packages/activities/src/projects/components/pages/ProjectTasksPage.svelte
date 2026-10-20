@@ -6,6 +6,7 @@
   import { Icon, IconButton, Button, Input, Select } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
   import {
+    createConfirmation,
     PageShell,
     PageHeader,
     PageBody,
@@ -403,7 +404,14 @@
 
   async function handleDeleteTask(): Promise<void> {
     if (!selectedTaskId) return;
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to delete this task?', {
+        title: 'Delete task',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      }))
+    )
+      return;
     const tenantId = getAuthState().user?.tenantId;
     if (!tenantId) return;
     try {
@@ -426,6 +434,7 @@
       panelMode = 'view';
     },
   });
+  const { confirmAction } = createConfirmation(() => `${projectId}/${selectedTaskId}`);
 </script>
 
 <PageShell class={className}>

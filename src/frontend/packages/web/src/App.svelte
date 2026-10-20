@@ -5,9 +5,11 @@
     AppLayout,
     SplitEditorGroup,
     SidebarPanels,
+    Dropdown,
     CommandPalette,
     QuickSwitcher,
     TabClosePrompt,
+    ConfirmationPrompt,
     ToastContainer,
     GridOverlay,
     formatTime,
@@ -15,10 +17,17 @@
     truncate,
     showProblemsPanel,
   } from '@sddp/shell';
-  import { tabActions, editorGroups, activeGroupId, layoutStore } from '@sddp/shell/stores';
+  import {
+    tabActions,
+    editorGroups,
+    activeGroupId,
+    layoutStore,
+    setSidebarSingleExpand,
+    statusBar,
+  } from '@sddp/shell/stores';
   import type { LayoutState, ActivityPanelMap, SidebarPanelConfig } from '@sddp/shell/types';
   // @sddp/ui - Design system
-  import { Icon, IconButton, Spinner } from '@sddp/ui';
+  import { Button, Icon, IconButton, Spinner } from '@sddp/ui';
   // @sddp/auth - Authentication
   import { LoginScreen, ForcePasswordChangePage } from '@sddp/shell/auth/pages';
   import {
@@ -134,6 +143,7 @@
   // Layout state
   let layoutState = $state<LayoutState | null>(null);
   let layoutUnsubscribe: (() => void) | null = null;
+  let sidebarPanels = $state<{ collapseAll: () => void } | undefined>();
 
   // Editor groups state
   let groups = $state($editorGroups);
@@ -145,18 +155,8 @@
   const isAdmin = $derived(
     authState.user?.roles?.some((r: string) => r === 'Admin' || r === 'ADMIN') ?? false
   );
-  const isProductOwner = $derived(
-    authState.user?.roles?.some((r: string) => r === 'ProductOwner' || r === 'PRODUCT_OWNER') ??
-      false
-  );
-  const visibleSettingsProjects = $derived(
-    getVisibleSettingsProjects({
-      projects: projectState.projects,
-      currentUserId: authState.user?.id ?? '',
-      isAdmin,
-      isProductOwner,
-    })
-  );
+  let visibleSettingsProjects = $state<Array<{ id: string; name: string }>>([]);
+  let projectLoadGeneration = 0;
 
   // Dev tools: Grid overlay for responsive design verification
   let showGridOverlay = $state(false);
@@ -234,10 +234,14 @@
       };
     },
     openTab: openTabWithComponent,
-    showError: (path, id) => openAccessDeniedTab(
-      'Conversation unavailable', 'message-square', path, `conversation-${id}`,
-      'Could not open this conversation. It may be unavailable or you may no longer have access. Reload to try again.'
-    ),
+    showError: (path, id) =>
+      openAccessDeniedTab(
+        'Conversation unavailable',
+        'message-square',
+        path,
+        `conversation-${id}`,
+        'Could not open this conversation. It may be unavailable or you may no longer have access. Reload to try again.'
+      ),
   });
 
   // Cleanup references (set after auth-dependent initialization)
@@ -409,7 +413,11 @@
         await bootstrap.navigateToReturnUrl();
 
         // Replace the returnUrl history entry so browser back won't return to it
-        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+        window.history.replaceState(
+          window.history.state,
+          '',
+          window.location.pathname + window.location.search
+        );
       }
     } catch {
       // Token refresh failed, user needs to login
@@ -454,7 +462,11 @@
     await bootstrap.navigateToReturnUrl();
 
     // Replace the login screen history entry so browser back won't return to it
-    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search
+    );
   }
 
   // Handle logout
@@ -507,19 +519,30 @@
     if (!user?.tenantId) return;
 
     const service = createProjectService(user.tenantId);
+    const request = ++projectLoadGeneration;
+    visibleSettingsProjects = [];
+    const isCurrent = () =>
+      request === projectLoadGeneration &&
+      authStore.get().user?.id === user.id &&
+      authStore.get().user?.tenantId === user.tenantId;
 
     setProjectsLoading(true);
     try {
       const projects = await service.getProjectsWithBadges();
+      const settingsProjects = await getVisibleSettingsProjects(projects, user.tenantId);
+      if (!isCurrent()) return;
       setProjects(projects);
+      visibleSettingsProjects = settingsProjects;
 
       // Connect SignalR hubs for real-time updates
       realtimeBridge.connect();
     } catch (error) {
-      console.error('Failed to load projects:', error);
-      setProjectsError('Failed to load projects');
+      if (isCurrent()) {
+        console.error('Failed to load projects:', error);
+        setProjectsError('Failed to load projects');
+      }
     } finally {
-      setProjectsLoading(false);
+      if (isCurrent()) setProjectsLoading(false);
     }
   }
 
@@ -808,7 +831,7 @@
               cfg.icon,
               canonicalPath,
               `settings-project-${projId}-${pageType}`,
-              'Project settings are available only to admins or project product owners.'
+              'Project settings require project update permission.'
             );
             return true;
           }
@@ -845,9 +868,10 @@
       ...sidebarState.privateChannels,
       ...sidebarState.topics,
     ].find((c) => c.id === parsed.id);
-    const channelEntry = !convEntry && Array.isArray(conversationState.channels)
-      ? conversationState.channels.find((c) => c.id === parsed.id)
-      : null;
+    const channelEntry =
+      !convEntry && Array.isArray(conversationState.channels)
+        ? conversationState.channels.find((c) => c.id === parsed.id)
+        : null;
     const convName = convEntry?.name || channelEntry?.topic;
     // All entity views from URL path are readonly
     const readonlyProps = { additionalProps: { readonly: true } };
@@ -956,6 +980,7 @@
       tasks: { icon: 'check-square', label: 'Tasks' },
       glossary: { icon: 'book-open', label: 'Glossary' },
       knowledge: PROJECT_PAGE_CONFIG.knowledge,
+      files: { icon: 'file-code', label: 'Files' },
       artifacts: { icon: 'package', label: 'Artifacts' },
       effort: { icon: 'clock', label: 'Effort' },
       traceability: { icon: 'type-hierarchy', label: 'Traceability' },
@@ -1049,6 +1074,16 @@
   // Left: user,,
   // Right:,, Sign Out
   let statusItems = $derived([
+    ...$statusBar.items
+      .filter((item) => item.visible !== false)
+      .sort((a, b) => b.priority - a.priority)
+      .map((item) => ({
+        id: item.id,
+        text: item.text,
+        icon: item.icon,
+        tooltip: item.tooltip,
+        position: item.alignment,
+      })),
     {
       id: 'version',
       text: appVersionLabel,
@@ -1127,6 +1162,32 @@
   let currentActivityLabel = $derived(
     [...activityItems, ...activityBottomItems].find((i) => i.id === currentActivity)?.label ?? ''
   );
+  const activeSidebarPanelId = $derived.by(() => {
+    if (currentActivity === 'settings') {
+      const selectedId = selectionSync.selectedSettingsItemId;
+      if (!selectedId) return null;
+      const projectMatch = selectedId.match(
+        /^settings-project-(.+)-(general|members|roles|integrations)$/
+      );
+      if (projectMatch) return `settings-project-${projectMatch[1]}`;
+      if (selectedId.startsWith('settings-system-')) return 'settings-system';
+      if (['settings-profile', 'settings-preferences'].includes(selectedId)) {
+        return 'settings-user';
+      }
+    }
+    if (currentActivity === 'projects') {
+      const projectId = selectionSync.selectedProjectNodePath?.split('/')[1];
+      return projectId ? `project-${projectId}` : null;
+    }
+    if (currentActivity === 'dashboard' && selectionSync.selectedDashboardItemId) {
+      return 'my-dashboard';
+    }
+    if (currentActivity === 'tasks') {
+      if (selectionSync.selectedBacklogProjectId) return 'backlog';
+      if (selectionSync.selectedCategoryId) return 'my-tasks';
+    }
+    return null;
+  });
 
   // Settings activity: no auto-open tab. Each panel item opens its own tab via onOpenTab.
 
@@ -1290,6 +1351,46 @@
       <IconButton icon="refresh-cw" title="Refresh" onclick={handleSidebarRefresh} />
     {/snippet}
 
+    {#snippet sidebarOverflowActions()}
+      {#if currentActivity !== 'conversations' && (dynamicActivityPanels[currentActivity]?.length ?? 0) >= 2}
+        {#key currentActivity}
+          <Dropdown position="bottom-right" menuClass="min-w-[180px]">
+            {#snippet trigger({ toggle, open })}
+              <IconButton
+                icon="more-vertical"
+                title="Sidebar options"
+                onclick={toggle}
+                ariaHasPopup
+                ariaExpanded={open}
+              />
+            {/snippet}
+            <Button
+              variant="unstyled"
+              role="menuitemcheckbox"
+              aria-checked={layoutState?.sidebar.singleExpand ?? false}
+              class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-[var(--color-bg-tertiary)] transition-colors"
+              onclick={() => setSidebarSingleExpand(!(layoutState?.sidebar.singleExpand ?? false))}
+            >
+              <span class="flex-1">Single Expand</span>
+              <span class="flex items-center justify-center w-4 h-4">
+                {#if layoutState?.sidebar.singleExpand}
+                  <Icon name="check" size="sm" class="text-[var(--color-accent-text)]" />
+                {/if}
+              </span>
+            </Button>
+            <Button
+              variant="unstyled"
+              role="menuitem"
+              class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-[var(--color-bg-tertiary)] transition-colors"
+              onclick={() => sidebarPanels?.collapseAll()}
+            >
+              <span class="flex-1">Collapse All</span>
+            </Button>
+          </Dropdown>
+        {/key}
+      {/if}
+    {/snippet}
+
     {#snippet sidebarContent()}
       {#if currentActivity === 'conversations'}
         <LazyActivityContent
@@ -1305,7 +1406,10 @@
         />
       {:else}
         <SidebarPanels
+          bind:this={sidebarPanels}
           activity={currentActivity}
+          singleExpand={layoutState?.sidebar.singleExpand ?? false}
+          activePanelId={activeSidebarPanelId}
           activityPanels={dynamicActivityPanels}
           panelContents={{
             'my-dashboard': myDashboardPanel,
@@ -1336,6 +1440,7 @@
 
   <!-- Unsaved-changes prompt for tab closes -->
   <TabClosePrompt />
+  <ConfirmationPrompt />
 
   <!-- Toast Notifications -->
   <ToastContainer position="top-right" />

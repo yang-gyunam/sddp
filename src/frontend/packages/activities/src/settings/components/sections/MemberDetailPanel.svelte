@@ -6,7 +6,7 @@
    */
 
   import { untrack, type Snippet } from 'svelte';
-  import { Avatar, formatDateTime, getAuthState } from '@sddp/shell';
+  import { createConfirmation, Avatar, formatDateTime, getAuthState } from '@sddp/shell';
   import { Icon, IconButton, Select, Button, SearchField, Spinner } from '@sddp/ui';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import type { ProjectMember } from '../../../projects/types/project.types';
@@ -154,15 +154,27 @@
     onRoleChanged(member.userId, newRole);
   }
 
-  function handleDeactivate() {
+  async function handleDeactivate() {
     if (!member?.userId || !onDeactivated) return;
-    if (!confirm(`Deactivate ${member.displayName}? They will lose project access.`)) return;
+    if (
+      !(await confirmAction(`Deactivate ${member.displayName}? They will lose project access.`, {
+        title: 'Deactivate member',
+        confirmLabel: 'Deactivate',
+        variant: 'danger',
+      }))
+    )
+      return;
     onDeactivated(member.userId);
   }
 
-  function handleRemove() {
+  async function handleRemove() {
     if (!member?.userId || !onRemoved) return;
-    if (!confirm(`Remove ${member.displayName} from the project? This action cannot be undone.`))
+    if (
+      !(await confirmAction(
+        `Remove ${member.displayName} from the project? This action cannot be undone.`,
+        { title: 'Remove member', confirmLabel: 'Remove', variant: 'danger' }
+      ))
+    )
       return;
     onRemoved(member.userId);
   }
@@ -172,6 +184,7 @@
     if (!dateStr) return 'Never';
     return formatDateTime(dateStr, { month: 'short', year: undefined });
   }
+  const { confirmAction } = createConfirmation(() => member?.userId ?? '');
 </script>
 
 <section class="panel" aria-label={mode === 'view' ? 'Member details' : 'Add member'}>

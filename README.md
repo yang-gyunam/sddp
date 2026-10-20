@@ -6,7 +6,7 @@ SDDP turns discussions and agreements into structured specs and keeps implementa
 
 Code explains what changed. SDDP keeps the why.
 
-This repository contains the free edition: conversations, requirements, specs, Knowledge, glossary, artifacts, tasks and effort tracking. AI assistance, semantic search and code-generation tools are not included. Optional local Whisper dictation is available separately.
+This repository contains the free edition: conversations, requirements, specs, Knowledge, glossary, artifacts, tasks, effort tracking and the Git File Viewer. AI assistance, semantic search and code-generation tools are not included. Optional local Whisper dictation is available separately.
 
 ## One Decision, End to End
 
@@ -21,9 +21,26 @@ If you open code written six months ago and can no longer explain why it looks t
 - Preserve decision context through **Conversation -> Requirement -> Spec -> Code**
 - Review and approve specs, then explicitly lock them; preserve decisions through versions
 - Track recorded artifact status and content-hash verification results
+- Explore committed files, whole-file Git history and the current SDDP records linked to each file
 - Dictate conversation messages with local speech-to-text (Whisper, no cloud calls)
 
 Public setup and evaluation notes are in [docs/public-guide.md](docs/public-guide.md).
+
+## Git File Viewer — 0.5.0
+
+Open **Projects → your project → Files** to search every committed file path, browse folders,
+read a historical version and follow links to Artifacts, Tasks, Specs, Requirements and Conversations.
+The side panels use the shared project layout; file status appears in the app status bar.
+Historical file URLs survive browser reloads, and split tabs retain independent file and search state.
+
+[Connect the project's repository](docs/public-guide.md#connect-a-project-repository) in
+**Settings → Project → General → Git Repository**. Save a draft, check the connection and confirm
+it before saving file relationships. Free supports public repositories without authentication.
+Administrators can register a project-scoped public GitHub/Gitea connection in System Config.
+Confirmed URL/branch/root settings are locked; sync timing remains editable.
+Files is read-only: editing, branch switching and before/after comparisons are outside this release.
+Existing 0.4.0/0.4.1 installations must follow the [manual database upgrade](docs/deploy/repository-050.md)
+before starting the updated API.
 
 ## Explore the Whole Project Context
 
@@ -140,10 +157,11 @@ make test
 make lint
 ```
 
-`make test` runs the limited UI-control and public error-handler suites (6 files, 51 cases).
+`make test` runs the limited UI-control and public error-handler suites.
 These are not the full product tests. Backend and AI tests are not shipped.
 For the separate OnBrick browser scenario, including seed and browser prerequisites, follow
-[public validation](docs/public-guide.md#validation). Its setup clears the evaluation Redis
+[public validation](docs/public-guide.md#validation). The headless smoke avoids shared setup and Redis
+flushes. The older headed showcase setup clears the evaluation Redis
 instance and changes test data; use a disposable evaluation environment.
 
 ## Contributing

@@ -1,7 +1,7 @@
 <!-- Activity: Artifacts > Nav: Global (ACT-ART-001) -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { getTabState, setTabState, toast } from '@sddp/shell';
+  import { createConfirmation, getTabState, setTabState, toast } from '@sddp/shell';
   import ArtifactSidebar from '../sections/ArtifactSidebar.svelte';
   import ArtifactContent from '../sections/ArtifactContent.svelte';
   import ArtifactMetaPanel from '../sections/ArtifactMetaPanel.svelte';
@@ -176,7 +176,14 @@
 
   async function handleDeactivateArtifact() {
     if (!currentArtifact || !_tenantId || !_projectId) return;
-    if (!confirm('Are you sure you want to deactivate this artifact?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to deactivate this artifact?', {
+        title: 'Deactivate artifact',
+        confirmLabel: 'Deactivate',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     try {
       await deactivateArtifact(_tenantId, _projectId, currentArtifact.id);
@@ -190,6 +197,9 @@
       toast.error(err instanceof Error ? err.message : 'Failed to deactivate artifact');
     }
   }
+  const { confirmAction } = createConfirmation(
+    () => `${_tenantId}/${_projectId}/${currentArtifact?.id}`
+  );
 </script>
 
 <div class="flex h-full {className}">

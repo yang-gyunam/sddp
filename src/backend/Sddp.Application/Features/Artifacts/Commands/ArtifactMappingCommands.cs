@@ -1,3 +1,4 @@
+using Sddp.Application.Behaviors;
 using MediatR;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Exceptions;
@@ -22,7 +23,7 @@ public sealed record CreateArtifactMappingCommand(
     string MappingReason,
     string? SourceContent,
     string? Notes,
-    GlobalUniqueId UserId) : ICommand<ArtifactToSpecMappingDto>, IAuditableRequest<ArtifactToSpecMappingDto>
+    GlobalUniqueId UserId) : ICommand<ArtifactToSpecMappingDto>, IAuditableRequest<ArtifactToSpecMappingDto>, IRepositoryBoundRequest
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(ArtifactToSpecMappingDto response) => AuditLog;

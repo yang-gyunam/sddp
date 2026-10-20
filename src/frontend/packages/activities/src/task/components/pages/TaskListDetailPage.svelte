@@ -3,6 +3,7 @@
   import { untrack } from 'svelte';
   import { Icon, IconButton, Input, Spinner } from '@sddp/ui';
   import {
+    createConfirmation,
     getAuthState,
     subscribeAuth,
     toast,
@@ -282,7 +283,14 @@
 
   async function handleDeleteTask() {
     if (!selectedTaskId || !tenantId) return;
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to delete this task?', {
+        title: 'Delete task',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     try {
       await deleteTask(tenantId, selectedTaskId, projectId || undefined);
@@ -364,6 +372,7 @@
     }
     await loadTasks();
   }
+  const { confirmAction } = createConfirmation(() => `${tenantId}/${projectId}/${selectedTaskId}`);
 </script>
 
 <PageShell class="h-full {className}">

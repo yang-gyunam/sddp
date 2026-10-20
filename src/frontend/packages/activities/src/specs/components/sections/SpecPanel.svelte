@@ -4,7 +4,7 @@
   import { untrack } from 'svelte';
   import { Icon, IconButton, Button } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
-  import { toast, getTabState, setTabState } from '@sddp/shell';
+  import { createConfirmation, toast, getTabState, setTabState } from '@sddp/shell';
   import SpecList from './SpecList.svelte';
   import SpecDetailView from './SpecDetailView.svelte';
   import SpecVersionHistory from '../idioms/SpecVersionHistory.svelte';
@@ -336,7 +336,14 @@
 
   async function handleDeactivateSpec(): Promise<void> {
     if (!storeState?.currentSpec) return;
-    if (!confirm('Are you sure you want to deactivate this spec?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to deactivate this spec?', {
+        title: 'Deactivate spec',
+        confirmLabel: 'Deactivate',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     try {
       await specService.deleteSpec(storeState.currentSpec.id);
@@ -451,6 +458,9 @@
       }
     }, 300);
   }
+  const { confirmAction } = createConfirmation(
+    () => `${tenantId}/${projectId}/${storeState?.currentSpec?.id}`
+  );
 </script>
 
 <div class="flex h-full bg-[var(--color-surface-100)] {className}">

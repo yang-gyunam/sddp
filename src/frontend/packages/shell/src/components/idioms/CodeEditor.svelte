@@ -1,6 +1,6 @@
 <!-- Idiom: CodeEditor — read-only source viewer backed by Monaco -->
 <script lang="ts">
-  import { onDestroy, untrack } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
 
   interface Props {
     /** File contents to display. */
@@ -11,6 +11,8 @@
     readOnly?: boolean;
     /** Height of the editor surface. */
     height?: string;
+    /** Fill a parent editor pane without a nested card frame. */
+    embedded?: boolean;
     class?: string;
   }
 
@@ -19,6 +21,7 @@
     language = 'plaintext',
     readOnly = true,
     height = '100%',
+    embedded = false,
     class: className = '',
   }: Props = $props();
 
@@ -66,6 +69,20 @@
       // A viewer, not an IDE: drop the affordances that imply editing.
       automaticLayout: true,
       minimap: { enabled: false },
+      overviewRulerLanes: 0,
+      hideCursorInOverviewRuler: true,
+      overviewRulerBorder: false,
+      scrollbar: {
+        // Match the app's native gutters with a narrower, rounded thumb on both axes.
+        vertical: 'visible',
+        horizontal: 'visible',
+        verticalScrollbarSize: 14,
+        horizontalScrollbarSize: 14,
+        verticalSliderSize: 8,
+        horizontalSliderSize: 8,
+        useShadows: false,
+        scrollByPage: true,
+      },
       scrollBeyondLastLine: false,
       renderLineHighlight: readOnly ? 'none' : 'line',
       fontSize: 13,
@@ -79,8 +96,26 @@
     const explicit = root.getAttribute('data-theme');
     if (explicit === 'dark') return true;
     if (explicit === 'light') return false;
+    if (root.classList.contains('dark')) return true;
+    if (root.classList.contains('light')) return false;
+    if (root.style.colorScheme === 'light') return false;
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   }
+
+  onMount(() => {
+    const updateTheme = () => monacoModule?.editor.setTheme(prefersDark() ? 'vs-dark' : 'vs');
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme', 'style'],
+    });
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+    media?.addEventListener('change', updateTheme);
+    return () => {
+      observer.disconnect();
+      media?.removeEventListener('change', updateTheme);
+    };
+  });
 
   function teardown() {
     mountToken++;
@@ -112,13 +147,31 @@
 
 {#if loadFailed}
   <pre
-    class="overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 font-mono text-xs text-[var(--color-text-secondary)] {className}"
+    class="overflow-auto {embedded
+      ? ''
+      : 'rounded border border-[var(--color-border)]'} bg-[var(--color-surface-2)] p-3 font-mono text-xs text-[var(--color-text-secondary)] {className}"
     style="height: {height}">{value}</pre>
 {:else}
   <div
     bind:this={container}
-    class="overflow-hidden rounded border border-[var(--color-border)] {className}"
+    class="code-editor overflow-hidden {embedded
+      ? ''
+      : 'rounded border border-[var(--color-border)]'} {className}"
     style="height: {height}"
     data-testid="code-editor"
   ></div>
 {/if}
+
+<style>
+  .code-editor :global(.monaco-scrollable-element > .scrollbar) {
+    background: var(--color-bg-secondary);
+  }
+  .code-editor :global(.monaco-scrollable-element > .scrollbar > .slider) {
+    border-radius: 4px;
+    background: light-dark(var(--color-neutral-400), var(--color-neutral-500));
+  }
+  .code-editor :global(.monaco-scrollable-element > .scrollbar > .slider:hover),
+  .code-editor :global(.monaco-scrollable-element > .scrollbar > .slider.active) {
+    background: light-dark(var(--color-neutral-500), var(--color-neutral-400));
+  }
+</style>

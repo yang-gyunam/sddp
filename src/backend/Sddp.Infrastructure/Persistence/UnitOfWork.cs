@@ -173,6 +173,8 @@ public class UnitOfWork : IUnitOfWork
         }
         catch (DbUpdateConcurrencyException exception)
         {
+            if (exception.Entries.Any(entry => entry.Entity is Project))
+                throw new ConflictException("Repository settings changed. Refresh and review the current settings.");
             var pageEntry = exception.Entries.FirstOrDefault(
                 entry => entry.Entity is KnowledgePage);
             if (pageEntry is null)

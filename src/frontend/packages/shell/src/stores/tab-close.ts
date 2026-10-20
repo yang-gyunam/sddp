@@ -1,5 +1,6 @@
 
 import { tabActions, tabsStore } from './tabs.store';
+import { requestConfirmation } from './confirmation.store';
 
 export type TabCloseOutcome = 'save' | 'discard' | 'cancel';
 
@@ -23,16 +24,17 @@ const guards = new Map<string, TabCloseGuard>();
 const inFlight = new Map<string, Promise<boolean>>();
 
 /**
- * The default decider keeps today's behavior: a confirmed prompt discards, a dismissed one cancels.
- * It never answers `save`. A host that mounts the three-way dialog installs its own decider.
- *
- * Defaulting to a fixed `cancel` would make tabs unclosable wherever the dialog is not mounted, and
- * defaulting to a fixed `discard` would keep the silent data loss this guard exists to stop.
+ * Hosts normally install the three-way save/discard/cancel dialog. The fallback uses the same
+ * shared Modal confirmation service; without a mounted host it safely cancels.
  */
 const confirmDecider: TabCloseDecider = async () => {
-  const confirm = globalThis.confirm;
-  if (typeof confirm !== 'function') return 'cancel';
-  return confirm.call(globalThis, 'Discard unsaved changes?') ? 'discard' : 'cancel';
+  return (await requestConfirmation('Discard unsaved changes?', {
+    title: 'Unsaved changes',
+    confirmLabel: 'Discard changes',
+    variant: 'danger',
+  }))
+    ? 'discard'
+    : 'cancel';
 };
 
 let decider: TabCloseDecider = confirmDecider;

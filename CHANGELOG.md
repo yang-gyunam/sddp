@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0] - 2026-10-20
+
+### Git File Viewer
+
+- Browse committed project files and whole-file Git history, with File Info and Git metadata shown separately.
+- Follow links to current, authorized Artifacts, Tasks, Specs, Requirements and Conversations.
+- Search every committed file name/path, including unopened folders, and open results directly.
+- Restore a selected historical commit and its original path after browser reloads; remove revision parameters when returning to the latest version.
+- Retain search results after file selection, scroll the selected tree row into view, and copy search state when splitting a tab without coupling subsequent changes.
+- Preserve chosen side-panel widths during browser resizing, fit file contents into the remaining space, and keep the panel resize handle usable beside the editor scrollbar.
+- Reuse shared compact tree/list patterns, show filenames above parent paths in search, and provide collapse/refresh actions beside the search field.
+- Show file-type icons consistently and align both editor scrollbars with the app's rounded appearance and theme.
+- Align page, panel and relationship components with the existing UI and preserve file, version, search and expanded folders on the page's Refresh repository action. Browser reloads restore file/version URLs but do not persist search or custom panel widths.
+- File editing, branch switching and before/after comparisons are outside this release scope.
+
+### Repository setup and access
+
+- Add repository drafts, connection checks and confirmation in Settings → Project → General. Require confirmation before saving the first file relationship and lock the confirmed repository coordinates.
+- Allow public repositories only in the free edition. Reject authentication token registration and repositories that require authentication on the server.
+- Let administrators register project-scoped public GitHub/Gitea connections in System Config and select the connection in project settings.
+- Check anonymous GitHub readability during Files access without consuming the provider's metadata API quota on each read.
+- Enforce project access restrictions on Artifact source reads, refresh the repository form after Reload, and preserve the current repository configuration during project snapshot restore.
+- Provide a transactional, repeatable V016/V017 SQL entrypoint for reviewed upgrades from 0.4.0/0.4.1. See [repository upgrade notes](docs/deploy/repository-050.md).
+
+### Shared interaction
+
+- Replace browser confirmation dialogs with the shared application Modal; cancelling Knowledge archive leaves the item unchanged.
+- Add Single Expand and Collapse All to the sidebar's overflow menu when it contains at least two supported panels. Single Expand defaults to off and its preference survives browser reloads.
+- Preserve the sidebar's selected expansion state while project panels reload.
+
+### Known limitations
+
+- The 2026-10-20 dependency audit retained seven Moderate npm findings, including two runtime findings, with no High/Critical findings; the NuGet audit reported no vulnerabilities.
+- This free source distribution does not include AI/LLM modules or an automatic in-place upgrade bundle.
+
+See [release notes](RELEASE.md) for installation, upgrade precautions and validation scope.
+
 ## [v0.4.1] - 2026-10-18
 
 ### Security and compatibility

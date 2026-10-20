@@ -37,6 +37,7 @@
 
     // Slots
     sidebarHeaderActions?: import('svelte').Snippet;
+    sidebarOverflowActions?: import('svelte').Snippet;
     sidebarContent?: import('svelte').Snippet;
     mainContent?: import('svelte').Snippet;
     statusContent?: import('svelte').Snippet;
@@ -56,6 +57,7 @@
 
     // Slots
     sidebarHeaderActions,
+    sidebarOverflowActions,
     sidebarContent,
     mainContent,
     statusContent,
@@ -141,6 +143,7 @@
       onResize={handleSidebarResize}
       onToggle={handleSidebarToggle}
       headerActions={sidebarHeaderActions}
+      overflowActions={sidebarOverflowActions}
     >
       {#if sidebarContent}
         {@render sidebarContent()}

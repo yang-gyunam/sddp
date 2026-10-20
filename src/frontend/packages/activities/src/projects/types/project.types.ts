@@ -113,6 +113,7 @@ export type ProjectPageType =
   | 'glossary'
   | 'knowledge'
   | 'artifacts'
+  | 'files'
   | 'effort'
   | 'traceability';
 
@@ -162,6 +163,7 @@ export const PROJECT_TREE_NODES: ProjectTreeNode[] = [
   { id: 'specs', type: 'specs', label: 'Specs', icon: ENTITY_SVG_ICONS.specs },
   { id: 'glossary', type: 'glossary', label: 'Glossary', icon: ENTITY_SVG_ICONS.glossary },
   { id: 'knowledge', type: 'knowledge', label: 'Knowledge', icon: 'documents' },
+  { id: 'files', type: 'files', label: 'Files', icon: 'file-code' },
   { id: 'artifacts', type: 'artifacts', label: 'Artifacts', icon: ENTITY_SVG_ICONS.artifacts },
   { id: 'tasks', type: 'tasks', label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
   { id: 'effort', type: 'effort', label: 'Effort', icon: ENTITY_SVG_ICONS.effort },
@@ -176,6 +178,7 @@ export const PROJECT_PAGE_CONFIG: Record<ProjectPageType, { label: string; icon:
   tasks: { label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
   glossary: { label: 'Glossary', icon: ENTITY_SVG_ICONS.glossary },
   knowledge: { label: 'Knowledge', icon: 'documents' },
+  files: { label: 'Files', icon: 'file-code' },
   artifacts: { label: 'Artifacts', icon: ENTITY_SVG_ICONS.artifacts },
   effort: { label: 'Effort', icon: ENTITY_SVG_ICONS.effort },
   traceability: { label: 'Traceability', icon: 'type-hierarchy' },

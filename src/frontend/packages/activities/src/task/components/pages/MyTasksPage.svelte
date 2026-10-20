@@ -3,6 +3,7 @@
   import { untrack } from 'svelte';
   import { Icon, Button, Input, Select } from '@sddp/ui';
   import {
+    createConfirmation,
     getAuthState,
     subscribeAuth,
     toast,
@@ -429,7 +430,14 @@
 
   async function handleDeleteTask() {
     if (!selectedTaskId || !tenantId) return;
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to delete this task?', {
+        title: 'Delete task',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     try {
       const taskProjectId = propProjectId || currentTask?.projectId || undefined;
@@ -515,6 +523,9 @@
   function handleCancelPanel() {
     panelMode = 'view';
   }
+  const { confirmAction } = createConfirmation(
+    () => `${tenantId}/${propProjectId}/${currentTask?.projectId}/${selectedTaskId}`
+  );
 </script>
 
 <PageShell class={className}>

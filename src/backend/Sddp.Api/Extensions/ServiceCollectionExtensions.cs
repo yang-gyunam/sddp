@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Data;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -72,7 +73,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped(typeof(IReadRepository<>), typeof(DapperRepository<>));
 
         services.Configure<GitRepositoryOptions>(configuration.GetSection("Git"));
+        services.AddSingleton(sp => new GitEditionPolicy(
+            sp.GetRequiredService<Sddp.Api.Configuration.DistributionInfo>().Edition != "free"));
+        services.AddDataProtection().SetApplicationName("SDDP")
+            .PersistKeysToFileSystem(new DirectoryInfo(configuration["Git:CredentialKeyPath"] ?? "data/git-credential-keys"));
+        services.AddSingleton<IGitCredentialProtector, Sddp.Api.Configuration.GitCredentialProtector>();
+        services.AddScoped<IGitConnectionService, GitConnectionService>();
+        services.AddScoped<IGitRepositoryAccess, GitRepositoryAccess>();
+        services.AddHttpClient<IGitRemoteInspector, GitRemoteInspector>(client => client.Timeout = TimeSpan.FromSeconds(15))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddScoped<IArtifactRepositoryService, GitArtifactRepositoryService>();
+        services.AddScoped<IRepositoryConnectionChecker, GitRepositoryConnectionChecker>();
+        services.AddScoped<IProjectFileRepository, GitProjectFileRepository>();
 
         // Artifact descriptors (SDDP-owned storage, separate from the customer checkout)
         services.Configure<ArtifactDescriptorOptions>(configuration.GetSection("ArtifactDescriptor"));

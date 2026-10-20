@@ -67,8 +67,6 @@ services:
       - SpeechToText__Model=Systran/faster-whisper-small
       - SpeechToText__TimeoutSeconds=120
       - FeatureFlags__Speech__Enabled=true
-      - Git__Token=${SDDP_GIT__TOKEN:-}
-      - Git__Username=${SDDP_GIT__USERNAME:-oauth2}
       - Git__RepoRoot=${SDDP_GIT__REPOROOT:-data/git-repos}
       - Git__ServerUrl=http://sddp-gitea:3100
       - OpenTelemetry__Endpoint=http://sddp-aspire:18889

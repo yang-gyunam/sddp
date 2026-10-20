@@ -211,6 +211,11 @@
       "svelte": "./dist/task/types/index.js",
       "types": "./dist/task/types/index.d.ts",
       "default": "./dist/task/types/index.js"
+    },
+    "./projects/pages/files": {
+      "svelte": "./dist/projects/pages/files.js",
+      "types": "./dist/projects/pages/files.d.ts",
+      "default": "./dist/projects/pages/files.js"
     }
   },
   "files": [

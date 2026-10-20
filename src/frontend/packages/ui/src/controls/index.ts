@@ -21,6 +21,7 @@ export { default as Calendar } from './Calendar.svelte';
 // Display Controls
 export { default as Badge } from './Badge.svelte';
 export { default as Icon } from './Icon.svelte';
+export { default as FileIcon } from './FileIcon.svelte';
 export { default as IconButton } from './IconButton.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 export { default as Typography } from './Typography.svelte';

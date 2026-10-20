@@ -14,13 +14,15 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
     private readonly GitRepositoryOptions _options;
     private readonly ILogger<GitArtifactRepositoryService> _logger;
     private readonly string _repoRoot;
+    private readonly IGitRepositoryAccess _access;
 
     public GitArtifactRepositoryService(
         IUnitOfWork unitOfWork,
         IOptions<GitRepositoryOptions> options,
-        ILogger<GitArtifactRepositoryService> logger)
+        ILogger<GitArtifactRepositoryService> logger, IGitRepositoryAccess access)
     {
         _unitOfWork = unitOfWork;
+        _access = access;
         _options = options.Value;
         _logger = logger;
         _repoRoot = Path.GetFullPath(_options.RepoRoot, Directory.GetCurrentDirectory());
@@ -40,7 +42,10 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         if (string.IsNullOrWhiteSpace(project.RepoUrl))
             throw new InvalidOperationException("Project repository URL is not configured");
 
-        var repoPath = Path.Combine(_repoRoot, tenantId.ToString(), projectId.ToString());
+        // A draft may point to another remote/branch. Never reuse its predecessor's checkout.
+        var identity = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            project.RepoUrl + "\n" + project.RepoBranch))).ToLowerInvariant()[..16];
+        var repoPath = Path.Combine(_repoRoot, tenantId.ToString(), projectId.ToString(), identity);
 
         return new ArtifactRepositoryContext(
             TenantId: tenantId,
@@ -57,6 +62,10 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         ArtifactRepositoryContext context,
         CancellationToken cancellationToken = default)
     {
+        var project = await _unitOfWork.Repository<Project>().GetByIdAsync(context.ProjectId, cancellationToken);
+        if (project is null || project.TenantId != context.TenantId || !project.IsActive || project.RepoUrl != context.RepoUrl)
+            throw new InvalidOperationException("Project repository changed. Reload before browsing.");
+        var remote = await _access.ResolveForReadAsync(context.TenantId, context.ProjectId, context.RepoUrl, project.GitConnectionId, cancellationToken);
         Directory.CreateDirectory(_repoRoot);
 
         var repoPath = context.RepoPath;
@@ -65,15 +74,17 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
 
         if (!repoExists)
         {
-            await (CloneRepositoryAsync(context, cancellationToken)).ConfigureAwait(false);
+            await (CloneRepositoryAsync(context, remote, cancellationToken)).ConfigureAwait(false);
             await (RecordSyncAsync(context, cancellationToken)).ConfigureAwait(false);
             return;
         }
 
+        // Remove credentials left by older installations even when a fetch is not due.
+        await RunGitAsync($"-C {Quote(context.RepoPath)} remote set-url origin {Quote(context.RepoUrl)}", _repoRoot, cancellationToken);
         if (!ShouldSync(context))
             return;
 
-        await (SyncRepositoryAsync(context, cancellationToken)).ConfigureAwait(false);
+        await (SyncRepositoryAsync(context, remote, cancellationToken)).ConfigureAwait(false);
         await (RecordSyncAsync(context, cancellationToken)).ConfigureAwait(false);
     }
 
@@ -162,7 +173,7 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
     }
 
     private async Task CloneRepositoryAsync(
-        ArtifactRepositoryContext context,
+        ArtifactRepositoryContext context, GitRemoteAccess remote,
         CancellationToken cancellationToken)
     {
         var parentDir = Directory.GetParent(context.RepoPath)?.FullName;
@@ -171,21 +182,21 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
 
         Directory.CreateDirectory(parentDir);
 
-        var authUrl = BuildAuthenticatedUrl(context.RepoUrl);
+        var authUrl = context.RepoUrl;
         var maskedUrl = MaskUrl(authUrl);
         var branch = string.IsNullOrWhiteSpace(context.RepoBranch) ? "main" : context.RepoBranch;
 
         _logger.LogInformation("Cloning repository {RepoUrl} into {RepoPath}", maskedUrl, context.RepoPath);
 
         var args = $"clone --branch {Quote(branch)} --single-branch {Quote(authUrl)} {Quote(context.RepoPath)}";
-        await (RunGitAsync(args, parentDir, cancellationToken)).ConfigureAwait(false);
+        await (RunGitAsync(args, parentDir, cancellationToken, remote)).ConfigureAwait(false);
     }
 
     private async Task SyncRepositoryAsync(
-        ArtifactRepositoryContext context,
+        ArtifactRepositoryContext context, GitRemoteAccess remote,
         CancellationToken cancellationToken)
     {
-        var authUrl = BuildAuthenticatedUrl(context.RepoUrl);
+        var authUrl = context.RepoUrl;
         var maskedUrl = MaskUrl(authUrl);
         var branch = string.IsNullOrWhiteSpace(context.RepoBranch) ? "main" : context.RepoBranch;
 
@@ -197,7 +208,7 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
 
         await (RunGitAsync($"-C {Quote(context.RepoPath)} fetch origin {Quote(branch)}",
             Directory.GetCurrentDirectory(),
-            cancellationToken)).ConfigureAwait(false);
+            cancellationToken, remote)).ConfigureAwait(false);
 
         var checkoutResult = await (TryRunGitAsync($"-C {Quote(context.RepoPath)} checkout {Quote(branch)}",
             Directory.GetCurrentDirectory(),
@@ -212,7 +223,7 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
 
         await (RunGitAsync($"-C {Quote(context.RepoPath)} pull --ff-only origin {Quote(branch)}",
             Directory.GetCurrentDirectory(),
-            cancellationToken)).ConfigureAwait(false);
+            cancellationToken, remote)).ConfigureAwait(false);
     }
 
     private async Task RecordSyncAsync(
@@ -226,23 +237,6 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
 
         project.RecordSync();
         await (_unitOfWork.SaveChangesAsync(cancellationToken)).ConfigureAwait(false);
-    }
-
-    private string BuildAuthenticatedUrl(string repoUrl)
-    {
-        if (string.IsNullOrWhiteSpace(_options.Token))
-            return repoUrl;
-
-        if (!repoUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            return repoUrl;
-
-        var user = string.IsNullOrWhiteSpace(_options.Username) ? "oauth2" : _options.Username;
-        var builder = new UriBuilder(repoUrl)
-        {
-            UserName = user,
-            Password = _options.Token
-        };
-        return builder.Uri.ToString();
     }
 
     private static string MaskUrl(string repoUrl)
@@ -274,9 +268,9 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
-    private async Task RunGitAsync(string arguments, string workingDirectory, CancellationToken cancellationToken)
+    private async Task RunGitAsync(string arguments, string workingDirectory, CancellationToken cancellationToken, GitRemoteAccess? remote = null)
     {
-        var result = await (TryRunGitAsync(arguments, workingDirectory, cancellationToken, throwOnError: true)).ConfigureAwait(false);
+        var result = await (TryRunGitAsync(arguments, workingDirectory, cancellationToken, throwOnError: true, remote: remote)).ConfigureAwait(false);
         _ = result;
     }
 
@@ -284,9 +278,8 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         string arguments,
         string workingDirectory,
         CancellationToken cancellationToken,
-        bool throwOnError = false)
+        bool throwOnError = false, GitRemoteAccess? remote = null)
     {
-        var maskedArgs = MaskGitArgs(arguments);
         var psi = new ProcessStartInfo("git", arguments)
         {
             WorkingDirectory = workingDirectory,
@@ -295,7 +288,7 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
             UseShellExecute = false,
             CreateNoWindow = true
         };
-        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        GitProcessCredentials.Configure(psi, remote);
 
         using var process = new Process { StartInfo = psi };
         process.Start();
@@ -303,7 +296,10 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
-        await (process.WaitForExitAsync(cancellationToken)).ConfigureAwait(false);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        try { await process.WaitForExitAsync(timeout.Token); }
+        finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
 
         var stdout = await (stdoutTask).ConfigureAwait(false);
         var stderr = await (stderrTask).ConfigureAwait(false);
@@ -311,27 +307,15 @@ public class GitArtifactRepositoryService : IArtifactRepositoryService
         if (process.ExitCode == 0)
             return true;
 
-        _logger.LogError("Git command failed: git {Args}\n{StdErr}", maskedArgs, stderr);
+        _logger.LogWarning("Git repository operation failed (exit {Code})", process.ExitCode);
 
         if (throwOnError)
         {
             throw new InvalidOperationException(
-                $"Git command failed (exit {process.ExitCode}): git {maskedArgs}\n{stderr}");
+                "Git operation failed. Check repository access and credentials.");
         }
 
         return false;
     }
 
-    private string MaskGitArgs(string arguments)
-    {
-        if (string.IsNullOrWhiteSpace(arguments))
-            return arguments;
-
-        if (!string.IsNullOrWhiteSpace(_options.Token))
-        {
-            arguments = arguments.Replace(_options.Token, "****", StringComparison.Ordinal);
-        }
-
-        return arguments;
-    }
 }

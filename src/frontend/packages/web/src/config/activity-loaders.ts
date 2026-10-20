@@ -148,6 +148,9 @@ export const activityComponents = {
   ProjectArtifactsPage: lazyComponent('ProjectArtifactsPage', async () =>
     import('@sddp/activities/projects/pages/artifacts').then(({ default: page }) => page)
   ),
+  ProjectFilesPage: lazyComponent('ProjectFilesPage', async () =>
+    import('@sddp/activities/projects/pages/files').then(({ default: page }) => page)
+  ),
   ProjectEffortPage: lazyComponent('ProjectEffortPage', async () =>
     import('@sddp/activities/projects/pages/effort').then(({ default: page }) => page)
   ),

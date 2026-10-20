@@ -7,6 +7,7 @@
   import { Icon, IconButton, Button, CardGrid, Spinner } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
   import {
+    createConfirmation,
     config as appConfig,
     PageShell,
     PageHeader,
@@ -19,7 +20,11 @@
     getTabState,
     setTabState,
     toast,
+    RouterService,
   } from '@sddp/shell';
+  import { ApiRequestError } from '../../../shared/api/fetchWithAuth';
+  let repositoryRequired = $state(false);
+
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../../shared/components/idioms';
@@ -354,7 +359,14 @@
 
   async function handleDeactivateArtifact(): Promise<void> {
     if (!selectedArtifact) return;
-    if (!confirm('Are you sure you want to deactivate this artifact?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to deactivate this artifact?', {
+        title: 'Deactivate artifact',
+        confirmLabel: 'Deactivate',
+        variant: 'danger',
+      }))
+    )
+      return;
     const tenantId = authStore.get().user?.tenantId || '';
     if (!tenantId) {
       toast.error('No tenant context');
@@ -534,6 +546,7 @@
 
   async function handleCreateArtifactSubmit(data: UpsertArtifactRequest) {
     formLoading = true;
+    repositoryRequired = false;
     try {
       const authState = getAuthState();
       const tenantId = authState.user?.tenantId;
@@ -543,7 +556,9 @@
       await loadArtifacts();
       toast.success('Artifact created successfully');
     } catch (err) {
-      console.error('Failed to create artifact:', err);
+      repositoryRequired =
+        err instanceof ApiRequestError && err.errorCode === 'REPOSITORY_CONFIRMATION_REQUIRED';
+      if (!repositoryRequired) console.error('Failed to create artifact:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to create artifact');
     } finally {
       formLoading = false;
@@ -552,6 +567,7 @@
 
   async function handleEditArtifactSubmit(data: UpsertArtifactRequest) {
     formLoading = true;
+    repositoryRequired = false;
     try {
       const authState = getAuthState();
       const tenantId = authState.user?.tenantId;
@@ -570,7 +586,9 @@
       await loadArtifacts();
       toast.success('Artifact updated successfully');
     } catch (err) {
-      console.error('Failed to update artifact:', err);
+      repositoryRequired =
+        err instanceof ApiRequestError && err.errorCode === 'REPOSITORY_CONFIRMATION_REQUIRED';
+      if (!repositoryRequired) console.error('Failed to update artifact:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to update artifact');
     } finally {
       formLoading = false;
@@ -698,6 +716,7 @@
       }
     },
   });
+  const { confirmAction } = createConfirmation(() => `${projectId}/${selectedArtifact?.id}`);
 </script>
 
 <PageShell class={className}>
@@ -916,6 +935,17 @@
         <!-- Main Content -->
         {#if viewMode === 'create'}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
+            {#if repositoryRequired}
+              <div role="alert" class="mb-4 text-sm text-[var(--color-text-secondary)]">
+                <p>Confirm the Git repository before saving file relationships.</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onclick={() => RouterService.navigate(`/settings/project/${projectId}/general`)}
+                  >Open repository settings</Button
+                >
+              </div>
+            {/if}
             <ArtifactForm
               loading={formLoading}
               {memberCandidates}
@@ -936,6 +966,17 @@
           </div>
         {:else if viewMode === 'edit' && selectedArtifact}
           <div class="flex-1 min-h-0 overflow-y-auto p-4">
+            {#if repositoryRequired}
+              <div role="alert" class="mb-4 text-sm text-[var(--color-text-secondary)]">
+                <p>Confirm the Git repository before saving file relationships.</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onclick={() => RouterService.navigate(`/settings/project/${projectId}/general`)}
+                  >Open repository settings</Button
+                >
+              </div>
+            {/if}
             <ArtifactForm
               loading={formLoading}
               initialData={editInitialData}

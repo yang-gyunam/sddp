@@ -40,6 +40,7 @@
     ProjectGlossaryPage,
     ProjectKnowledgePage,
     ProjectArtifactsPage,
+    ProjectFilesPage,
     ProjectEffortPage,
     ProjectTraceabilityPage,
   } from './pages';
@@ -208,6 +209,8 @@
         <ProjectGlossaryPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'knowledge'}
         <ProjectKnowledgePage projectId={selectedProjectId} project={currentProject ?? undefined} />
+      {:else if selectedPageType === 'files'}
+        <ProjectFilesPage projectId={selectedProjectId} />
       {:else if selectedPageType === 'artifacts'}
         <ProjectArtifactsPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'tasks'}

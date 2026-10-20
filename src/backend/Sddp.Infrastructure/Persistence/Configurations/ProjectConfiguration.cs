@@ -82,6 +82,13 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
                 dto => dto == null ? null : Timestamp.FromDateTimeOffset(dto.Value))
             .HasColumnName("last_synced_at");
 
+        builder.Property(p => p.GitConnectionId).HasColumnName("git_connection_id")
+            .HasConversion(id => id == null ? (Guid?)null : id.Value.ToGuid(), id => id == null ? null : GlobalUniqueId.FromGuid(id.Value));
+        builder.Property(p => p.RepositoryVisibility).HasColumnName("repository_visibility").HasMaxLength(10);
+        builder.Property(p => p.RepositoryVersion).HasColumnName("repository_version").IsConcurrencyToken();
+        builder.Property(p => p.RepositoryCheckedAt).HasColumnName("repository_checked_at");
+        builder.Property(p => p.RepositoryConfirmedAt).HasColumnName("repository_confirmed_at");
+
         builder.Property(p => p.IsActive)
             .HasColumnName("is_active")
             .HasDefaultValue(true);

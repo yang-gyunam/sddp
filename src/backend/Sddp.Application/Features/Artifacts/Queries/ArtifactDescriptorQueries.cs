@@ -101,6 +101,9 @@ public sealed class GetArtifactContentQueryHandler
         var context = await (_artifactRepositoryService.GetProjectContextAsync(
             request.TenantId, request.ProjectId, cancellationToken)).ConfigureAwait(false);
 
+        await _artifactRepositoryService.EnsureProjectSyncedAsync(context, cancellationToken)
+            .ConfigureAwait(false);
+
         var file = await (_artifactRepositoryService.GetArtifactContentAsync(
             context, artifact.ArtifactPath, cancellationToken)).ConfigureAwait(false);
 

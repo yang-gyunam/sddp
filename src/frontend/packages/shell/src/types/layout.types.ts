@@ -241,6 +241,7 @@ export interface ResponsiveConfig {
 // Layout state types (for stores)
 export interface SidebarState {
   isOpen: boolean;
+  singleExpand: boolean;
   width: number;
   minWidth: number;
   maxWidth: number;

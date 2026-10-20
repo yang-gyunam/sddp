@@ -20,6 +20,9 @@
 
     // Row 1: Title
     title: string;
+    /** Custom title rendering keeps the string title as the accessible fallback. */
+    titleContent?: Snippet;
+    ariaLabel?: string;
     titleLink?: boolean;
     titleClass?: string;
     meta?: string;
@@ -47,6 +50,8 @@
     density = 'regular',
     separator = 'border',
     title,
+    titleContent,
+    ariaLabel,
     titleLink = false,
     titleClass = '',
     meta,
@@ -91,7 +96,7 @@
     {disabled ? 'opacity-50 cursor-not-allowed' : ''}
     {className}"
   tabindex={disabled ? -1 : undefined}
-  aria-label={title}
+  aria-label={ariaLabel ?? title}
   onclick={handleClick}
   {disabled}
 >
@@ -115,7 +120,7 @@
               {titleLink ? 'text-[var(--color-info-500)]' : 'text-[var(--color-text-primary)]'}
               {titleClass}"
           >
-            {title}
+            {#if titleContent}{@render titleContent()}{:else}{title}{/if}
           </span>
           {#if trailing}
             {@render trailing()}

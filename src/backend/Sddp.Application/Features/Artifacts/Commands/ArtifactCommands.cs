@@ -1,3 +1,4 @@
+using Sddp.Application.Behaviors;
 using MediatR;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Exceptions;
@@ -31,7 +32,7 @@ public sealed record UpsertArtifactCommand(
     GlobalUniqueId? ArtifactId = null)
     : ICommand<ArtifactTrackingDto>,
       IAuditableRequest<ArtifactTrackingDto>,
-      IProducesArtifactDescriptor<ArtifactTrackingDto>
+      IProducesArtifactDescriptor<ArtifactTrackingDto>, IRepositoryBoundRequest
 {
     public AuditLogRequest? AuditLog { get; set; }
     public AuditLogRequest? GetAuditLogRequest(ArtifactTrackingDto response) => AuditLog;
@@ -203,6 +204,9 @@ public sealed class VerifyArtifactCommandHandler : IRequestHandler<VerifyArtifac
 
         var context = await (_artifactRepositoryService.GetProjectContextAsync(
             request.TenantId, request.ProjectId, cancellationToken)).ConfigureAwait(false);
+
+        await _artifactRepositoryService.EnsureProjectSyncedAsync(context, cancellationToken)
+            .ConfigureAwait(false);
 
         var fileInfo = await (_artifactRepositoryService.GetArtifactFileInfoAsync(
             context, artifact.ArtifactPath, cancellationToken)).ConfigureAwait(false);

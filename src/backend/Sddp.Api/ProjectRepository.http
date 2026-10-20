@@ -1,0 +1,33 @@
+@baseUrl = http://localhost:5001/api
+@projectId = replace-with-project-id
+@tenantId = replace-with-tenant-id
+@token = replace-with-access-token
+
+### Load saved settings; use returned version in later requests.
+GET {{baseUrl}}/projects/{{projectId}}/repository
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### Save draft (409 if expectedVersion is stale or confirmed coordinates change).
+PUT {{baseUrl}}/projects/{{projectId}}/repository
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+Content-Type: application/json
+
+{"repoUrl":"https://github.com/yang-gyunam/sddp.git","repoBranch":"main","artifactRootPath":"","syncIntervalMinutes":60,"expectedVersion":0}
+
+### Check the saved connection (400 for unavailable branch/root or mismatched paths).
+POST {{baseUrl}}/projects/{{projectId}}/repository/check
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+Content-Type: application/json
+
+{"expectedVersion":1}
+
+### Confirm the checked configuration (409 without a current connection check).
+POST {{baseUrl}}/projects/{{projectId}}/repository/confirm
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+Content-Type: application/json
+
+{"expectedVersion":2}

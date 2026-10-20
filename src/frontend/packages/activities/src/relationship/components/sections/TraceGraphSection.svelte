@@ -2,7 +2,7 @@
 <script lang="ts">
   import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
-  import { Icon, Button, IconButton, Checkbox, Spinner } from '@sddp/ui';
+  import { Icon, IconButton, Checkbox, Spinner } from '@sddp/ui';
   import { CollapsibleGroup } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
   import {
@@ -17,6 +17,7 @@
     getPrimaryFlow,
     invalidateRelationship,
   } from '../../services/RelationshipService';
+  import TraceEntityButton from '../idioms/TraceEntityButton.svelte';
   import RelationshipLinkSearch from '../idioms/RelationshipLinkSearch.svelte';
   import EntityFullDetailTab from '../../../shared/components/sections/EntityFullDetailTab.svelte';
   import type {
@@ -240,46 +241,17 @@
             {:else}
               <div class="space-y-0.5">
                 {#each resolvedPrimaryFlow as node, i (node.id ?? node.entityId ?? `node-${i}`)}
-                  {@const style = ENTITY_TYPE_STYLES[node.entityType as EntityType]}
                   {@const depth = node.depth ?? 0}
                   {@const isIndented = depth >= 1}
 
                   <div style={isIndented ? `padding-left: ${depth * 1.5}rem` : ''}>
-                    <Button
-                      variant="unstyled"
-                      class="w-full flex items-center gap-2 p-1.5 rounded-lg transition-colors
-                        {node.isCurrent
-                        ? 'bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30'
-                        : 'hover:bg-[var(--color-bg-tertiary)]'}"
+                    <TraceEntityButton
+                      entityType={node.entityType as EntityType}
+                      label={node.label}
+                      code={node.code}
+                      current={node.isCurrent}
                       onclick={() => handleNodeClick(node)}
-                    >
-                      <div
-                        class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {style?.bgColor ||
-                          'bg-[var(--color-bg-tertiary)]'}"
-                      >
-                        <Icon
-                          name={style?.icon || 'file'}
-                          size="xs"
-                          class={style?.color || 'text-[var(--color-text-tertiary)]'}
-                        />
-                      </div>
-                      <div class="flex-1 min-w-0 text-left">
-                        <div class="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {node.label}
-                        </div>
-                        {#if node.code}
-                          <div class="text-xs text-[var(--color-text-tertiary)] truncate">
-                            {node.code}
-                          </div>
-                        {/if}
-                      </div>
-                      {#if node.isCurrent}
-                        <span
-                          class="text-xs text-[var(--color-accent-text)] font-medium flex-shrink-0"
-                          >Current</span
-                        >
-                      {/if}
-                    </Button>
+                    />
                   </div>
                 {/each}
               </div>
@@ -342,35 +314,15 @@
                       ? getInverseRelationType(rel.type)
                       : relStyle.label}
                   <div class="group flex items-center gap-0.5">
-                    <Button
-                      variant="unstyled"
-                      class="flex-1 min-w-0 flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors
-                        {rel.validTo ? 'opacity-50' : ''}"
+                    <TraceEntityButton
+                      entityType={targetType}
+                      label={targetLabel || entityStyle?.label || targetType}
+                      code={targetCode}
+                      iconTitle={relationLabel}
+                      class="flex-1 min-w-0 {rel.validTo ? 'opacity-50' : ''}"
                       onclick={() =>
                         handleRelationshipItemClick(targetType, targetId, targetLabel ?? undefined)}
-                    >
-                      <div
-                        class="flex items-center justify-center w-5 h-5 rounded flex-shrink-0 {entityStyle?.bgColor ??
-                          'bg-[var(--color-bg-tertiary)]'}"
-                        title={relationLabel}
-                      >
-                        <Icon
-                          name={entityStyle?.icon ?? 'file'}
-                          size="xs"
-                          class={entityStyle?.color ?? 'text-[var(--color-text-tertiary)]'}
-                        />
-                      </div>
-                      <div class="flex-1 min-w-0 text-left">
-                        <div class="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {targetLabel || `${entityStyle?.label ?? targetType}`}
-                        </div>
-                        {#if targetCode}
-                          <div class="text-xs text-[var(--color-text-tertiary)] truncate">
-                            {targetCode}
-                          </div>
-                        {/if}
-                      </div>
-                    </Button>
+                    />
                     <IconButton
                       icon="x"
                       variant="ghost"

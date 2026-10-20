@@ -1,47 +1,36 @@
 import type { Project } from '../../projects/types';
+import { getProjectCapabilities } from '../../shared/state/projectCapabilities';
 
 export interface SettingsProjectSummary {
   id: string;
   name: string;
 }
 
-export interface ProjectVisibilityParams {
-  projects: Project[];
-  currentUserId: string;
-  isAdmin: boolean;
-  isProductOwner: boolean;
-}
-
-function resolveProjectOwnerId(project: Project): string {
-  const ownerRef = (project as Project & { owner?: { id?: string } }).owner;
-  return project.ownerId || ownerRef?.id || '';
-}
-
-/**
- * Returns projects that can be shown under Settings > Project.
- * - Admin: all projects
- * - Non-admin Product Owner: only projects owned by current user
- * - Other non-admin roles: none
- */
-export function getVisibleSettingsProjects({
-  projects,
-  currentUserId,
-  isAdmin,
-  isProductOwner,
-}: ProjectVisibilityParams): SettingsProjectSummary[] {
-  if (isAdmin) {
-    return projects.map(({ id, name }) => ({ id, name }));
-  }
-
-  if (!isProductOwner || !currentUserId) {
-    return [];
-  }
-
-  const visibleProjects = projects.filter(
-    (project) => resolveProjectOwnerId(project) === currentUserId
+/** Settings uses the same scoped permission as the project update API. */
+export async function getVisibleSettingsProjects(
+  projects: Project[],
+  tenantId: string,
+  load = getProjectCapabilities
+): Promise<SettingsProjectSummary[]> {
+  if (!tenantId) return [];
+  const visible = await Promise.all(
+    projects.map(async (project) => {
+      try {
+        const authority = await load(project.id, tenantId);
+        if (
+          authority.tenantId !== tenantId ||
+          authority.projectId !== project.id ||
+          !authority.canWrite ||
+          !authority.permissions.includes('project:update')
+        )
+          return null;
+        return { id: project.id, name: project.name };
+      } catch {
+        return null;
+      }
+    })
   );
-
-  return visibleProjects.map(({ id, name }) => ({ id, name }));
+  return visible.filter((project): project is SettingsProjectSummary => project !== null);
 }
 
 export function canAccessSettingsProject(

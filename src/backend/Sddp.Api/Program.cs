@@ -101,6 +101,7 @@ try
     // to IProducesArtifactDescriptor, so DI skips it for every other request.
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ArtifactDescriptorBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
+    builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(RepositoryConfirmationBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
 
     builder.Services.AddSignalR(options =>

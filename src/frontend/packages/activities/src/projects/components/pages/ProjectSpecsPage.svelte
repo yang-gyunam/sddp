@@ -17,6 +17,7 @@
   } from '@sddp/ui';
   import type { ComboboxOption } from '@sddp/ui';
   import {
+    createConfirmation,
     PageShell,
     PageHeader,
     PageBody,
@@ -523,7 +524,14 @@
 
   async function handleDeactivateSpec(): Promise<void> {
     if (!selectedSpec) return;
-    if (!confirm('Are you sure you want to deactivate this spec?')) return;
+    if (
+      !(await confirmAction('Are you sure you want to deactivate this spec?', {
+        title: 'Deactivate spec',
+        confirmLabel: 'Deactivate',
+        variant: 'danger',
+      }))
+    )
+      return;
     const authState = getAuthState();
     if (!authState.user?.tenantId) return;
     try {
@@ -705,6 +713,7 @@
       if (id) void loadSpecDetail(id);
     },
   });
+  const { confirmAction } = createConfirmation(() => `${projectId}/${selectedSpec?.id}`);
 </script>
 
 <PageShell class={className}>

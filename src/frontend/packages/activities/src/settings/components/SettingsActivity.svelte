@@ -52,7 +52,6 @@
 
   // Check admin role from auth store
   const isAdmin = $derived(hasRole('Admin'));
-  const isProductOwner = $derived(hasRole('ProductOwner') || hasRole('PRODUCT_OWNER'));
 
   // Load owned projects from API
   let ownedProjects = $state<Array<{ id: string; name: string }>>([]);
@@ -68,7 +67,7 @@
       return;
     }
 
-    const loadKey = `${tenantId}:${currentUserId}:${isAdmin ? 'admin' : 'user'}:${isProductOwner ? 'po' : 'non-po'}`;
+    const loadKey = `${tenantId}:${currentUserId}:${isAdmin ? 'admin' : 'user'}`;
     if (loadKey === prevLoadKey) return;
     prevLoadKey = loadKey;
     ownedProjectsLoaded = false;
@@ -76,19 +75,19 @@
   });
 
   async function loadOwnedProjects() {
+    const key = prevLoadKey;
+    const tenant = tenantId;
     try {
-      const projects = await getProjects(tenantId);
-      ownedProjects = getVisibleSettingsProjects({
-        projects,
-        currentUserId,
-        isAdmin,
-        isProductOwner,
-      });
+      const projects = await getProjects(tenant);
+      const visible = await getVisibleSettingsProjects(projects, tenant);
+      if (key === prevLoadKey) ownedProjects = visible;
     } catch {
-      output.error('Settings', 'Failed to load projects');
-      ownedProjects = [];
+      if (key === prevLoadKey) {
+        output.error('Settings', 'Failed to load projects');
+        ownedProjects = [];
+      }
     } finally {
-      ownedProjectsLoaded = true;
+      if (key === prevLoadKey) ownedProjectsLoaded = true;
     }
   }
 

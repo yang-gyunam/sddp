@@ -128,7 +128,11 @@ export class RouterService {
   }
 
   /** Set detail selection without changing the owning tab's pathname. */
-  static selectItem(id: string | null, tabId?: string): void {
+  static selectItem(
+    id: string | null,
+    tabId?: string,
+    detailQuery?: Record<string, string | null>
+  ): void {
     if (tabId && !this.isActiveTab(tabId)) {
       const group = get(tabsStore).groups.find((g) => g.tabs.some((t) => t.id === tabId));
       if (!group) return;
@@ -149,6 +153,10 @@ export class RouterService {
     );
     if (id) query.set('id', id);
     else query.delete('id');
+    for (const [key, value] of Object.entries(detailQuery ?? {})) {
+      if (value !== null) query.set(key, value);
+      else query.delete(key);
+    }
     const search = query.toString();
     this.writeUrl(path + (search ? `?${search}` : ''), false);
   }

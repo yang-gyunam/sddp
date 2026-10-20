@@ -5,7 +5,7 @@
    * Right panel for viewing, editing, and creating users
    */
 
-  import { formatDateTime, toast } from '@sddp/shell';
+  import { createConfirmation, formatDateTime, toast } from '@sddp/shell';
   import { Icon, Input, IconButton, Select } from '@sddp/ui';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import type { SystemUser, CreateUserParams } from '../../types';
@@ -139,7 +139,14 @@
 
   async function handleDeactivate() {
     if (!user) return;
-    if (!confirm(`Are you sure you want to deactivate ${user.name}?`)) return;
+    if (
+      !(await confirmAction(`Are you sure you want to deactivate ${user.name}?`, {
+        title: 'Deactivate member',
+        confirmLabel: 'Deactivate',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     loading = true;
     try {
@@ -156,7 +163,13 @@
 
   async function handleActivate() {
     if (!user) return;
-    if (!confirm(`Are you sure you want to activate ${user.name}?`)) return;
+    if (
+      !(await confirmAction(`Are you sure you want to activate ${user.name}?`, {
+        title: 'Activate member',
+        confirmLabel: 'Activate',
+      }))
+    )
+      return;
 
     loading = true;
     try {
@@ -173,7 +186,12 @@
 
   async function handleResetPassword() {
     if (!user) return;
-    if (!confirm(`Reset password for ${user.name}? A temporary password will be generated.`))
+    if (
+      !(await confirmAction(
+        `Reset password for ${user.name}? A temporary password will be generated.`,
+        { title: 'Reset password', confirmLabel: 'Reset password', variant: 'danger' }
+      ))
+    )
       return;
 
     loading = true;
@@ -190,7 +208,12 @@
 
   async function handleDelete() {
     if (!user || !onDeleted) return;
-    if (!confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`))
+    if (
+      !(await confirmAction(
+        `Are you sure you want to delete ${user.name}? This action cannot be undone.`,
+        { title: 'Delete user', confirmLabel: 'Delete', variant: 'danger' }
+      ))
+    )
       return;
 
     loading = true;
@@ -206,6 +229,7 @@
     if (!dateStr) return 'Never';
     return formatDateTime(dateStr, { month: 'short', year: undefined });
   }
+  const { confirmAction } = createConfirmation(() => user?.id ?? '');
 </script>
 
 <div class="panel">

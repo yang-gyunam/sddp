@@ -1,0 +1,36 @@
+@host = http://localhost:5000
+@tenantId = REPLACE_WITH_TENANT_ID
+@projectId = REPLACE_WITH_PROJECT_ID
+@token = REPLACE_WITH_ACCESS_TOKEN
+@path = src/example.cs
+@revision = REPLACE_WITH_FULL_COMMIT_SHA
+
+### Root directory (configured branch tip)
+GET {{host}}/api/projects/{{projectId}}/files/tree
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}
+
+### Whole file at a reachable commit
+GET {{host}}/api/projects/{{projectId}}/files/content?path={{path}}&revision={{revision}}
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}
+
+### Rename-aware history
+GET {{host}}/api/projects/{{projectId}}/files/history?path={{path}}&skip=0
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}
+
+### Current SDDP relationships
+GET {{host}}/api/projects/{{projectId}}/files/relations?path={{path}}
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}
+
+### Search every committed file path, including unopened folders (100 per page)
+GET {{host}}/api/projects/{{projectId}}/files/search?q=package.json&skip=0
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+X-Project-Id: {{projectId}}

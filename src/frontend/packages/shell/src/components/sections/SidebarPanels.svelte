@@ -27,6 +27,8 @@
     panelLoading?: SidebarPanelLoadingMap;
     menus?: TreeNode[];
     selectedMenuId?: string | null;
+    singleExpand?: boolean;
+    activePanelId?: string | null;
     onMenuSelect?: (menu: TreeNode) => void;
     onPanelToggle?: (panelId: string, expanded: boolean) => void;
     class?: string;
@@ -78,6 +80,8 @@
     panelLoading = {},
     menus = [],
     selectedMenuId = null,
+    singleExpand = false,
+    activePanelId = null,
     onMenuSelect,
     onPanelToggle,
     class: className = '',
@@ -99,6 +103,10 @@
 
   // Local state for expanded panels
   let expandedPanels = new SvelteSet<string>();
+  let initializedActivity: string | null = null;
+  let previousSingleExpand = false;
+  let lastOpenedPanelId: string | null = null;
+  let lastRevealedPanelId: string | null = null;
 
   // Local state for expanded tree nodes
   let expandedTreeNodes = new SvelteSet<string>();
@@ -116,7 +124,10 @@
     try {
       const saved = localStorage.getItem(`sidebar-panels-${activityId}`);
       if (saved) {
-        return new Set(JSON.parse(saved));
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) {
+          return new Set(parsed);
+        }
       }
     } catch (error) {
       console.warn('Failed to load panel state:', error);
@@ -133,29 +144,77 @@
     }
   }
 
-  // Initialize expanded panels when activity changes
+  // Reconcile navigation and asynchronously loaded panels without undoing manual collapse.
   $effect(() => {
-    const panels = panelConfigs[activity] || [];
-    expandedPanels.clear();
-    if (panels.length > 0) {
-      const savedState = loadPanelState(activity);
-      if (savedState !== null) {
-        for (const id of savedState) {
+    const activityId = activity;
+    const panels = panelConfigs[activityId] || [];
+    const single = singleExpand;
+    const activeId = activePanelId;
+
+    untrack(() => {
+      const enablingSingle = initializedActivity === activityId && single && !previousSingleExpand;
+      if (initializedActivity !== activityId) {
+        expandedPanels.clear();
+        lastOpenedPanelId = null;
+        lastRevealedPanelId = null;
+        if (panels.length === 0) return;
+
+        const savedState = loadPanelState(activityId);
+        for (const id of savedState ?? panels.map((panel) => panel.id)) {
           expandedPanels.add(id);
         }
-      } else {
-        // First time: expand all panels
-        for (const p of panels) {
-          expandedPanels.add(p.id);
-        }
-        savePanelState(activity, expandedPanels);
+        // Returning to an explicitly collapsed activity must keep it collapsed.
+        if (savedState?.size === 0) lastRevealedPanelId = activeId;
+        initializedActivity = activityId;
       }
-    }
+
+      if (single) {
+        if (enablingSingle || activeId === null) lastRevealedPanelId = null;
+        const revealActive =
+          activeId !== null &&
+          activeId !== lastRevealedPanelId &&
+          panels.some((panel) => panel.id === activeId);
+        // A refresh may temporarily omit project panels. Preserve their expansion
+        // intent until they return or the user explicitly changes it.
+        const expanded = [...expandedPanels];
+        const keepId = revealActive
+          ? activeId
+          : (expanded.find((id) => id === lastOpenedPanelId) ?? expanded[0]);
+
+        expandedPanels.clear();
+        if (keepId) expandedPanels.add(keepId);
+        if (revealActive) lastRevealedPanelId = activeId;
+      } else {
+        lastRevealedPanelId = null;
+      }
+      previousSingleExpand = single;
+      savePanelState(activityId, expandedPanels);
+    });
   });
 
+  /** Collapse only this activity; keep the selected expansion mode. */
+  export function collapseAll(): void {
+    lastRevealedPanelId = activePanelId;
+    const previouslyExpanded = [...expandedPanels];
+    expandedPanels.clear();
+    savePanelState(activity, expandedPanels);
+    for (const id of previouslyExpanded) {
+      onPanelToggle?.(id, false);
+    }
+  }
+
   function handlePanelToggle(panelId: string, expanded: boolean) {
+    // Explicit interaction supersedes a pending reveal while projects are loading.
+    lastRevealedPanelId = activePanelId;
     if (expanded) {
+      if (singleExpand) {
+        for (const id of expandedPanels) {
+          if (id !== panelId) onPanelToggle?.(id, false);
+        }
+        expandedPanels.clear();
+      }
       expandedPanels.add(panelId);
+      lastOpenedPanelId = panelId;
     } else {
       expandedPanels.delete(panelId);
     }

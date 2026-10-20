@@ -16,6 +16,7 @@ const LAYOUT_STORAGE_KEY = 'sddp-layout';
 // Default values - derived from layout constants
 const DEFAULT_SIDEBAR: SidebarState = {
   isOpen: true,
+  singleExpand: false,
   width: APP_SIDEBAR.width,
   minWidth: APP_SIDEBAR.minWidth,
   maxWidth: APP_SIDEBAR.maxWidth,
@@ -52,7 +53,11 @@ function loadInitialLayout(): LayoutState {
       const parsed = JSON.parse(stored) as Partial<LayoutState>;
       return {
         ...DEFAULT_LAYOUT,
-        sidebar: { ...DEFAULT_SIDEBAR, ...parsed.sidebar },
+        sidebar: {
+          ...DEFAULT_SIDEBAR,
+          ...parsed.sidebar,
+          singleExpand: parsed.sidebar?.singleExpand === true,
+        },
         panel: { ...DEFAULT_PANEL, ...parsed.panel },
         activityBar: { ...DEFAULT_LAYOUT.activityBar, ...parsed.activityBar },
       };
@@ -73,6 +78,7 @@ function persistLayout(state: LayoutState): void {
   const toStore = {
     sidebar: {
       isOpen: state.sidebar.isOpen,
+      singleExpand: state.sidebar.singleExpand,
       width: state.sidebar.width,
       activePanel: state.sidebar.activePanel,
     },
@@ -93,6 +99,21 @@ const layoutStore: Store<LayoutState> = createStore<LayoutState>(loadInitialLayo
 // ============================================
 // Sidebar Actions
 // ============================================
+
+/** Set whether the sidebar allows only one expanded panel at a time. */
+export function setSidebarSingleExpand(singleExpand: boolean): void {
+  layoutStore.update((state) => {
+    const newState = {
+      ...state,
+      sidebar: {
+        ...state.sidebar,
+        singleExpand,
+      },
+    };
+    persistLayout(newState);
+    return newState;
+  });
+}
 
 /**
  * Toggle sidebar visibility

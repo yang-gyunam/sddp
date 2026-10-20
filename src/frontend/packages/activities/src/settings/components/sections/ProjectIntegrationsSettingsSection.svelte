@@ -7,8 +7,10 @@
 
   import { untrack } from 'svelte';
   import {
+    createConfirmation,
     config as appConfig,
     toast,
+    RouterService,
     SingleColumnLayout,
     PageHeader,
     PageShell,
@@ -118,16 +120,6 @@
     loading = false;
   }
 
-  async function toggleIntegration(type: string) {
-    if (!projectIntegrationsEnabled) {
-      toast.info('Project integrations are coming soon.');
-      return;
-    }
-
-    integrations = integrations.map((i) => (i.type === type ? { ...i, enabled: !i.enabled } : i));
-    toast.info('Integration toggle not yet implemented (backend API pending)');
-  }
-
   async function addWebhook() {
     if (!projectIntegrationsEnabled) {
       toast.info('Project integrations are coming soon.');
@@ -165,10 +157,18 @@
       return;
     }
 
-    if (!confirm('Delete this webhook?')) return;
+    if (
+      !(await confirmAction('Delete this webhook?', {
+        title: 'Delete webhook',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      }))
+    )
+      return;
     webhooks = webhooks.filter((w) => w.id !== id);
     toast.info('Webhook deleted locally (backend API pending)');
   }
+  const { confirmAction } = createConfirmation(() => `${_tenantId}/${_projectId}`);
 </script>
 
 <PageShell>
@@ -214,10 +214,13 @@
                 </div>
               </div>
             </div>
-            <Switch
-              checked={integration.enabled}
-              onchange={() => toggleIntegration(integration.type)}
-            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={() => RouterService.navigate(`/settings/project/${_projectId}/general`)}
+            >
+              Manage in General
+            </Button>
           </div>
         {/each}
 

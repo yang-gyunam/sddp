@@ -11,6 +11,7 @@
     onResize?: (width: number) => void;
     onToggle?: () => void;
     headerActions?: import('svelte').Snippet;
+    overflowActions?: import('svelte').Snippet;
     children?: import('svelte').Snippet;
   }
 
@@ -23,6 +24,7 @@
     onResize,
     onToggle,
     headerActions,
+    overflowActions,
     children,
   }: Props = $props();
 
@@ -105,6 +107,9 @@
           title="Collapse sidebar (Ctrl+B)"
           onclick={handleToggle}
         />
+        {#if overflowActions}
+          {@render overflowActions()}
+        {/if}
       </div>
     </div>
 

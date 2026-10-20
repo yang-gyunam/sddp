@@ -7,12 +7,13 @@
 
   import { untrack } from 'svelte';
   import {
+    createConfirmation,
     toast,
     SingleColumnLayout,
     PageHeader,
     PageShell,
     getTabState,
-    setTabState,
+    updateTabState,
     formatDateByPreference,
   } from '@sddp/shell';
   import { IconButton, Input, Switch, Textarea, Button, Spinner } from '@sddp/ui';
@@ -24,6 +25,7 @@
   import { createSystemConfigService } from '../../services/SystemConfigService';
   import { createResourceAiCapability } from '../../../ai/stores/resource-ai-capability.svelte';
   import { SettingItem, SettingGroupHeader, ConfirmResetModal } from '../idioms';
+  import ProjectRepositorySettingsSection from './ProjectRepositorySettingsSection.svelte';
 
   interface Props {
     tenantId?: string;
@@ -107,7 +109,7 @@
 
   $effect(() => {
     if (!tabStateKey || !isRestored) return;
-    setTabState<GeneralTabState>(tabStateKey, {
+    updateTabState<GeneralTabState>(tabStateKey, {
       settings: settings ? { ...settings } : null,
       snapshots: [...snapshots],
     });
@@ -198,9 +200,10 @@
   async function handleRestore(snapshot: ProjectSnapshot) {
     if (!tenantId || !projectId) return;
     if (
-      !confirm(
-        `Restore from "${snapshot.name}"?\n\nThis will replace ALL current project data with the snapshot data. A safety backup will be created automatically.`
-      )
+      !(await confirmAction(
+        `Restore from "${snapshot.name}"?\n\nThis will replace current project data with the snapshot data. Git repository settings and credentials will be preserved. A safety backup will be created automatically.`,
+        { title: 'Restore snapshot', confirmLabel: 'Restore', variant: 'danger' }
+      ))
     )
       return;
 
@@ -218,7 +221,14 @@
 
   async function handleDeleteSnapshot(snapshot: ProjectSnapshot) {
     if (!tenantId || !projectId) return;
-    if (!confirm(`Delete snapshot "${snapshot.name}"?`)) return;
+    if (
+      !(await confirmAction(`Delete snapshot "${snapshot.name}"?`, {
+        title: 'Delete snapshot',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     try {
       await snapshotService.deleteProjectSnapshot(tenantId, projectId, snapshot.id);
@@ -311,6 +321,7 @@
       aiToggleSaving = false;
     }
   }
+  const { confirmAction } = createConfirmation(() => `${tenantId}/${projectId}`);
 </script>
 
 <PageShell>
@@ -367,6 +378,8 @@
         >
           <Textarea bind:value={settings.description} rows={3} />
         </SettingItem>
+
+        <ProjectRepositorySettingsSection {tenantId} {projectId} {tabId} />
 
         <!-- Project Lifecycle -->
         <SettingGroupHeader title="Project Lifecycle" />

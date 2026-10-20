@@ -7,6 +7,7 @@
    * Right main: settings for selected category (per-item auto-save)
    */
 
+  import GitConnectionsSettingsSection from './GitConnectionsSettingsSection.svelte';
   import { untrack } from 'svelte';
   import { SettingItem, ConfirmResetModal } from '../idioms';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
@@ -42,7 +43,7 @@
   const systemConfigPerformanceEnabled = appConfig.get('enableSystemConfigPerformance');
 
   // Active config group
-  type ConfigGroup = 'general' | 'auth' | 'storage' | 'performance' | 'aiAgent';
+  type ConfigGroup = 'general' | 'auth' | 'storage' | 'performance' | 'aiAgent' | 'gitConnections';
 
   let config = $state<SystemConfig | null>(null);
   let loading = $state(false);
@@ -75,6 +76,13 @@
     desc: string;
     count: number;
   }[] = $derived([
+    {
+      id: 'gitConnections',
+      label: 'Git Connections',
+      icon: 'git-branch',
+      desc: 'Repository servers and credentials',
+      count: 0,
+    },
     { id: 'general', label: 'General', icon: 'settings', desc: 'Basic system settings', count: 3 },
     ...(systemConfigAuthEnabled
       ? [
@@ -398,9 +406,11 @@
                   onclick={() => (activeGroup = group.id)}
                 >
                   {#snippet trailing()}
-                    <span class="ml-auto flex-shrink-0 text-xs text-[var(--color-text-tertiary)]"
-                      >{group.count}</span
-                    >
+                    {#if group.id !== 'gitConnections'}
+                      <span class="ml-auto flex-shrink-0 text-xs text-[var(--color-text-tertiary)]"
+                        >{group.count}</span
+                      >
+                    {/if}
                   {/snippet}
                 </RichListItem>
               {/each}
@@ -425,18 +435,20 @@
               >{activeGroupInfo?.desc ?? ''}</span
             >
             {#snippet actions()}
-              <IconButton
-                icon="check"
-                variant={isActiveGroupDirty ? 'success' : 'ghost'}
-                title="Save"
-                onclick={handleSaveGroup}
-                disabled={!isActiveGroupDirty || saving || isActiveGroupDisabled}
-              />
+              {#if activeGroup !== 'gitConnections'}<IconButton
+                  icon="check"
+                  variant={isActiveGroupDirty ? 'success' : 'ghost'}
+                  title="Save"
+                  onclick={handleSaveGroup}
+                  disabled={!isActiveGroupDirty || saving || isActiveGroupDisabled}
+                />{/if}
             {/snippet}
           </DetailHeader>
 
           <div class="config-content">
-            {#if activeGroup === 'general'}
+            {#if activeGroup === 'gitConnections'}
+              <GitConnectionsSettingsSection tenantId={effectiveTenantId} />
+            {:else if activeGroup === 'general'}
               <SettingItem
                 category="General"
                 title="Site Name"

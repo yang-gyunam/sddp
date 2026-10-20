@@ -5,7 +5,7 @@
    * Right panel for viewing, editing, and creating projects
    */
 
-  import { formatDateTime, toast } from '@sddp/shell';
+  import { createConfirmation, formatDateTime, toast } from '@sddp/shell';
   import { Icon, Input, IconButton, Textarea } from '@sddp/ui';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import type { Project, ProjectDetail } from '../../../projects/types/project.types';
@@ -144,7 +144,14 @@
     label: string
   ) {
     if (!project) return;
-    if (!confirm(`Are you sure you want to ${label.toLowerCase()} "${project.name}"?`)) return;
+    if (
+      !(await confirmAction(`Are you sure you want to ${label.toLowerCase()} "${project.name}"?`, {
+        title: `${label} project`,
+        confirmLabel: label,
+        variant: action === 'archive' ? 'danger' : 'primary',
+      }))
+    )
+      return;
 
     loading = true;
     try {
@@ -178,6 +185,7 @@
     if (!dateStr) return 'Never';
     return formatDateTime(dateStr, { month: 'short', year: undefined });
   }
+  const { confirmAction } = createConfirmation(() => project?.id ?? '');
 </script>
 
 <div class="panel">
