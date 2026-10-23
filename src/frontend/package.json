@@ -30,11 +30,17 @@
     "@tailwindcss/node": "4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.3.1",
-    "@vitest/coverage-istanbul": "^4.1.10",
+    "@vitest/coverage-istanbul": "^4.1.12",
     "jsdom": "^28.1.0",
     "lucide": "1.25.0",
     "prettier": "^3.8.0",
     "prettier-plugin-svelte": "^3.4.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "dompurify": "3.4.17"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.56.0"
   }
 }

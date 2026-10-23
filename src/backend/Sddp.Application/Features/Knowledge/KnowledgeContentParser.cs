@@ -48,10 +48,10 @@ public static class KnowledgeContentParser
         new Dictionary<string, HashSet<string>>(StringComparer.Ordinal)
         {
             ["heading"] = ["level"],
-            ["orderedList"] = ["start"],
+            ["orderedList"] = ["start", "type"],
             ["codeBlock"] = ["language"],
-            ["tableHeader"] = ["colspan", "rowspan", "colwidth"],
-            ["tableCell"] = ["colspan", "rowspan", "colwidth"],
+            ["tableHeader"] = ["colspan", "rowspan", "colwidth", "align"],
+            ["tableCell"] = ["colspan", "rowspan", "colwidth", "align"],
             ["sddpEntityMention"] = ["entityType", "entityId"]
         };
 
@@ -322,6 +322,15 @@ public static class KnowledgeContentParser
                 break;
 
             case "orderedList":
+                if (attrs.TryGetProperty("type", out var listType)
+                    && listType.ValueKind != JsonValueKind.Null
+                    && (listType.ValueKind != JsonValueKind.String
+                        || listType.GetString() is not ("1" or "a" or "A" or "i" or "I")))
+                {
+                    throw new ValidationException(
+                        "content", "Ordered list type must be null or one of: 1, a, A, i, I.");
+                }
+
                 if (attrs.TryGetProperty("start", out var start)
                     && (!start.TryGetInt32(out var startValue) || startValue < 1))
                 {
@@ -349,6 +358,15 @@ public static class KnowledgeContentParser
 
     private static void ValidateTableCellAttributes(JsonElement attrs)
     {
+        if (attrs.TryGetProperty("align", out var align)
+            && align.ValueKind != JsonValueKind.Null
+            && (align.ValueKind != JsonValueKind.String
+                || align.GetString() is not ("left" or "center" or "right")))
+        {
+            throw new ValidationException(
+                "content", "Table cell align must be null, left, center, or right.");
+        }
+
         foreach (var name in new[] { "colspan", "rowspan" })
         {
             if (attrs.TryGetProperty(name, out var span)

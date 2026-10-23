@@ -367,7 +367,6 @@
     min-height: 28rem;
     /* Match the default Input inset used by Change summary in both modes. */
     padding-inline: var(--space-3);
-    line-height: 1.65;
   }
 
   .knowledge-editor :global(.sddp-entity-mention) {

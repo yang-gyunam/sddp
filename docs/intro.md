@@ -68,12 +68,18 @@ Requirements emerge from conversations, requirements are refined into specs, and
 
 ![SDDP Square: Conversation → Requirement → Spec → Code](assets/intro/05-sddp-square.gif)
 
-## What the free v0.4.0 edition provides
+## What the free edition provides
 
 The public application records conversations, requirements, specs, relationships and artifact
 status. Approval and locking are explicit workflow steps. Artifact content-hash verification
 is a file-consistency check, not proof that code satisfies the meaning of a spec; maintenance
 operations also depend on deployment flags and permissions.
+
+Files lets you search tracked paths across a connected public repository, read file
+contents and browse Git commit history. Related Artifacts, Tasks, Specs, Requirements
+and Conversations link the file back to its recorded context. Relationships reflect
+current authorized data even when viewing an older revision. Files is read-only;
+it does not edit files or compare revisions.
 
 AI assistance, semantic search and code-generation tools are not included. The Generation tab
 does not generate code. The animated examples illustrate the workflow and do not establish

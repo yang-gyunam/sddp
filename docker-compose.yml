@@ -68,7 +68,7 @@ services:
       - SpeechToText__TimeoutSeconds=120
       - FeatureFlags__Speech__Enabled=true
       - Git__RepoRoot=${SDDP_GIT__REPOROOT:-data/git-repos}
-      - Git__ServerUrl=http://sddp-gitea:3100
+      - Git__ServerUrl=${SDDP_GIT__SERVERURL:-http://sddp-gitea:3000}
       - OpenTelemetry__Endpoint=http://sddp-aspire:18889
     ports:
       - "127.0.0.1:5001:5001"

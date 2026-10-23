@@ -28,7 +28,7 @@ The base bundle includes the editable Knowledge Hub schema and its project-scope
 - Do not run shared test data in production environments.
 - Scenario-specific story content is not part of the default provisioning path.
 - The only public showcase scenario is the OnBrick brownfield story.
-- `make demo-onbrick` removes all project volumes without confirmation before rebuilding and seeding. It is not a seed-only command. For seed-only instructions on an existing evaluation DB, see [Database Commands](../../docs/public-guide.md#database-commands).
+- `make demo-onbrick` removes all project volumes without confirmation before rebuilding and seeding. Running `onbrick-seed.sql` alone also deletes existing business data across the demo tenant, including other projects. Use it only for a newly provisioned, disposable evaluation DB; see [Database Commands](../../docs/public-guide.md#database-commands).
 - `make db-reset` destroys the database; `make db-reset-full` destroys all Compose project volumes. Neither is an upgrade procedure.
 
 ## Related Files
@@ -40,7 +40,10 @@ AI session tables and AI configuration values are not created in this free distr
 The shared `ai_reports` and `embeddings` storage tables remain because project snapshot,
 restore and deletion paths reference them. This does not install AI functionality.
 
-`provision-base.sql` rejects a non-empty application database. `provision.sql` also loads the
+`provision-base.sql` is for a new, empty database only. It has no preflight check that
+rejects an existing database before writes: it can change database defaults and existing
+storage settings before failing on an already existing table. Do not rely on that error
+to protect existing data. `provision.sql` also loads the
 public evaluation accounts, so it is an evaluation-only wrapper. None of these entrypoints
 is an in-place migration script. An automatic in-place upgrade bundle is not included.
 For existing 0.4.0/0.4.1 databases, follow the separate

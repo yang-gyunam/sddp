@@ -4,7 +4,7 @@ This guide covers the supported public-repository workflow for running SDDP, pro
 
 ## Scope
 
-This is the free edition. See [release notes](../RELEASE.md) for version 0.5.0 support and limitations.
+This is the free edition. See [release notes](../RELEASE.md) for version 0.5.1 support and limitations.
 
 The public repository includes:
 
@@ -52,13 +52,13 @@ Passwords remain on the existing Compose configuration path. Public container/se
 cp src/frontend/packages/web/.env.example src/frontend/packages/web/.env
 
 docker compose up -d --wait sddp-db sddp-redis
-docker compose up -d sddp-aspire
 make db-provision      # empty application database only
 make db-seed-test
 docker compose up -d --build sddp-api sddp-front
 ```
 
 Host-side `npm ci` is not required when you use the frontend container only.
+The commands above start PostgreSQL, Redis, the API and the web frontend.
 
 Optional — speech-to-text for conversation messages (local Whisper, no cloud calls):
 
@@ -67,22 +67,46 @@ docker compose up -d sddp-whisper
 make whisper-warmup    # one-time model download (~460MB)
 ```
 
+### Optional telemetry dashboard
+
+Aspire Dashboard is an optional viewer for OpenTelemetry logs and traces. SDDP runs without it;
+the API's required Compose dependencies are PostgreSQL and Redis. The targeted Quick Start
+commands above and `make infra` do not start Aspire.
+
+To use the dashboard:
+
+```bash
+docker compose up -d sddp-aspire
+```
+
+Open `http://localhost:18888` after the container starts. Without the dashboard, use
+`docker compose logs -f sddp-api` to read API console logs.
+
+Aspire is defined in the default Compose configuration, so running `docker compose up -d`
+without service names also starts it.
+
+### Local frontend development (optional)
+
 After completing the Docker setup, run the local frontend from the repository root:
 
 ```bash
 cd src/frontend
 npm ci
 cd packages/web
-npm run dev
+VITE_API_URL=http://localhost:5001 npm run dev
 ```
+
+Vite has no API proxy. This command sets the API origin for this local process only;
+substitute your API host and port if different. Keep `VITE_API_URL` empty for the
+Docker frontend, where nginx proxies `/api` and `/hubs` requests.
 
 ## URLs
 
 - Frontend: `http://localhost:9010`
-- Frontend dev server: `http://localhost:3500`
+- Frontend dev server (optional): `http://localhost:3500`
 - API: `http://localhost:5001`
 - API docs: `http://localhost:5001/scalar/v1`
-- Aspire Dashboard: `http://localhost:18888`
+- Aspire Dashboard (optional, when started): `http://localhost:18888`
 - Whisper STT (optional): `http://localhost:9020`
 
 ## Database Commands
@@ -98,16 +122,22 @@ make demo-onbrick      # deletes ALL project volumes, rebuilds services and seed
 - `make db-provision` runs on a **clean database only**. Existing 0.4.0/0.4.1 installations must follow the [manual repository upgrade procedure](deploy/repository-050.md); older or customized schemas need a separate migration review. `make db-reset` destroys the database and is only for deliberate evaluation resets.
 - `make db-seed-test` loads the tracked public shared test dataset.
 - `make demo-onbrick` runs `docker compose down -v` before rebuilding and provisioning. It removes DB, Redis, API-file and Gitea volumes for this Compose project without an interactive confirmation. Use it only in a disposable evaluation environment.
-- To add only OnBrick seed data to an already provisioned evaluation DB, run from the repository root:
+- The OnBrick seed below is **destructive**, even though it does not reset volumes.
+  It deletes existing Artifacts, Tasks, Specs, Requirements, Conversations and related
+  records across the demo tenant, including other projects in that tenant, then inserts
+  the scenario. Use it only to initialize a newly provisioned, disposable evaluation DB
+  after `make db-seed-test`. Do not rerun it to repair an installation with work to preserve.
+  Run from the repository root:
 
 ```bash
 docker compose exec -T sddp-db psql -v ON_ERROR_STOP=1 -U sddp -d sddp -f /scripts/demo/onbrick-seed.sql
 ```
 
 The command uses the default DB user/database; substitute your configured values if changed.
-It adds or updates scenario data rather than resetting volumes. The shared evaluation accounts
-are in [provision-test.sql](../scripts/db/provision-test.sql); scenario accounts are in
-[onbrick-seed.sql](../scripts/demo/onbrick-seed.sql).
+Evaluation accounts, including the OnBrick users, are in
+[provision-test.sql](../scripts/db/provision-test.sql); the seed supplies scenario content.
+For the known audit-field issue in an existing OnBrick dataset, use the targeted
+[audit repair procedure](#validation) instead of reseeding.
 
 ## Connect a project repository
 
@@ -144,13 +174,32 @@ relationships can be saved. Existing data remains readable. See the
 | `projects.sync_interval_minutes` | Default 60. A file request fetches when this interval has elapsed; there is no background polling in this path. Values of 0 or less disable periodic synchronization after the initial clone. |
 | `projects.last_synced_at` | Written after successful synchronization. The page's Refresh repository action follows the interval and does not force a remote fetch. |
 | `SDDP_GIT__REPOROOT` | Git working directories; default `data/git-repos`, inside the `api_data` volume. |
-| `SDDP_GIT__SERVERURL` | Explicitly allowed internal Gitea origin. HTTP is accepted only for this configured Gitea origin; other Git server connections require HTTPS. |
+| `SDDP_GIT__SERVERURL` | Compose input for the API's `Git__ServerUrl`; defaults to `http://sddp-gitea:3000`. Explicitly allowed internal Gitea origin. HTTP is accepted only for this configured Gitea origin; other Git server connections require HTTPS. |
 
 Free supports public repositories only. Private repositories and authentication token registration
 are rejected by the server. Public github.com repositories can be connected directly. Administrators
 can register a public GitHub/Gitea connection in Settings → System Config → Git Connections,
 restricted to one project. Select it in Project → General → Git Repository, then save, check and confirm.
 For a configured internal Gitea server, use its matching clone URL; the repository must still be public.
+For the bundled service:
+
+1. Start it with `docker compose --profile tools up -d sddp-gitea`.
+2. Open `http://localhost:3100` to complete Gitea setup and create a **public** repository
+   with at least one commit. Host port 3100 maps to container port 3000.
+3. In SDDP's Git Connections settings, use provider **Gitea** and server URL
+   `http://sddp-gitea:3000`. Use `http://sddp-gitea:3000/owner/repository.git` as the
+   project's repository URL and select a branch that exists.
+   These addresses are resolved by the API container, not your browser.
+4. Save the project repository, check the connection, browse files, then confirm it.
+
+If you use a different Gitea origin, set `SDDP_GIT__SERVERURL` in the root `.env`
+and recreate the API with `docker compose up -d sddp-api`. The origin must be reachable
+from that container. For an API started outside Compose, set `Git__ServerUrl` directly.
+Earlier exports hardcoded `http://sddp-gitea:3100`; the bundled service's correct internal
+port is 3000. An installation customized to listen on 3100 can retain it with
+`SDDP_GIT__SERVERURL=http://sddp-gitea:3100`. Existing project URLs are not rewritten:
+review any already confirmed repository before changing its server address.
+
 The connection check verifies repository visibility against provider metadata. Later GitHub Files reads
 verify anonymous Git access without repeating the metadata request; access failures are never treated
 as public access. Gitea reads continue to use the provider visibility check.
@@ -215,6 +264,19 @@ Conversations sidebar.
 Confirmation actions use the application's shared Modal. Cancelling an action, including Knowledge
 archive, leaves the selected data unchanged. The sidebar's Refresh action retains its current
 expansion state while the project panels reload.
+
+## Knowledge document editing
+
+Knowledge uses the shared rich-text editor in reading and editing views, with
+consistent typography in history and conflict comparisons. Body text uses 16px type,
+24px line height and 8px paragraph spacing.
+
+Discarding edits restores the saved body immediately. Saving and reopening preserves
+ordered-list start numbers and numbering types, nested lists, table-cell alignment,
+column widths and merged cells. Supported numbering types are decimal, lower/upper
+alphabetic and lower/upper Roman; table alignment supports left, center and right.
+This describes preservation of supported document formatting, not additional toolbar controls.
+Unsupported attributes and values are rejected rather than silently accepted.
 
 ## Validation
 
@@ -298,9 +360,9 @@ Contact your deployment operator for separately managed generation. The legacy r
 returns HTTP 410; its `GENERATION_VIA_CLI` error code is retained for compatibility, not as an instruction
 to install a public CLI package.
 
-## Version 0.5.0 support scope
+## Version 0.5.1 support scope
 
-The global Search UI and SLA policy management UI are not supported in 0.5.0. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its execution dependencies are excluded from this public distribution. Project list search, Files repository-path search and item navigation remain available; item URLs and browser back/forward navigation support multiple panels. Configure repositories in Settings → Project → General; the older Integrations entry redirects there.
+The global Search UI and SLA policy management UI are not supported in 0.5.1. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its execution dependencies are excluded from this public distribution. Project list search, Files repository-path search and item navigation remain available; item URLs and browser back/forward navigation support multiple panels. Configure repositories in Settings → Project → General; the older Integrations entry redirects there.
 
 ## Evaluation credentials and tests
 

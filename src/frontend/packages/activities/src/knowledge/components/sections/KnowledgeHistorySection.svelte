@@ -119,6 +119,5 @@
     max-height: 28rem;
     overflow: auto;
     padding: 1rem;
-    font-size: 0.875rem;
   }
 </style>

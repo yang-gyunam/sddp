@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.1] - 2026-10-23
+
+- Improve shared rich-text typography with 16px body text, 24px line height,
+  8px paragraph spacing and consistent headings and lists in Knowledge views.
+- Restore the saved Knowledge body immediately after discarding edits and avoid
+  spurious unsaved-change state when reopening the editor.
+- Preserve ordered-list numbering types and table-cell alignment through save and
+  reopen, alongside start numbers, nested lists, column widths and merged cells.
+  Unsupported attribute values remain rejected.
+- Patch the Monaco DOMPurify dependency and refresh compatible Vite, Storybook and
+  Vitest dependencies to address newly reported security advisories.
+- Correct the bundled Gitea API origin to container port 3000 and allow
+  `SDDP_GIT__SERVERURL` overrides for customized installations.
+- Specify the API origin when starting the local Vite frontend.
+- Clarify destructive OnBrick seeding, fresh-database provisioning limits, test
+  side effects and the separate default-credential guards.
+- Update the public introduction for Files and mark Aspire as optional in setup instructions.
+
+- Refresh the README and animated walkthroughs, and document the included test paths,
+  commands and limited coverage without implying full product verification.
+- Correct the OnBrick smoke description: it creates and reads back a unique Spec, then
+  deactivates it. It does not create a temporary Conversation.
+- No application database schema changes or new migrations are introduced in 0.5.1.
+
 ## [v0.5.0] - 2026-10-20
 
 ### Git File Viewer

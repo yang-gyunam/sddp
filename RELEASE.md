@@ -1,51 +1,36 @@
-# SDDP v0.5.0 — Free Edition
+# SDDP v0.5.1 — Free Edition
 
-Release files prepared on 2026-10-20. This document describes the free public distribution.
+Release files prepared on 2026-10-23. This document describes the free public distribution.
 It does not announce a hosted service deployment or include separately distributed AI modules.
 
 ## Changes
 
-### Git File Viewer
+This patch improves Knowledge document readability and editing reliability, updates
+security-sensitive dependencies, and corrects the public setup and validation guidance
+and the bundled Gitea API origin.
+The Git File Viewer and repository confirmation features introduced in 0.5.0 remain included.
 
-- Browse committed files and search all file names/paths, including unopened folders.
-- Select a Git history entry to read that complete version, including the path before a rename, or return to the latest locally synchronized revision.
-- See File Info and Git metadata separately, followed by links to current Artifacts, Tasks, Specs, Requirements and Conversations.
-- Keep search results after selecting a file, reveal the selected tree row, and preserve independent file/revision/search state across tab switches and splits.
-- Restore the selected file and historical revision from its URL after a browser reload. The page's Refresh repository action also retains the search and expanded folders; browser reloads do not persist search or custom panel widths.
-- Reuse shared panels, collapsible sections, file icons and scrollbars; retain side-panel widths while resizing the window and show file status in the app status bar.
+- Patch the DOMPurify dependency used by Monaco and update compatible Vite, Storybook
+  and Vitest dependencies for newly reported security advisories.
+- Improve the shared rich-text editor's headings, lists and document spacing, with
+  16px body text, 24px line height and 8px paragraph spacing. Knowledge reading,
+  editing, history and conflict views use the shared typography.
+- Restore the saved body immediately when discarding Knowledge edits, without
+  leaving temporary text in the reading view or marking unchanged content as modified.
+- Preserve ordered-list numbering types and table-cell alignment when saving and
+  reopening Knowledge pages. Retain start numbers, nested lists, column widths and
+  merged cells, while continuing to reject unsupported attribute values.
+- Use container port 3000 for bundled Gitea API requests and support `SDDP_GIT__SERVERURL`
+  overrides for installations with a custom internal address.
+- Set the API origin explicitly for local Vite development; Docker continues to use nginx proxying.
+- Explain the destructive scope of OnBrick seeding, fresh-database provisioning limits,
+  test setup side effects and the separate default-credential guards.
+- Refresh the README and animated walkthroughs; identify the shipped tests, their locations,
+  commands and limited coverage. Correct the smoke description to Spec creation/readback
+  and deactivation. Aspire is optional for the documented local setup.
 
-Start with [repository connection and Files usage](docs/public-guide.md#connect-a-project-repository).
-Use Settings → Project → General → Git Repository to save a draft, check the connection and confirm it.
-File relationships require confirmation. Upgrade existing databases with V016 and V017; see the
-[repository upgrade notes](docs/deploy/repository-050.md).
-Refresh follows the configured synchronization interval and does not force a remote fetch.
-File editing, branch switching and before/after comparisons are excluded.
-
-### Repository setup and access
-
-- Free supports public repositories only. The server rejects authentication token registration and
-  repositories that require authentication.
-- Administrators can register public GitHub/Gitea connections for a specific project in
-  Settings → System Config → Git Connections. Project owners select a connection in General.
-- Confirmation locks the repository URL, branch and Artifact root. Synchronization timing remains
-  editable; changing the selected connection rechecks access and existing file paths before saving.
-- Anonymous GitHub Files access checks current Git readability without a metadata API request for every read.
-- Artifact source reads enforce project access. Reload refreshes the repository form, and snapshot restore
-  preserves the current repository configuration rather than replacing it with historical settings.
-
-### Shared interaction
-
-- Confirmation actions use the application's common Modal. Cancelling Knowledge archive makes no change.
-- Sidebars with at least two supported panels provide Single Expand and Collapse All in their top
-  overflow menu. Single Expand is off by default, persists across browser reloads and retains the
-  chosen expansion while the project list refreshes.
-
-The runtime, dependency and OnBrick corrections from 0.4.1 remain included. Existing OnBrick demo
-databases have a targeted [repair procedure](docs/public-guide.md#validation).
-Release validation requires matching frontend/API versions, builds, tests, database/API checks,
-edition-boundary checks and dependency/secret scans. These checks run locally before publication.
-
-See [CHANGELOG.md](CHANGELOG.md) for version-by-version changes.
+See [CHANGELOG.md](CHANGELOG.md) for version-by-version changes and the
+[public guide](docs/public-guide.md) for repository setup and Files usage.
 
 ## Included and excluded
 
@@ -71,7 +56,13 @@ and the example DB/JWT/admin/demo credentials are public values, not production 
 
 ## Upgrade precautions
 
-**v0.5.0 does not support automatic in-place upgrades from existing installations.**
+**v0.5.1 does not support automatic in-place upgrades from existing installations.**
+For a 0.5.0 installation, this patch adds no database schema changes or new migrations.
+Keep the existing database and API files; rebuild and redeploy the API and frontend together.
+Do not reprovision the database or rerun demo seeds. If your Gitea container listens on a
+custom port (including 3100), set `SDDP_GIT__SERVERURL` to that internal address before
+redeploying. Existing saved and confirmed repository URLs are not automatically rewritten.
+
 For existing 0.4.0/0.4.1 databases, follow the reviewed manual
 [V016/V017 procedure](docs/deploy/repository-050.md) and its
 [SQL entrypoint](scripts/db/upgrade-0.5.0.sql). Test it on a restored copy before upgrading your installation;
@@ -86,9 +77,13 @@ status bar against the API version. A tab left open during deployment can retain
 JavaScript files; reload it if a lazily loaded screen fails to open.
 
 For production use a separately reviewed configuration with unique credentials and private
-service access. The API rejects published DB/JWT defaults and the known default administrator
-password outside the explicitly allowed development profile. Demo-account passwords must also
-be replaced or their accounts removed; the administrator guard does not audit every test account.
+service access. The DB/JWT startup guard rejects published defaults outside Development
+and Testing; those two environments are exempt from that guard. The known default
+administrator password has a separate guard: it is allowed only in Development with
+`Authentication__DevelopmentCredentials__AllowKnownCredentials=true` and
+`Authentication__DevelopmentCredentials__ExposureMode=Loopback`. These configuration values
+do not themselves restrict network access. Demo-account passwords must also be replaced
+or their accounts removed; the administrator guard does not audit every test account.
 
 ## Public validation commands
 
@@ -111,8 +106,13 @@ repositories that require authentication are not supported in the free edition.
 Git metadata is commit-based: Modified is the last change's commit time and Owner is the linked
 SDDP Artifact owner. Related SDDP records are current, even when viewing an older commit.
 
-The 2026-10-20 npm audit reported no High/Critical findings and retained seven Moderate
-findings across all dependencies, including two runtime findings in the Monaco/DOMPurify
-dependency chain. The NuGet audit reported no vulnerabilities across the five public backend
-projects, including transitive dependencies. These dated audits do not prove that the application
-is free of vulnerabilities. Published docs and tests describe the limited scope above.
+The 2026-10-23 npm audit retained two Moderate development-dependency findings in the
+Tailwind Typography/PostCSS selector-parser chain. No runtime, High or Critical npm
+findings remained after the dependency updates. The NuGet audit covers all five public
+backend projects, including transitive dependencies; consult the candidate validation results.
+These dated audits do not prove that the application is free of vulnerabilities.
+Published docs and tests describe the limited scope above.
+
+The workspace root also declares the existing Monaco dependency so npm consistently applies
+the DOMPurify 3.4.17 override across workspace links. Keep this declaration and the lockfile
+together; changing dependency resolutions requires another audit and build.

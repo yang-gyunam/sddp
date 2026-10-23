@@ -45,9 +45,9 @@
     "svelte": "^5.0.0"
   },
   "devDependencies": {
-    "@storybook/addon-a11y": "^10.5.3",
-    "@storybook/svelte": "^10.5.3",
-    "@storybook/svelte-vite": "^10.5.3",
+    "@storybook/addon-a11y": "^10.6.3",
+    "@storybook/svelte": "^10.6.3",
+    "@storybook/svelte-vite": "^10.6.3",
     "@sveltejs/package": "^2.5.7",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
@@ -55,12 +55,12 @@
     "eslint": "^10.8.0",
     "eslint-plugin-svelte": "^3.14.0",
     "globals": "^17.0.0",
-    "storybook": "^10.5.3",
+    "storybook": "^10.6.3",
     "svelte-check": "^4.3.4",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.32.1",
-    "vite": "^7.3.5",
-    "vitest": "^4.1.10"
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12"
   },
   "dependencies": {
     "@internationalized/date": "^3.10.1",

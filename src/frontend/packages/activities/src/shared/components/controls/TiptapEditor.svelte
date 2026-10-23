@@ -82,17 +82,20 @@
     return () => editor?.destroy();
   });
 
-  // Update content when prop changes
+  // Cancel can return to the same source HTML prop while the editor owns a draft.
+  // Synchronize on mode changes too, without reporting programmatic edits.
   $effect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, { emitUpdate: false });
+    if (editor) {
+      editor.setEditable(editable, false);
+      if (content !== editor.getHTML()) {
+        editor.commands.setContent(content, { emitUpdate: false });
+      }
     }
   });
 
-  // Update editable state
+  // Accessibility changes must not reset an in-progress draft.
   $effect(() => {
     if (editor) {
-      editor.setEditable(editable);
       editor.view.dom.setAttribute('aria-label', ariaLabel);
       editor.view.dom.setAttribute('aria-readonly', editable ? 'false' : 'true');
     }
@@ -126,6 +129,18 @@
     outline: none;
     min-height: 100px;
     padding: 0.5rem;
+    font-family:
+      ui-sans-serif,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Ubuntu,
+      'Helvetica Neue',
+      sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: normal;
   }
 
   .tiptap-editor :global(.ProseMirror:focus) {
@@ -141,48 +156,70 @@
     height: 0;
   }
 
-  /* Typography */
+  /* Shared document typography for reading and editing. */
   .tiptap-editor :global(.ProseMirror h1) {
-    font-size: 1.5rem;
+    font-size: 1.71429em;
     font-weight: 600;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
+    line-height: 1.16667;
+    margin: 1.45833em 0 0;
   }
 
   .tiptap-editor :global(.ProseMirror h2) {
-    font-size: 1.25rem;
+    font-size: 1.43em;
     font-weight: 600;
-    margin-top: 0.75rem;
-    margin-bottom: 0.5rem;
+    line-height: 1.2;
+    margin: 1.4em 0 0;
   }
 
   .tiptap-editor :global(.ProseMirror h3) {
-    font-size: 1.125rem;
+    font-size: 1.142em;
     font-weight: 600;
-    margin-top: 0.5rem;
-    margin-bottom: 0.25rem;
+    line-height: 1.5;
+    margin: 1.31249em 0 0;
   }
 
   .tiptap-editor :global(.ProseMirror p) {
-    margin-bottom: 0.5rem;
+    line-height: 1.5;
+    margin: 0.5em 0 0;
   }
 
   .tiptap-editor :global(.ProseMirror ul),
   .tiptap-editor :global(.ProseMirror ol) {
-    padding-left: 1.5rem;
-    margin-bottom: 0.5rem;
+    padding-left: 24px;
+    margin: 10px 0 0;
   }
 
   .tiptap-editor :global(.ProseMirror ul) {
     list-style-type: disc;
   }
 
-  .tiptap-editor :global(.ProseMirror ol) {
-    list-style-type: decimal;
+  /* Undo Preflight's marker reset in its own layer. The browser then honors
+     ol.type case-sensitively; CSS [type] selectors otherwise fold a/A and i/I. */
+  @layer base {
+    .tiptap-editor :global(.ProseMirror ol) {
+      list-style-type: revert-layer;
+    }
   }
 
   .tiptap-editor :global(.ProseMirror li) {
-    margin-bottom: 0.25rem;
+    margin: 0;
+  }
+
+  .tiptap-editor :global(.ProseMirror li + li) {
+    margin-top: 4px;
+  }
+
+  .tiptap-editor :global(.ProseMirror li > ul),
+  .tiptap-editor :global(.ProseMirror li > ol) {
+    margin-top: 0;
+  }
+
+  .tiptap-editor :global(.ProseMirror > :first-child),
+  .tiptap-editor :global(.ProseMirror li > p:first-child),
+  .tiptap-editor :global(.ProseMirror blockquote > :first-child),
+  .tiptap-editor :global(.ProseMirror td > :first-child),
+  .tiptap-editor :global(.ProseMirror th > :first-child) {
+    margin-top: 0;
   }
 
   .tiptap-editor :global(.ProseMirror blockquote) {
@@ -197,7 +234,7 @@
     background-color: var(--color-bg-tertiary);
     border-radius: 0.25rem;
     padding: 0.125rem 0.25rem;
-    font-family: monospace;
+    font-family: ui-monospace, Menlo, 'Segoe UI Mono', 'Ubuntu Mono', monospace;
     font-size: 0.875em;
   }
 
