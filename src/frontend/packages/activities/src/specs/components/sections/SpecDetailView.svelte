@@ -10,6 +10,7 @@
   import SpecDetailMainSections from './spec-detail/SpecDetailMainSections.svelte';
   import type { GlossarySegment } from './spec-detail/SpecDetailMainSections.svelte';
   import SpecDetailWorkflowSection from './spec-detail/SpecDetailWorkflowSection.svelte';
+  import SpecChangeReview from '../../../ai/components/sections/SpecChangeReview.svelte';
   import SpecDetailSupplementaryTabs from './spec-detail/SpecDetailSupplementaryTabs.svelte';
   import SpecDetailRejectModal from './spec-detail/SpecDetailRejectModal.svelte';
   import type { ReferenceItem } from '../../../shared/components/idioms/ReferencesSection.svelte';
@@ -216,6 +217,8 @@
     const tabs: TabItem[] = aiView.visible
       ? [{ id: 'ai-analysis', label: 'AI Analysis', icon: 'cpu' }]
       : [];
+    if (aiView.visible)
+      tabs.push({ id: 'change-review', label: 'Change review', icon: 'git-branch' });
     if (!specSupplementaryTabsEnabled) {
       return tabs;
     }
@@ -927,6 +930,16 @@
         {onUpdateEntitySchema}
         {onDeleteEntitySchema}
       />
+      {#if activeDetailTab === 'change-review' && aiView.visible}
+        {#key spec.id}
+          <SpecChangeReview
+            tenantId={spec.tenantId}
+            projectId={spec.projectId}
+            specId={spec.id}
+            previousId={spec.supersedesSpecId}
+          />
+        {/key}
+      {/if}
     {/if}
   </div>
 </div>

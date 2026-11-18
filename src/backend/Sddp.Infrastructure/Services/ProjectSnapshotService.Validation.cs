@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using System.Text.Json;
 using Dapper;
+using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces.Snapshots;
 
 namespace Sddp.Infrastructure.Services;
@@ -25,6 +26,21 @@ public partial class ProjectSnapshotService
                         throw new InvalidOperationException($"Missing snapshot scope: {table}.{column}.");
             }
         }
+    }
+
+    private async Task ValidateDiagramRestoreAsync(ProjectSnapshotData data, Guid projectId, IDbTransaction transaction)
+    {
+        var installed = (await InstalledProjectTablesAsync(transaction)).Contains("diagrams");
+        if (data.Tables.ContainsKey("diagrams"))
+        {
+            if (!installed && data.Tables["diagrams"].Count > 0)
+                throw new InvalidOperationException("Restoring diagrams requires the diagram schema.");
+            return;
+        }
+
+        if (installed && await _connection.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM diagrams WHERE project_id=@projectId)", new { projectId }, transaction))
+            throw new InvalidOperationException("This historical snapshot omitted diagrams and cannot replace existing project diagrams.");
     }
 
     private async Task LockProjectAsync(Guid tenantId, Guid projectId, IDbTransaction transaction, CancellationToken ct)
@@ -97,6 +113,23 @@ public partial class ProjectSnapshotService
                     if (!parents.Contains(SnapshotId(row, column)))
                         throw new InvalidOperationException($"Snapshot parent mismatch in {table}.{column}.");
         }
+        if (data.Tables.ContainsKey("diagrams") != data.Tables.ContainsKey("diagram_versions"))
+            throw new InvalidOperationException("Incomplete diagram snapshot.");
+        var diagramIds = Ids("diagrams");
+        Children(["diagram_versions"], "diagram_id", diagramIds);
+        foreach (var row in data.Tables.GetValueOrDefault("relationships", []))
+        {
+            ValidateDiagramEndpoint(row, "from_entity_type", "from_entity_id");
+            ValidateDiagramEndpoint(row, "to_entity_type", "to_entity_id");
+        }
+        void ValidateDiagramEndpoint(Dictionary<string, object?> row, string type, string id)
+        {
+            if (row.GetValueOrDefault(type) is JsonElement { ValueKind: JsonValueKind.Number } value &&
+                value.TryGetInt32(out var entityType) && entityType == (int)EntityType.Diagram &&
+                !diagramIds.Contains(SnapshotId(row, id)))
+                throw new InvalidOperationException("Snapshot relationship references a diagram outside the snapshot.");
+        }
+
         var conversations = Ids("conversations");
         Children(new[] { "channels", "forums", "direct_messages" }, "id", conversations);
         Children(new[] { "conversation_members" }, "conversation_id", conversations);

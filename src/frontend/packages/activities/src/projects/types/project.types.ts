@@ -112,6 +112,7 @@ export type ProjectPageType =
   | 'tasks'
   | 'glossary'
   | 'knowledge'
+  | 'diagrams'
   | 'artifacts'
   | 'files'
   | 'effort'
@@ -146,43 +147,35 @@ export interface ProjectsState {
   searchQuery: string;
 }
 
-export const PROJECT_TREE_NODES: ProjectTreeNode[] = [
-  { id: 'dashboard', type: 'dashboard', label: 'Dashboard', icon: ENTITY_SVG_ICONS.dashboard },
-  {
-    id: 'conversations',
-    type: 'conversations',
-    label: 'Conversations',
-    icon: ENTITY_SVG_ICONS.conversations,
-  },
-  {
-    id: 'requirements',
-    type: 'requirements',
-    label: 'Requirements',
-    icon: ENTITY_SVG_ICONS.requirements,
-  },
-  { id: 'specs', type: 'specs', label: 'Specs', icon: ENTITY_SVG_ICONS.specs },
-  { id: 'glossary', type: 'glossary', label: 'Glossary', icon: ENTITY_SVG_ICONS.glossary },
-  { id: 'knowledge', type: 'knowledge', label: 'Knowledge', icon: 'documents' },
-  { id: 'files', type: 'files', label: 'Files', icon: 'file-code' },
-  { id: 'artifacts', type: 'artifacts', label: 'Artifacts', icon: ENTITY_SVG_ICONS.artifacts },
-  { id: 'tasks', type: 'tasks', label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
-  { id: 'effort', type: 'effort', label: 'Effort', icon: ENTITY_SVG_ICONS.effort },
-  { id: 'traceability', type: 'traceability', label: 'Traceability', icon: 'type-hierarchy' },
-];
-
-export const PROJECT_PAGE_CONFIG: Record<ProjectPageType, { label: string; icon: string }> = {
+export const PROJECT_PAGE_CONFIG: Record<
+  ProjectPageType,
+  { label: string; icon: string; tabIcon?: string }
+> = {
   dashboard: { label: 'Dashboard', icon: ENTITY_SVG_ICONS.dashboard },
   conversations: { label: 'Conversations', icon: ENTITY_SVG_ICONS.conversations },
-  requirements: { label: 'Requirements', icon: ENTITY_SVG_ICONS.requirements },
+  requirements: {
+    label: 'Requirements',
+    icon: ENTITY_SVG_ICONS.requirements,
+    tabIcon: 'file-text',
+  },
   specs: { label: 'Specs', icon: ENTITY_SVG_ICONS.specs },
-  tasks: { label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
   glossary: { label: 'Glossary', icon: ENTITY_SVG_ICONS.glossary },
   knowledge: { label: 'Knowledge', icon: 'documents' },
   files: { label: 'Files', icon: 'file-code' },
+  diagrams: { label: 'Diagrams', icon: ENTITY_SVG_ICONS.diagrams },
   artifacts: { label: 'Artifacts', icon: ENTITY_SVG_ICONS.artifacts },
+  tasks: { label: 'Tasks', icon: ENTITY_SVG_ICONS.tasks },
   effort: { label: 'Effort', icon: ENTITY_SVG_ICONS.effort },
   traceability: { label: 'Traceability', icon: 'type-hierarchy' },
 };
+
+export function isProjectPageType(value: string): value is ProjectPageType {
+  return Object.prototype.hasOwnProperty.call(PROJECT_PAGE_CONFIG, value);
+}
+
+export const PROJECT_TREE_NODES: ProjectTreeNode[] = Object.entries(PROJECT_PAGE_CONFIG).map(
+  ([id, { label, icon }]) => ({ id, type: id as ProjectPageType, label, icon })
+);
 
 /**
  * Generate tree nodes for a project's sidebar navigation

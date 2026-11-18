@@ -678,6 +678,7 @@
                 active={group.activeTab === tab.id}
                 localActive={$globalActiveTab?.id === tab.id}
                 dirty={tab.dirty}
+                dirtyMarker={tab.dirtyMarker}
                 closable={tab.closable !== false}
                 draggable={true}
                 isDragging={draggedTabId === tab.id}

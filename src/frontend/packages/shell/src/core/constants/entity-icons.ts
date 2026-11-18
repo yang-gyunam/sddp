@@ -21,6 +21,8 @@ export type EntityType =
   | 'conversation'
   | 'conversations'
   | 'glossary'
+  | 'diagram'
+  | 'diagrams'
   | 'artifact'
   | 'artifacts'
   | 'project'
@@ -62,6 +64,8 @@ export const ENTITY_ICON_MAP: Record<EntityType, EntityIconMapping> = {
   conversation: { codicon: 'comment-discussion', svg: 'message-square' },
   conversations: { codicon: 'comment-discussion', svg: 'message-square' },
   glossary: { codicon: 'book', svg: 'book-open' },
+  diagram: { codicon: 'type-hierarchy', svg: 'git-branch' },
+  diagrams: { codicon: 'type-hierarchy', svg: 'git-branch' },
   artifact: { codicon: 'package', svg: 'package' },
   artifacts: { codicon: 'package', svg: 'package' },
 
@@ -135,6 +139,8 @@ export const ENTITY_LABELS: Record<EntityType, string> = {
   conversation: 'Conversation',
   conversations: 'Conversations',
   glossary: 'Glossary',
+  diagram: 'Diagram',
+  diagrams: 'Diagrams',
   artifact: 'Artifact',
   artifacts: 'Artifacts',
   project: 'Project',

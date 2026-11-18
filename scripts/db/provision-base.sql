@@ -1264,11 +1264,11 @@ CREATE TABLE relationships (
  project_id UUID NOT NULL,
 
  -- Source Entity
- from_entity_type INT NOT NULL, -- EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task
+ from_entity_type INT NOT NULL, -- EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task, 7=Diagram
  from_entity_id UUID NOT NULL,
 
  -- Target Entity
- to_entity_type INT NOT NULL, -- EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task
+ to_entity_type INT NOT NULL, -- EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task, 7=Diagram
  to_entity_id UUID NOT NULL,
 
  -- Relationship Type (codes Table FK)
@@ -1296,8 +1296,8 @@ CREATE TABLE relationships (
 );
 
 COMMENT ON TABLE relationships IS 'Entity relationships (temporal versioning)';
-COMMENT ON COLUMN relationships.from_entity_type IS 'EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task';
-COMMENT ON COLUMN relationships.to_entity_type IS 'EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task';
+COMMENT ON COLUMN relationships.from_entity_type IS 'EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task, 7=Diagram';
+COMMENT ON COLUMN relationships.to_entity_type IS 'EntityType enum: 0=Spec, 1=Requirement, 2=Topic, 3=GlossaryTerm, 4=Conversation, 5=Artifact, 6=Task, 7=Diagram';
 COMMENT ON COLUMN relationships.type_code_id IS 'RELATIONSHIP_TYPE codes table FK — supersedes, evolves_from, extends, conflicts_with, depends_on, implements, replaces, affects';
 
 -- -----------------------------------------------------------------------------
@@ -3455,7 +3455,10 @@ VALUES
  ('00000000-0000-0000-0003-000000000093', 'knowledge:update', 'Update Knowledge', 'Update knowledge pages', 'knowledge', 'update', TRUE),
  ('00000000-0000-0000-0003-000000000094', 'knowledge:archive', 'Archive Knowledge', 'Archive knowledge pages', 'knowledge', 'archive', TRUE),
  ('00000000-0000-0000-0003-000000000095', 'knowledge:publish', 'Publish Knowledge', 'Publish knowledge pages', 'knowledge', 'publish', TRUE),
- ('00000000-0000-0000-0003-000000000096', 'knowledge:admin', 'Administer Knowledge', 'Administer project knowledge', 'knowledge', 'admin', TRUE)
+ ('00000000-0000-0000-0003-000000000096', 'knowledge:admin', 'Administer Knowledge', 'Administer project knowledge', 'knowledge', 'admin', TRUE),
+ ('00000000-0000-0000-0003-000000000101', 'diagram:read', 'Read Diagrams', 'Read diagrams and revisions', 'diagram', 'read', TRUE),
+ ('00000000-0000-0000-0003-000000000102', 'diagram:create', 'Create Diagrams', 'Create project diagrams', 'diagram', 'create', TRUE),
+ ('00000000-0000-0000-0003-000000000103', 'diagram:update', 'Update Diagrams', 'Save diagram revisions', 'diagram', 'update', TRUE)
 
 ON CONFLICT (code) DO UPDATE SET
  name = EXCLUDED.name,
@@ -3488,7 +3491,7 @@ END $$;
 -- REVIEWER: 00000000-0000-0000-0002-000000000005
 -- QA_TESTER: 00000000-0000-0000-0002-000000000006
 -- -----------------------------------------------------------------------------
--- ADMIN: Permission (37)
+-- ADMIN: Permission (40)
 -- -----------------------------------------------------------------------------
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT
@@ -4112,3 +4115,84 @@ UNION ALL SELECT 'permissions', COUNT(*) FROM permissions
 UNION ALL SELECT 'role_permissions', COUNT(*) FROM role_permissions
 UNION ALL SELECT 'system_configs', COUNT(*) FROM system_configs
 ORDER BY table_name;
+
+-- Shared diagrams and immutable revisions (Free and Pro).
+-- Project-shared diagrams. IDs/revisions inside the common model agree with the row.
+CREATE TABLE IF NOT EXISTS diagrams (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    project_id UUID NOT NULL,
+    title VARCHAR(200) NOT NULL CHECK (length(btrim(title)) > 0),
+    kind VARCHAR(20) NOT NULL CHECK (kind IN ('authored', 'derived')),
+    revision INT NOT NULL CHECK (revision > 0),
+    model_json JSONB NOT NULL,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    updated_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT uq_diagrams_scope UNIQUE (tenant_id, project_id, id),
+    CONSTRAINT fk_diagrams_project FOREIGN KEY (tenant_id, project_id) REFERENCES projects(tenant_id, id) ON DELETE RESTRICT,
+    CONSTRAINT ck_diagrams_model CHECK ((
+        model_json->>'diagramId' = id::text AND model_json->>'revision' = revision::text
+        AND model_json->>'schemaVersion' IN ('1', '2')) IS TRUE)
+);
+CREATE TABLE IF NOT EXISTS diagram_versions (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    project_id UUID NOT NULL,
+    diagram_id UUID NOT NULL,
+    revision INT NOT NULL CHECK (revision > 0),
+    title VARCHAR(200) NOT NULL CHECK (length(btrim(title)) > 0),
+    model_json JSONB NOT NULL,
+    change_summary VARCHAR(500),
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT uq_diagram_versions_revision UNIQUE (diagram_id, revision),
+    CONSTRAINT fk_diagram_versions_diagram FOREIGN KEY (tenant_id, project_id, diagram_id)
+        REFERENCES diagrams(tenant_id, project_id, id) ON DELETE RESTRICT,
+    CONSTRAINT ck_diagram_versions_model CHECK ((
+        model_json->>'diagramId' = diagram_id::text AND model_json->>'revision' = revision::text
+        AND model_json->>'schemaVersion' IN ('1', '2')) IS TRUE)
+);
+CREATE INDEX IF NOT EXISTS ix_diagrams_project ON diagrams(tenant_id, project_id, updated_at);
+CREATE INDEX IF NOT EXISTS ix_diagram_versions_scope ON diagram_versions(tenant_id, project_id, diagram_id);
+INSERT INTO permissions (id, code, name, description, resource_type, action, is_system)
+VALUES
+('00000000-0000-0000-0003-000000000101', 'diagram:read', 'Read Diagrams', 'Read diagrams and revisions', 'diagram', 'read', TRUE),
+('00000000-0000-0000-0003-000000000102', 'diagram:create', 'Create Diagrams', 'Create project diagrams', 'diagram', 'create', TRUE),
+('00000000-0000-0000-0003-000000000103', 'diagram:update', 'Update Diagrams', 'Save diagram revisions', 'diagram', 'update', TRUE)
+ON CONFLICT (code) DO NOTHING;
+INSERT INTO role_permissions (id, role_id, permission_id)
+SELECT uuid_generate_v4(), r.id, p.id
+FROM roles r CROSS JOIN permissions p
+WHERE r.is_system AND r.is_active AND
+    ((r.type IN (0,1,2,5) AND p.code IN ('diagram:read','diagram:create','diagram:update'))
+     OR (r.type IN (3,4,6) AND p.code = 'diagram:read'))
+ON CONFLICT (role_id,permission_id) DO NOTHING;
+
+BEGIN;
+-- Database-owned digest of the exact UTF-8 JSON representation validated by DiagramListReader.
+ALTER TABLE diagrams ADD COLUMN IF NOT EXISTS model_hash bytea;
+
+CREATE OR REPLACE FUNCTION sddp_set_diagram_model_hash() RETURNS trigger
+LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    NEW.model_hash := sha256(convert_to(NEW.model_json::text, 'UTF8'));
+    RETURN NEW;
+END
+$$;
+
+CREATE OR REPLACE TRIGGER set_diagram_model_hash
+BEFORE INSERT OR UPDATE OF model_json, model_hash ON diagrams
+FOR EACH ROW EXECUTE FUNCTION sddp_set_diagram_model_hash();
+ALTER TABLE diagrams ENABLE ALWAYS TRIGGER set_diagram_model_hash;
+
+-- Fire the same trigger for pre-V024 rows, leaving all document and audit fields intact.
+UPDATE diagrams SET model_hash = NULL WHERE model_hash IS NULL;
+ALTER TABLE diagrams ALTER COLUMN model_hash SET NOT NULL;
+COMMIT;
+
+\ir migrations/V025__weekly_statistics_consent.sql

@@ -7,9 +7,16 @@
     prepare?: () => void | Promise<void>;
     prepareLabel?: string;
     remove?: () => void | Promise<void>;
+    candidate?: () => void;
   }
 
-  let { displayName, prepare, prepareLabel = 'Prepare history', remove }: Props = $props();
+  let {
+    displayName,
+    prepare,
+    prepareLabel = 'Prepare history',
+    remove,
+    candidate,
+  }: Props = $props();
 </script>
 
 <Dropdown position="bottom-right">
@@ -28,6 +35,16 @@
     />
   {/snippet}
   <div class="min-w-[200px]">
+    {#if candidate}
+      <Button
+        role="menuitem"
+        variant="unstyled"
+        onclick={candidate}
+        class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]"
+      >
+        <Icon name="message-square" size="xs" />답변 지침
+      </Button>
+    {/if}
     {#if prepare}
       <Button
         role="menuitem"

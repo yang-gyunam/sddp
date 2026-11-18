@@ -1,41 +1,29 @@
-# SDDP v0.5.1 — Free Edition
+# SDDP v0.6.0 — Free Edition
 
-Release files prepared on 2026-10-23. This document describes the free public distribution.
+Release files prepared on 2026-11-18. This document describes the free public distribution.
 It does not announce a hosted service deployment or include separately distributed AI modules.
 
 ## Changes
 
-This patch improves Knowledge document readability and editing reliability, updates
-security-sensitive dependencies, and corrects the public setup and validation guidance
-and the bundled Gitea API origin.
-The Git File Viewer and repository confirmation features introduced in 0.5.0 remain included.
+Open **Project → Diagrams** to create a flowchart, sequence, class, state, ERD,
+or C4 context/container diagram. Drag shapes from the palette, resize or connect
+them, then save explicitly. Open a related item from either detail panel to view
+it in a separate work tab.
 
-- Patch the DOMPurify dependency used by Monaco and update compatible Vite, Storybook
-  and Vitest dependencies for newly reported security advisories.
-- Improve the shared rich-text editor's headings, lists and document spacing, with
-  16px body text, 24px line height and 8px paragraph spacing. Knowledge reading,
-  editing, history and conflict views use the shared typography.
-- Restore the saved body immediately when discarding Knowledge edits, without
-  leaving temporary text in the reading view or marking unchanged content as modified.
-- Preserve ordered-list numbering types and table-cell alignment when saving and
-  reopening Knowledge pages. Retain start numbers, nested lists, column widths and
-  merged cells, while continuing to reject unsupported attribute values.
-- Use container port 3000 for bundled Gitea API requests and support `SDDP_GIT__SERVERURL`
-  overrides for installations with a custom internal address.
-- Set the API origin explicitly for local Vite development; Docker continues to use nginx proxying.
-- Explain the destructive scope of OnBrick seeding, fresh-database provisioning limits,
-  test setup side effects and the separate default-credential guards.
-- Refresh the README and animated walkthroughs; identify the shipped tests, their locations,
-  commands and limited coverage. Correct the smoke description to Spec creation/readback
-  and deactivation. Aspire is optional for the documented local setup.
+- Compare saved revisions in Visual, YAML or Source view. The visual comparison
+  distinguishes changes to the model from movement and styling.
+- Import and export SDDP YAML. Preview supported Mermaid syntax before saving.
+  If you edit the diagram visually, the editor marks the preserved source as stale.
+- Primary Flow and Traceability Map now apply the same project and private
+  conversation read checks as related-item views. A readable child remains
+  visible when its parent is private.
 
-See [CHANGELOG.md](CHANGELOG.md) for version-by-version changes and the
-[public guide](docs/public-guide.md) for repository setup and Files usage.
+See the [changelog](CHANGELOG.md) for the full list of changes.
 
 ## Included and excluded
 
 The free edition includes project conversations, requirements, specs, Knowledge, glossary,
-artifacts, tasks, effort, permissions, the Git File Viewer and the OnBrick evaluation scenario.
+artifacts, tasks, effort, permissions, Diagrams, the Git File Viewer and the OnBrick evaluation scenario.
 Optional local Whisper dictation remains available; it is separate from LLM assistance.
 
 AI/LLM assistance, semantic search, AI binaries, private harness source, Ollama services and
@@ -56,21 +44,17 @@ and the example DB/JWT/admin/demo credentials are public values, not production 
 
 ## Upgrade precautions
 
-**v0.5.1 does not support automatic in-place upgrades from existing installations.**
-For a 0.5.0 installation, this patch adds no database schema changes or new migrations.
-Keep the existing database and API files; rebuild and redeploy the API and frontend together.
-Do not reprovision the database or rerun demo seeds. If your Gitea container listens on a
-custom port (including 3100), set `SDDP_GIT__SERVERURL` to that internal address before
-redeploying. Existing saved and confirmed repository URLs are not automatically rewritten.
+**v0.6.0 does not support automatic in-place upgrades from existing installations.**
+For a standard Free 0.5.0 or 0.5.1 installation, stop writers and take a matching
+backup of the database and API files. Rehearse on a restored copy, then apply the
+[four diagram migrations, V021 through V024](scripts/db/README.md#diagram-storage-and-permissions)
+before starting the updated API. Update the API and frontend together.
 
-For existing 0.4.0/0.4.1 databases, follow the reviewed manual
-[V016/V017 procedure](docs/deploy/repository-050.md) and its
-[SQL entrypoint](scripts/db/upgrade-0.5.0.sql). Test it on a restored copy before upgrading your installation;
-a clean installation is not a migration. Older or customized schemas need a separate migration review.
+For Free 0.4.0 or 0.4.1, complete the earlier [V016/V017 repository upgrade](docs/deploy/repository-050.md)
+first. Older or customized schemas require a separate migration review.
+To return to 0.5.x after enabling diagrams, restore the matching pre-upgrade database
+and [API files](docs/deploy/api-data.md) with the previous application version.
 
-Back up both the database and API files; follow [API data preservation](docs/deploy/api-data.md).
-Upgrade the API and frontend together. `provision-base.sql` is for a clean database, not an
-in-place upgrade. Do not run reset commands or demo/test seed scripts against production data.
 This source export does not include an automatic in-place migration bundle or registry image digest lock.
 After both services are updated, reload open browser tabs and check the version in the application
 status bar against the API version. A tab left open during deployment can retain references to old
@@ -106,11 +90,12 @@ repositories that require authentication are not supported in the free edition.
 Git metadata is commit-based: Modified is the last change's commit time and Owner is the linked
 SDDP Artifact owner. Related SDDP records are current, even when viewing an older commit.
 
-The 2026-10-23 npm audit retained two Moderate development-dependency findings in the
-Tailwind Typography/PostCSS selector-parser chain. No runtime, High or Critical npm
-findings remained after the dependency updates. The NuGet audit covers all five public
-backend projects, including transitive dependencies; consult the candidate validation results.
-These dated audits do not prove that the application is free of vulnerabilities.
+The 2026-11-18 audit found zero npm runtime vulnerabilities and zero High or Critical
+findings across the five public NuGet projects, including transitive dependencies.
+Including npm development tools yielded ten High and ten Moderate findings. The High
+findings include a [picomatch advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+and affected tools that depend on it. The advisory listed no patched version at the time
+of the audit. The frontend production image serves the built assets through Nginx.
 Published docs and tests describe the limited scope above.
 
 The workspace root also declares the existing Monaco dependency so npm consistently applies

@@ -1,3 +1,4 @@
+using Sddp.Api.Hubs;
 using Microsoft.AspNetCore.DataProtection;
 using System.Data;
 using System.Text;
@@ -95,11 +96,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ProjectionOutboxMessageHandler>();
         services.AddScoped<TimelineOutboxMessageHandler>();
         services.AddScoped<ConversationOutboxMessageHandler>();
+        services.AddScoped<NotificationOutboxMessageHandler>();
         services.AddScoped<IOutboxMessageHandler>(sp => new CompositeOutboxMessageHandler(
         [
             sp.GetRequiredService<ProjectionOutboxMessageHandler>(),
             sp.GetRequiredService<TimelineOutboxMessageHandler>(),
             sp.GetRequiredService<ConversationOutboxMessageHandler>(),
+            sp.GetRequiredService<NotificationOutboxMessageHandler>(),
         ]));
         services.AddScoped<IOutboxEnqueuer, OutboxEnqueuer>();
         services.AddHostedService<OutboxBackgroundService>();
@@ -378,6 +381,9 @@ public static class ServiceCollectionExtensions
     {
         var otlpEndpoint = configuration["OpenTelemetry:Endpoint"] ?? "http://localhost:4317";
 
+        if (configuration["Privacy:MetricsFile"] is {Length:>0} path && Path.IsPathFullyQualified(path))
+            services.AddSingleton(_ => new PrivacyMetrics(path));
+
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
                 .AddService("sddp-api"))
@@ -385,9 +391,11 @@ public static class ServiceCollectionExtensions
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddEntityFrameworkCoreInstrumentation()
+                .AddProcessor(new OperationalTraceProcessor())
                 .AddSource(MediatRActivitySource.Source.Name)
                 .AddOtlpExporter(opts => opts.Endpoint = new Uri(otlpEndpoint)))
             .WithMetrics(metrics => metrics
+                .AddMeter(PrivacyMetrics.Name)
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation()

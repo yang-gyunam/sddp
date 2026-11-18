@@ -43,6 +43,7 @@ export interface Tab {
   meta?: string;
   icon?: string;
   dirty: boolean;
+  dirtyMarker?: 'dot' | 'asterisk';
   closable: boolean;
   component: unknown;
   props: Record<string, unknown>;

@@ -34,6 +34,8 @@
     'arrow-right': 'M14 5l7 7m0 0l-7 7m7-7H3',
 
     // Actions
+    'undo-2': ['M9 14 4 9l5-5', 'M4 9h9a7 7 0 0 1 0 14h-2'],
+    'redo-2': ['m15 14 5-5-5-5', 'M20 9H11a7 7 0 0 0 0 14h2'],
     plus: 'M12 5v14m-7-7h14',
     minus: 'M5 12h14',
     check: 'M20 6L9 17l-5-5',

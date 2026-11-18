@@ -82,7 +82,13 @@ export interface GraphFilterState {
  * Default graph filters (all enabled)
  */
 export const DEFAULT_GRAPH_FILTERS: GraphFilterState = {
-  entityTypes: new Set<EntityType>(['Spec', 'Requirement', 'Conversation', 'GlossaryTerm']),
+  entityTypes: new Set<EntityType>([
+    'Spec',
+    'Requirement',
+    'Conversation',
+    'GlossaryTerm',
+    'Diagram',
+  ]),
   relationTypes: new Set<RelationType>([
     'Supersedes',
     'EvolvesFrom',
@@ -135,6 +141,7 @@ export const NODE_COLORS: Record<EntityType, string> = {
   GlossaryTerm: '#f59e0b',
   Artifact: '#06b6d4',
   Task: '#14b8a6',
+  Diagram: '#3b82f6',
 };
 
 export const EDGE_COLORS: Record<RelationType, string> = {

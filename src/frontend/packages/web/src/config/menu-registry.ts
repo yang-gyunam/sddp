@@ -5,6 +5,11 @@
  * rendered for a given menu item, along with the appropriate props.
  */
 
+import {
+  PROJECT_PAGE_CONFIG,
+  isProjectPageType,
+  type ProjectPageType,
+} from '@sddp/activities/projects/types';
 import type { TreeNode } from '@sddp/shell/types';
 import { activityComponents } from './activity-loaders';
 
@@ -37,6 +42,7 @@ const {
   ProjectGlossaryPage,
   ProjectKnowledgePage,
   ProjectArtifactsPage,
+  ProjectDiagramsPage,
   ProjectFilesPage,
   ProjectEffortPage,
   ProjectTraceabilityPage,
@@ -92,8 +98,7 @@ const MENU_PATTERNS = {
   newRequirement: /^new-requirement$/,
   newGlossary: /^new-glossary$/,
   // Project page patterns (e.g., "project-{uuid}-dashboard")
-  projectPage:
-    /^project-(.+)-(dashboard|conversations|requirements|specs|tasks|glossary|knowledge|artifacts|files|effort|traceability)$/,
+  projectPage: new RegExp(`^project-(.+)-(${Object.keys(PROJECT_PAGE_CONFIG).join('|')})$`),
   // Dashboard patterns
   dashboardMy: /^dashboard-(overview|my-tasks|recent|notifications)$/,
   // Task activity patterns
@@ -219,7 +224,7 @@ const glossaryResolver: MenuResolver = (menu) => {
 /**
  * Component map for project page types
  */
-const PROJECT_PAGE_COMPONENTS: Record<string, unknown> = {
+const PROJECT_PAGE_COMPONENTS: Record<ProjectPageType, unknown> = {
   dashboard: ProjectDashboardPage,
   conversations: ProjectConversationsPage,
   requirements: ProjectRequirementsPage,
@@ -228,6 +233,7 @@ const PROJECT_PAGE_COMPONENTS: Record<string, unknown> = {
   glossary: ProjectGlossaryPage,
   knowledge: ProjectKnowledgePage,
   artifacts: ProjectArtifactsPage,
+  diagrams: ProjectDiagramsPage,
   files: ProjectFilesPage,
   effort: ProjectEffortPage,
   traceability: ProjectTraceabilityPage,
@@ -243,6 +249,7 @@ const projectPageResolver: MenuResolver = (menu) => {
 
   const projectId = match[1];
   const pageType = match[2];
+  if (!isProjectPageType(pageType)) return null;
   const component = PROJECT_PAGE_COMPONENTS[pageType];
 
   if (!component) return null;

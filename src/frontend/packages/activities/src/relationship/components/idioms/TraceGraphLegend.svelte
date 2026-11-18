@@ -34,7 +34,13 @@
     'Affects',
   ];
 
-  const entityTypes: EntityType[] = ['Spec', 'Requirement', 'Conversation', 'GlossaryTerm'];
+  const entityTypes: EntityType[] = [
+    'Spec',
+    'Requirement',
+    'Conversation',
+    'GlossaryTerm',
+    'Diagram',
+  ];
 </script>
 
 <div class="text-xs {className}">

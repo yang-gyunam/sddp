@@ -26,7 +26,14 @@ export interface PrimaryFlowNode {
   id?: string;
   entityId?: string;
   entityType:
-    'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task' | 'SiblingGroup';
+    | 'Conversation'
+    | 'Requirement'
+    | 'Spec'
+    | 'GlossaryTerm'
+    | 'Artifact'
+    | 'Task'
+    | 'Diagram'
+    | 'SiblingGroup';
   label: string;
   code?: string;
   flowType?: PrimaryFlowType | null; // null for root node
@@ -131,7 +138,8 @@ export const INITIAL_TRACE_GRAPH_STATE: TraceGraphState = {
  */
 export interface RelatedItem {
   id: string;
-  entityType: 'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task';
+  entityType:
+    'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task' | 'Diagram';
   code: string;
   title: string;
   relationshipType: RelationType;
@@ -149,6 +157,7 @@ export interface GroupedRelatedItems {
   specs: RelatedItem[];
   glossaryTerms: RelatedItem[];
   artifacts: RelatedItem[];
+  diagrams: RelatedItem[];
 }
 
 // ============================================
@@ -191,7 +200,8 @@ export const PRIMARY_FLOW_STYLES: Record<PrimaryFlowType, PrimaryFlowStyle> = {
  * Get entity type icon name
  */
 export function getEntityTypeIcon(
-  entityType: 'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task'
+  entityType:
+    'Conversation' | 'Requirement' | 'Spec' | 'GlossaryTerm' | 'Artifact' | 'Task' | 'Diagram'
 ): string {
   const icons: Record<string, string> = {
     Conversation: 'message-circle',
@@ -200,6 +210,7 @@ export function getEntityTypeIcon(
     GlossaryTerm: 'book',
     Artifact: 'code',
     Task: 'clipboard-list',
+    Diagram: 'git-branch',
   };
   return icons[entityType] || 'file';
 }
@@ -214,6 +225,7 @@ export function groupRelatedItems(items: RelatedItem[]): GroupedRelatedItems {
     specs: items.filter((i) => i.entityType === 'Spec'),
     glossaryTerms: items.filter((i) => i.entityType === 'GlossaryTerm'),
     artifacts: items.filter((i) => i.entityType === 'Artifact'),
+    diagrams: items.filter((i) => i.entityType === 'Diagram'),
   };
 }
 

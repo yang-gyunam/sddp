@@ -13,6 +13,7 @@
     active?: boolean;
     localActive?: boolean;
     dirty?: boolean;
+    dirtyMarker?: 'dot' | 'asterisk';
     closable?: boolean;
     disabled?: boolean;
     draggable?: boolean;
@@ -37,6 +38,7 @@
     active = false,
     localActive = false,
     dirty = false,
+    dirtyMarker = 'dot',
     closable = true,
     disabled = false,
     draggable = false,
@@ -137,7 +139,13 @@
 
     <!-- Dirty indicator -->
     {#if dirty && !closable}
-      <div class="ml-1.5 w-2 h-2 bg-[var(--color-text-primary)] rounded-full flex-shrink-0"></div>
+      {#if dirtyMarker === 'asterisk'}<span
+          class="ml-1.5 font-semibold"
+          data-tab-dirty-marker="asterisk"
+          aria-hidden="true">*</span
+        >{:else}<div
+          class="ml-1.5 w-2 h-2 bg-[var(--color-text-primary)] rounded-full flex-shrink-0"
+        ></div>{/if}
     {/if}
   </div>
 
@@ -157,7 +165,10 @@
         aria-hidden="true"
         tabindex={-1}
       >
-        <div class="w-2 h-2 bg-[var(--color-text-primary)] rounded-full"></div>
+        {#if dirtyMarker === 'asterisk'}<span
+            class="font-semibold leading-none"
+            data-tab-dirty-marker="asterisk">*</span
+          >{:else}<div class="w-2 h-2 bg-[var(--color-text-primary)] rounded-full"></div>{/if}
       </Button>
     {:else}
       <IconButton

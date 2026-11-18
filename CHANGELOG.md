@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.0] - 2026-11-18
+
+- Apply project and private conversation read checks to Primary Flow and
+  Traceability Map. Hide unreadable parent references and links while retaining
+  independently readable children, and count only visible results.
+- Isolate corrupt stored models in V1 diagram lists and preserve HTTP 409
+  `UNSUPPORTED_MODEL_SCHEMA` responses when legacy clients access schema2 documents.
+- Add typed Flowchart, Sequence, Class, State, ERD and C4 Context/Container diagrams
+  with interchangeable editors/renderers, type-specific shapes and properties,
+  palette creation, movement, resizing and immutable saved revisions.
+- Add a strict SDDP Mermaid-subset parser with source/identity preview, explicit
+  ambiguity review and preserved source/profile metadata. Visual edits mark the
+  preserved source as stale; generating edited Mermaid text is not supported.
+- Add schema2 YAML and structural comparison, separating semantic, presentation
+  and provenance changes. Compare saved Visual, YAML and Source views using the
+  existing read-only Monaco diff editor.
+- Store a database-maintained SHA-256 fingerprint for diagram list reads (V024).
+- Add opt-in V2 Diagram APIs and V023 CHECK-constraint migration. Existing schema1
+  documents/history remain intact; V2 explicit saves promote old documents.
+  Old V1 clients receive a schema conflict for schema2 documents after access checks.
+
+- Add eight resize handles to selected authored diagram nodes, with live previews,
+  Undo/Redo, persistent sizes and connections that follow the resized boundaries.
+- Add YAML text/file import and export to the diagram workspace with strict validation
+  and draft preservation, plus automatic snapshots of selected existing entities and
+  current relationships. Refresh previews do not save; saved snapshots recheck current
+  origin visibility, including private conversation membership.
+- Add the common diagram model, strict YAML codec and semantic/presentation comparison.
+- Extend relationship APIs and target search with diagrams while preserving stored
+  entity type values and filtering inaccessible relationship endpoints.
+- Add project-shared diagram storage, immutable revisions and revision conflict checks,
+  with dedicated read/create/update permissions and V021/V022 upgrade SQL.
+- Add the project Diagrams menu, saved model details and bidirectional related-entity
+  work tabs using the existing right panel and tab navigation. Match the shared
+  list search, kind filter menu and column-header pattern.
+- Add interchangeable Canvas/Table views, authored node/connection editing and
+  visual comparison of saved revisions, including removed elements. Preserve
+  conflicted drafts and protect unsaved changes when leaving or closing a tab.
+  Drag nodes from the palette, connect their handles, rename on double click,
+  undo/redo edits and zoom or fit the canvas using the shared control patterns.
+  Keep zoom controls inside the canvas card and align its top border with the palette.
+
 ## [v0.5.1] - 2026-10-23
 
 - Improve shared rich-text typography with 16px body text, 24px line height,

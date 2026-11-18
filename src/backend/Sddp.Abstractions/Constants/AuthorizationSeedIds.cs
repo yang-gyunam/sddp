@@ -59,7 +59,10 @@ public static class AuthorizationSeedIds
             [PermissionCodes.KnowledgeUpdate] = "00000000-0000-0000-0003-000000000093",
             [PermissionCodes.KnowledgeArchive] = "00000000-0000-0000-0003-000000000094",
             [PermissionCodes.KnowledgePublish] = "00000000-0000-0000-0003-000000000095",
-            [PermissionCodes.KnowledgeAdmin] = "00000000-0000-0000-0003-000000000096"
+            [PermissionCodes.KnowledgeAdmin] = "00000000-0000-0000-0003-000000000096",
+            [PermissionCodes.DiagramRead] = "00000000-0000-0000-0003-000000000101",
+            [PermissionCodes.DiagramCreate] = "00000000-0000-0000-0003-000000000102",
+            [PermissionCodes.DiagramUpdate] = "00000000-0000-0000-0003-000000000103"
         };
 
     public static IReadOnlyCollection<RoleType> SystemRoleTypes { get; } =

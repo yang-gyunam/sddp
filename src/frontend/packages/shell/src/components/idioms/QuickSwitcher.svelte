@@ -166,7 +166,9 @@
                     <div class="text-sm font-medium truncate">
                       {tab.title}
                       {#if tab.dirty}
-                        <span class="text-[var(--color-warning-500)]">●</span>
+                        <span class="text-[var(--color-warning-500)]"
+                          >{tab.dirtyMarker === 'asterisk' ? '*' : '●'}</span
+                        >
                       {/if}
                     </div>
                     {#if tab.path}

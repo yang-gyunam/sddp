@@ -1,3 +1,4 @@
+using Sddp.Diagnostics;
 using System.Diagnostics;
 using Serilog.Context;
 
@@ -23,8 +24,13 @@ public class RequestLoggingMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         // Generate a correlation ID or reuse the one from the request header.
-        var correlationId = context.Request.Headers[CorrelationIdHeader].FirstOrDefault()
-            ?? Guid.NewGuid().ToString("N")[..16];
+        var correlationId = Guid.TryParse(context.Request.Headers[CorrelationIdHeader].FirstOrDefault(), out var supplied)
+            ? supplied.ToString("N") : Guid.NewGuid().ToString("N");
+        var route = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched";
+
+        var path = DiagnosticMask.Url(context.Request.Path) ?? route;
+        var method = context.Request.Method is "GET" or "POST" or "PUT" or "PATCH" or "DELETE" or "HEAD" or "OPTIONS"
+            ? context.Request.Method : "OTHER";
 
         // Store it in the request context.
         context.Items["CorrelationId"] = correlationId;
@@ -38,8 +44,9 @@ public class RequestLoggingMiddleware
 
         // Push it into the Serilog log context.
         using (LogContext.PushProperty("CorrelationId", correlationId))
-        using (LogContext.PushProperty("RequestPath", context.Request.Path))
-        using (LogContext.PushProperty("RequestMethod", context.Request.Method))
+        using (LogContext.PushProperty("RequestPath", path))
+        using (LogContext.PushProperty("Route", route))
+        using (LogContext.PushProperty("RequestMethod", method))
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -48,8 +55,8 @@ public class RequestLoggingMiddleware
                 // Log request start.
                 _logger.LogInformation(
                     "Request started: {Method} {Path}",
-                    context.Request.Method,
-                    context.Request.Path);
+                    method,
+                    path);
 
                 await _next(context);
 
@@ -58,8 +65,8 @@ public class RequestLoggingMiddleware
                 // Log request completion.
                 _logger.LogInformation(
                     "Request completed: {Method} {Path} - {StatusCode} in {ElapsedMs}ms",
-                    context.Request.Method,
-                    context.Request.Path,
+                    method,
+                    path,
                     context.Response.StatusCode,
                     stopwatch.ElapsedMilliseconds);
             }
@@ -69,8 +76,8 @@ public class RequestLoggingMiddleware
 
                 _logger.LogWarning(
                     "Request failed: {Method} {Path} after {ElapsedMs}ms",
-                    context.Request.Method,
-                    context.Request.Path,
+                    method,
+                    path,
                     stopwatch.ElapsedMilliseconds);
 
                 throw;

@@ -57,18 +57,17 @@ public sealed class GetMyNotificationsQueryHandler : IRequestHandler<GetMyNotifi
             : await (userRepo.FindAsync(u => actorIds.Contains(u.Id), cancellationToken)).ConfigureAwait(false);
         var actorNameMap = actors.ToDictionary(u => u.Id, u => u.DisplayName);
 
-        var dtos = paged.Select(n => new NotificationDto(
-            Id: n.Id.ToString(),
-            Type: n.Type,
-            Title: n.Title,
-            Message: n.Message,
-            IsRead: n.IsRead,
-            EntityType: n.EntityType,
-            EntityId: n.EntityId?.ToString(),
-            ActorName: n.ActorId.HasValue && actorNameMap.TryGetValue(n.ActorId.Value, out var name) ? name : null,
-            CreatedAt: n.CreatedAt.ToDateTimeOffset()
-        )).ToList();
+        var dtos = paged.Select(n => NotificationMapping.ToDto(n,
+            n.ActorId is { } actor ? actorNameMap.GetValueOrDefault(actor) : null)).ToList();
 
         return new MyNotificationsDto(dtos, unreadCount);
     }
+}
+
+public static class NotificationMapping
+{
+    public static NotificationDto ToDto(Notification notification, string? actorName) => new(
+        notification.Id.ToString(), notification.Type, notification.Title, notification.Message,
+        notification.IsRead, notification.EntityType, notification.EntityId?.ToString(),
+        actorName, notification.CreatedAt.ToDateTimeOffset());
 }

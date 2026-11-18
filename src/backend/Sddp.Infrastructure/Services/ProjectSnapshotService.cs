@@ -140,6 +140,7 @@ public partial class ProjectSnapshotService : IProjectSnapshotService
         using (var preflight = _connection.BeginTransaction(IsolationLevel.ReadCommitted))
         {
             await LockProjectAsync(tenantId, projectId, preflight, cancellationToken).ConfigureAwait(false);
+            await ValidateDiagramRestoreAsync(snapshotData, projectId, preflight);
             await ValidateSnapshotColumnsAsync(snapshotData, preflight, cancellationToken).ConfigureAwait(false);
             foreach (var extension in _extensions)
                 await extension.ValidateRestoreAsync(_connection, preflight, tenantId, projectId,
@@ -159,6 +160,7 @@ public partial class ProjectSnapshotService : IProjectSnapshotService
         try
         {
             await LockProjectAsync(tenantId, projectId, transaction, cancellationToken).ConfigureAwait(false);
+            await ValidateDiagramRestoreAsync(snapshotData, projectId, transaction);
             foreach (var extension in _extensions)
                 await extension.ValidateRestoreAsync(_connection, transaction, tenantId, projectId,
                     snapshotData.Extensions.GetValueOrDefault(extension.Key), snapshotData, cancellationToken).ConfigureAwait(false);

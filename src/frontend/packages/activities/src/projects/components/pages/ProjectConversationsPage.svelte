@@ -2,6 +2,7 @@
 <script lang="ts">
   import MemberHistoryIndicator from '../../../conversations/components/idioms/MemberHistoryIndicator.svelte';
   import MemberParticipantActions from '../../../conversations/components/idioms/MemberParticipantActions.svelte';
+  import ConversationCandidateModal from '../../../ai/components/sections/ConversationCandidateModal.svelte';
   import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
   import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { onDestroy, untrack } from 'svelte';
@@ -408,6 +409,13 @@
   const inviteScope = $derived(
     JSON.stringify([tenantId, projectId, currentUserId, selectedConversationId, selectedDmId])
   );
+  let candidateMemberId = $state('');
+  let candidateScope = $state('');
+  const candidateMember = $derived(
+    candidateScope === inviteScope
+      ? memberExtension.participants.find((member) => member.id === candidateMemberId)
+      : undefined
+  );
   $effect(() => {
     void inviteScope;
     untrack(() => {
@@ -418,6 +426,8 @@
       inviteSearchResults = [];
       inviteSearching = false;
       sendingUserId = null;
+      candidateMemberId = '';
+      candidateScope = '';
     });
     return () => {
       inviteRequest++;
@@ -919,7 +929,12 @@
         isCollapsed: false,
         conversations: allChannels.map(mapChannelConversation),
         actions: [
-          { id: 'add-channel', icon: 'plus', label: 'New Channel', onClick: handleCreateChannel },
+          {
+            id: 'add-channel',
+            icon: 'plus',
+            label: 'New Channel',
+            onClick: handleCreateChannel,
+          },
         ],
       },
       {
@@ -928,7 +943,12 @@
         isCollapsed: false,
         conversations: forums.map(mapChannelConversation),
         actions: [
-          { id: 'add-forum', icon: 'plus', label: 'New Forum', onClick: handleCreateTopic },
+          {
+            id: 'add-forum',
+            icon: 'plus',
+            label: 'New Forum',
+            onClick: handleCreateTopic,
+          },
         ],
       },
     ];
@@ -1332,7 +1352,12 @@
                 <CollapsibleGroup
                   title="DIRECT MESSAGES"
                   actions={[
-                    { id: 'add-dm', icon: 'plus', label: 'New Message', onClick: handleCreateDM },
+                    {
+                      id: 'add-dm',
+                      icon: 'plus',
+                      label: 'New Message',
+                      onClick: handleCreateDM,
+                    },
                   ]}
                   expanded={dmExpanded}
                   onToggle={() => (dmExpanded = !dmExpanded)}
@@ -1661,7 +1686,9 @@
                     size="sm"
                   />
                   {#if inviteSearching || memberExtension.loading}
-                    <div class="flex justify-center py-3"><Spinner size="sm" /></div>
+                    <div class="flex justify-center py-3">
+                      <Spinner size="sm" />
+                    </div>
                   {:else if inviteCandidates.length > 0}
                     <div class="mt-1 max-h-[160px] overflow-y-auto">
                       {#each inviteCandidates as user (user.key)}
@@ -1735,13 +1762,19 @@
                     {#if participant.isAi}
                       <span class="text-xs text-[var(--color-text-tertiary)]">AI</span>
                     {/if}
-                    {#if participant.key.startsWith('member:') && participant.removable}
+                    {#if participant.key.startsWith('member:') && (participant.removable || memberExtension.canReadCandidates)}
                       <div class="absolute inset-y-0 right-1 flex items-center">
                         <MemberParticipantActions
                           displayName={participant.displayName}
                           prepare={participant.retryHistory}
                           prepareLabel={participant.prepareLabel}
-                          remove={participant.remove}
+                          remove={participant.removable ? participant.remove : undefined}
+                          candidate={memberExtension.canReadCandidates
+                            ? () => {
+                                candidateScope = inviteScope;
+                                candidateMemberId = participant.key.slice('member:'.length);
+                              }
+                            : undefined}
                         />
                       </div>
                     {:else if participant.removable}
@@ -1787,3 +1820,25 @@
     </div>
   </PageBody>
 </PageShell>
+
+{#if candidateMember && currentUserId && selectedConversationId && tenantId}
+  <ConversationCandidateModal
+    scope={{
+      tenantId,
+      projectId,
+      userId: currentUserId,
+      requesterId: currentUserId,
+      conversationId: selectedConversationId,
+      memberId: candidateMember.id,
+    }}
+    displayName={candidateMember.displayName}
+    canRead={memberExtension.canReadCandidates}
+    canManage={memberExtension.canManageCandidates}
+    isCurrent={() =>
+      candidateScope === inviteScope && !!candidateMember && memberExtension.canReadCandidates}
+    onClose={() => {
+      candidateMemberId = '';
+      candidateScope = '';
+    }}
+  />
+{/if}

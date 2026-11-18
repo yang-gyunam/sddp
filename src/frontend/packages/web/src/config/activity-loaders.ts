@@ -145,6 +145,12 @@ export const activityComponents = {
   ProjectKnowledgePage: lazyComponent('ProjectKnowledgePage', async () =>
     import('@sddp/activities/projects/pages/knowledge').then(({ default: page }) => page)
   ),
+  ProjectDiagramsPage: lazyComponent('ProjectDiagramsPage', async () =>
+    import('@sddp/activities/projects/pages/diagrams').then(({ default: page }) => page)
+  ),
+  DiagramDetailTab: lazyComponent('DiagramDetailTab', async () =>
+    import('@sddp/activities/projects/pages/diagram-detail').then(({ default: page }) => page)
+  ),
   ProjectArtifactsPage: lazyComponent('ProjectArtifactsPage', async () =>
     import('@sddp/activities/projects/pages/artifacts').then(({ default: page }) => page)
   ),

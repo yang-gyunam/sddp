@@ -27,11 +27,14 @@ public partial class ProjectSnapshotService
         if (projectRows.Count > 0) data.Tables["projects"] = projectRows;
 
         // Direct project_id tables
-        foreach (var table in DirectProjectTables)
+        foreach (var table in await InstalledProjectTablesAsync(transaction))
         {
             var sql = $"SELECT * FROM {table} WHERE project_id = @ProjectId";
             var rows = await QueryRowsAsync(sql, new { ProjectId = pid }, transaction).ConfigureAwait(false);
-            if (rows.Count > 0) data.Tables[table] = rows;
+            // Restore regenerates the digest from the saved JSON. Snapshots also remain usable on V023.
+            if (table == "diagrams")
+                foreach (var row in rows) row.Remove("model_hash");
+            if (rows.Count > 0 || table is "diagrams" or "diagram_versions") data.Tables[table] = rows;
         }
 
         // Get conversation IDs for child tables
@@ -232,26 +235,37 @@ public partial class ProjectSnapshotService
         await (_connection.ExecuteAsync("UPDATE requirements SET parent_id = NULL WHERE project_id = @Pid", new { Pid = pid }, transaction)).ConfigureAwait(false);
         await (_connection.ExecuteAsync("UPDATE glossary_terms SET replaced_by_term_id = NULL WHERE project_id = @Pid", new { Pid = pid }, transaction)).ConfigureAwait(false);
 
-        // Level 6: Direct project_id tables (reverse order from insert)
-        var deleteOrder = new[]
-        {
-            "embeddings", "sla_policies", "ai_reports", "worklogs", "working_days",
-            "effort_allocations", "tasks", "artifact_trackings", "entity_metadata",
-            "relationships", "glossary_terms", "requirements", "specs",
-            "conversations", "project_members",
-        };
-
-        foreach (var table in deleteOrder)
-        {
-            await (_connection.ExecuteAsync(
-                $"DELETE FROM {table} WHERE project_id = @Pid",
-                new { Pid = pid }, transaction)).ConfigureAwait(false);
-        }
+        await DeleteDirectTablesAsync(pid, transaction, preserveMembers: false);
     }
 
     // ========================================================================
     // Restore (parents-first, 2-pass for self-refs)
     // ========================================================================
+
+    private async Task<string[]> InstalledProjectTablesAsync(IDbTransaction transaction)
+    {
+        // A database awaiting V021 has neither table. A partially installed pair is not restorable.
+        var count = await _connection.ExecuteScalarAsync<int>(
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('diagrams','diagram_versions')",
+            transaction: transaction);
+        return count switch
+        {
+            0 => DirectProjectTables.Where(table => table is not ("diagrams" or "diagram_versions")).ToArray(),
+            2 => DirectProjectTables,
+            _ => throw new InvalidOperationException("Incomplete diagram schema.")
+        };
+    }
+
+    private async Task DeleteDirectTablesAsync(Guid projectId, IDbTransaction transaction, bool preserveMembers)
+    {
+        var tables = await InstalledProjectTablesAsync(transaction);
+        foreach (var table in tables.Reverse())
+        {
+            if (preserveMembers && table == "project_members") continue;
+            await _connection.ExecuteAsync($"DELETE FROM {table} WHERE project_id = @projectId",
+                new { projectId }, transaction);
+        }
+    }
 
     private async Task RestoreProjectDataAsync(
         ProjectSnapshotData data, IDbTransaction transaction)
@@ -282,6 +296,7 @@ public partial class ProjectSnapshotService
             "specs",
             "requirements",
             "glossary_terms",
+            "diagrams", "diagram_versions",
             "relationships",
             "entity_metadata",
             "field_metadata", "entity_relationship_metadata",
@@ -347,7 +362,8 @@ public partial class ProjectSnapshotService
                 "entity_metadata", "effort_allocations"
             };
 
-            foreach (var table in tablesToCount)
+            var installed = await InstalledProjectTablesAsync(transaction);
+            foreach (var table in tablesToCount.Concat(installed.Where(t => t is "diagrams" or "diagram_versions")))
             {
                 var count = await (_connection.ExecuteScalarAsync<int>(
                     $"SELECT COUNT(*) FROM {table} WHERE project_id = @Pid",
@@ -450,21 +466,7 @@ public partial class ProjectSnapshotService
         await (_connection.ExecuteAsync("UPDATE requirements SET parent_id = NULL WHERE project_id = @Pid", new { Pid = pid }, transaction)).ConfigureAwait(false);
         await (_connection.ExecuteAsync("UPDATE glossary_terms SET replaced_by_term_id = NULL WHERE project_id = @Pid", new { Pid = pid }, transaction)).ConfigureAwait(false);
 
-        // Level 6: project_members ()
-        var resetDeleteOrder = new[]
-        {
-            "embeddings", "sla_policies", "ai_reports", "worklogs", "working_days",
-            "effort_allocations", "tasks", "artifact_trackings", "entity_metadata",
-            "relationships", "glossary_terms", "requirements", "specs",
-            "conversations",
-        };
-
-        foreach (var table in resetDeleteOrder)
-        {
-            await (_connection.ExecuteAsync(
-                $"DELETE FROM {table} WHERE project_id = @Pid",
-                new { Pid = pid }, transaction)).ConfigureAwait(false);
-        }
+        await DeleteDirectTablesAsync(pid, transaction, preserveMembers: true);
     }
 
     // ========================================================================

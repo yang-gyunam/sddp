@@ -1,9 +1,11 @@
 <!-- Section: EntityFullDetailTab — Projects > Traceability -->
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { navigateToEntity } from '../../navigation/entityNavigation';
-  import { Icon, Spinner, ResizeHandle } from '@sddp/ui';
+  import { Icon, IconButton, Spinner, ResizeHandle } from '@sddp/ui';
   import { getAuthState } from '@sddp/shell/auth';
+  import { getTabState, setTabState } from '@sddp/shell';
+  import { AccessDeniedError, ApiRequestError } from '../../api/fetchWithAuth';
   import DetailHeader from '../idioms/DetailHeader.svelte';
   import RequirementLevelBadge from '../../../requirements/components/idioms/RequirementLevelBadge.svelte';
 
@@ -12,6 +14,9 @@
   import ChannelView from '../../../conversations/components/sections/ChannelView.svelte';
   import GlossaryDetail from '../../../glossary/components/sections/GlossaryDetail.svelte';
   import ArtifactContent from '../../../artifact/components/sections/ArtifactContent.svelte';
+  import DiagramWorkbench from '../../../diagrams/components/sections/DiagramWorkbench2.svelte';
+  import { getDiagram2 as getDiagram } from '../../../diagrams/services/DiagramService2';
+  import type { DiagramV2Dto as DiagramDto } from '../../../diagrams/types2';
   import TraceGraphSection from '../../../relationship/components/sections/TraceGraphSection.svelte';
 
   import { getSpecById, getSignOffSummary } from '../../../specs/services';
@@ -34,15 +39,29 @@
     entityType: string;
     projectId?: string;
     tabId?: string;
+    refreshKey?: number;
+    ondiagramsaved?: (diagram: DiagramDto) => void;
     class?: string;
   }
 
-  let { entityId, entityType, projectId, tabId, class: className = '' }: Props = $props();
+  let {
+    entityId,
+    entityType,
+    projectId,
+    tabId,
+    refreshKey = 0,
+    ondiagramsaved,
+    class: className = '',
+  }: Props = $props();
 
   // Loading state
   let loading = $state(false);
   let error = $state<string | null>(null);
-  let prevEntityId = $state<string | null>(null);
+  let prevEntityKey = $state<string | null>(null);
+  let loadGeneration = 0;
+  onDestroy(() => {
+    ++loadGeneration;
+  });
 
   // Entity-specific data
   let specData = $state<SpecDetail | null>(null);
@@ -56,6 +75,15 @@
   let glossaryUsage = $state<GlossaryTermUsage | null>(null);
 
   let artifactData = $state<Artifact | null>(null);
+
+  let diagramData = $state<DiagramDto | null>(null);
+  let diagramWorkbench: { confirmLeave: () => Promise<boolean> } | undefined = $state();
+  export function confirmLeave(): Promise<boolean> {
+    return diagramWorkbench?.confirmLeave?.() ?? Promise.resolve(true);
+  }
+  async function refreshDiagram() {
+    if (await confirmLeave()) await loadEntity();
+  }
 
   // Right panel resize state
   let rightPanelWidth = $state(300);
@@ -101,12 +129,21 @@
 
   $effect(() => {
     if (!entityId) {
+      ++loadGeneration;
+      loading = false;
       resetState();
-      prevEntityId = null;
+      prevEntityKey = null;
       return;
     }
-    if (entityId === prevEntityId) return;
-    prevEntityId = entityId;
+    const key = JSON.stringify([
+      getAuthState().user?.tenantId,
+      projectId,
+      entityType,
+      entityId,
+      refreshKey,
+    ]);
+    if (key === prevEntityKey) return;
+    prevEntityKey = key;
     untrack(() => loadEntity());
   });
 
@@ -119,54 +156,86 @@
     glossaryData = null;
     glossaryUsage = null;
     artifactData = null;
+    diagramData = null;
   }
 
   async function loadEntity(): Promise<void> {
+    const request = ++loadGeneration;
+    const tenant = getAuthState().user?.tenantId ?? '';
+    const refresh = refreshKey;
+    const id = entityId;
+    const type = entityType;
+    const pid = projectId ?? '';
+    const isCurrent = () =>
+      request === loadGeneration &&
+      entityId === id &&
+      entityType === type &&
+      (projectId ?? '') === pid &&
+      refreshKey === refresh &&
+      (getAuthState().user?.tenantId ?? '') === tenant;
     loading = true;
     resetState();
     try {
       const auth = getAuthState();
       const tenantId = auth.user?.tenantId ?? '';
-      const pid = projectId ?? '';
-
-      switch (entityType) {
+      switch (type) {
         case 'Spec': {
           const [spec, signOff] = await Promise.all([
-            getSpecById(tenantId, pid, entityId),
-            getSignOffSummary(tenantId, pid, entityId).catch(() => null),
+            getSpecById(tenantId, pid, id),
+            getSignOffSummary(tenantId, pid, id).catch(() => null),
           ]);
+          if (!isCurrent()) return;
           specData = spec;
           specSignOff = signOff;
           break;
         }
         case 'Requirement': {
-          requirementData = await getRequirementById(tenantId, pid, entityId);
+          const data = await getRequirementById(tenantId, pid, id);
+          if (isCurrent()) requirementData = data;
           break;
         }
         case 'Conversation': {
-          conversationData = await getConversationById(tenantId, entityId);
+          const data = await getConversationById(tenantId, id);
+          if (isCurrent()) conversationData = data;
           break;
         }
         case 'GlossaryTerm': {
           const [term, usage] = await Promise.all([
-            getTermById(tenantId, pid, entityId),
-            getTermUsage(tenantId, pid, entityId).catch(() => null),
+            getTermById(tenantId, pid, id),
+            getTermUsage(tenantId, pid, id).catch(() => null),
           ]);
+          if (!isCurrent()) return;
           glossaryData = term;
           glossaryUsage = usage;
           break;
         }
         case 'Artifact': {
-          artifactData = await getArtifactById(tenantId, pid, entityId);
+          const data = await getArtifactById(tenantId, pid, id);
+          if (isCurrent()) artifactData = data;
+          break;
+        }
+        case 'Diagram': {
+          const data = await getDiagram(tenantId, pid, id);
+          if (isCurrent()) diagramData = data;
           break;
         }
         default:
           error = `Unknown entity type: ${entityType}`;
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to load entity';
+      if (isCurrent()) {
+        if (
+          type === 'Diagram' &&
+          tabId &&
+          (err instanceof AccessDeniedError ||
+            (err instanceof ApiRequestError && err.status === 404))
+        ) {
+          setTabState(tabId, { ...getTabState(tabId), diagramWorkspace: undefined });
+        }
+        error = err instanceof Error ? err.message : 'Failed to load entity';
+      }
     } finally {
-      loading = false;
+      if (isCurrent()) loading = false;
     }
   }
 
@@ -177,6 +246,7 @@
   const entityStyle = $derived(ENTITY_TYPE_STYLES[entityType as EntityType]);
 
   const headerTitle = $derived.by(() => {
+    if (entityType === 'Diagram' && diagramData) return diagramData.title;
     if (entityType === 'Spec' && specData) return specData.title;
     if (entityType === 'Requirement' && requirementData) return requirementData.title;
     if (entityType === 'Conversation' && conversationData) return conversationData.name;
@@ -187,6 +257,7 @@
   });
 
   const headerSubtitle = $derived.by(() => {
+    if (entityType === 'Diagram' && diagramData) return `Revision ${diagramData.revision}`;
     if (entityType === 'Spec' && specData) return specData.code;
     if (entityType === 'Requirement' && requirementData) return requirementData.code;
     if (entityType === 'Conversation' && conversationData) return conversationData.conversationType;
@@ -196,7 +267,8 @@
   });
 
   const hasData = $derived(
-    specData !== null ||
+    diagramData !== null ||
+      specData !== null ||
       requirementData !== null ||
       conversationData !== null ||
       glossaryData !== null ||
@@ -221,22 +293,50 @@
         {#if entityType === 'Requirement' && requirementData}
           <RequirementLevelBadge level={requirementData.level} />
         {:else if entityStyle}
-          <div class="flex items-center justify-center w-6 h-6 rounded {entityStyle.bgColor}">
-            <Icon name={entityStyle.icon} size="sm" class={entityStyle.color} />
-          </div>
+          {#if entityType === 'Diagram'}
+            <Icon name={entityStyle.icon} size="md" class={entityStyle.color} />
+          {:else}
+            <div class="flex items-center justify-center w-6 h-6 rounded {entityStyle.bgColor}">
+              <Icon name={entityStyle.icon} size="sm" class={entityStyle.color} />
+            </div>
+          {/if}
         {/if}
       {/snippet}
       <h2 class="text-sm font-semibold text-[var(--color-text-primary)] truncate">{headerTitle}</h2>
       {#if headerSubtitle}
         <span class="text-xs text-[var(--color-text-tertiary)] truncate">{headerSubtitle}</span>
       {/if}
+      {#snippet actions()}
+        {#if entityType === 'Diagram'}<IconButton
+            icon="refresh-cw"
+            size="sm"
+            variant="ghost"
+            title="Refresh diagram"
+            onclick={refreshDiagram}
+          />{/if}
+      {/snippet}
     </DetailHeader>
 
     <!-- 2-Column Body -->
     <div class="flex flex-1 min-h-0">
       <!-- Left: Detail Content (flex-1, flexible) -->
       <div class="flex-1 min-w-0 overflow-auto">
-        {#if entityType === 'Spec' && specData}
+        {#if entityType === 'Diagram' && diagramData}
+          <DiagramWorkbench
+            bind:this={diagramWorkbench}
+            diagram={diagramData}
+            projectId={projectId ?? ''}
+            tabId={tabId ?? ''}
+            onsaved={(saved) => {
+              diagramData = saved;
+              ondiagramsaved?.(saved);
+            }}
+            onreaddenied={() => {
+              diagramData = null;
+              error = 'Access denied';
+            }}
+          />
+        {:else if entityType === 'Spec' && specData}
           <SpecDetailView
             spec={specData}
             signOffSummary={specSignOff}
@@ -303,11 +403,14 @@
         class:right-panel-resizing={isResizing}
         style="width: {rightPanelWidth}px"
       >
-        <TraceGraphSection
-          entityType={entityType as EntityType}
-          {entityId}
-          projectId={projectId ?? ''}
-        />
+        {#key JSON.stringify([projectId, entityType, entityId])}
+          <TraceGraphSection
+            entityType={entityType as EntityType}
+            {entityId}
+            projectId={projectId ?? ''}
+            hidePrimaryFlow={entityType === 'Diagram'}
+          />
+        {/key}
       </div>
     </div>
   {:else}

@@ -1,4 +1,4 @@
-import { fetchWithAuth } from '../../shared/api';
+import { fetchWithAuth, type FetchOptions } from '../../shared/api';
 
 export interface FileEntry {
   name: string;
@@ -54,7 +54,10 @@ export interface FileRelations {
   items: FileLink[];
 }
 
-export function createProjectFilesService(projectId: string) {
+export function createProjectFilesService(
+  projectId: string,
+  scope: Pick<FetchOptions, 'tenantId' | 'beforeDispatch'> = {}
+) {
   const read = <T>(action: string, path: string, revision?: string, skip?: number) => {
     const params = new URLSearchParams({ path });
     if (revision) params.set('revision', revision);
@@ -62,6 +65,7 @@ export function createProjectFilesService(projectId: string) {
     return fetchWithAuth<T>(
       `/projects/${encodeURIComponent(projectId)}/files/${action}?${params}`,
       {
+        ...scope,
         projectId,
       }
     );
@@ -72,7 +76,7 @@ export function createProjectFilesService(projectId: string) {
       if (revision) params.set('revision', revision);
       return fetchWithAuth<FileSearch>(
         `/projects/${encodeURIComponent(projectId)}/files/search?${params}`,
-        { projectId }
+        { ...scope, projectId }
       );
     },
     tree: (path = '', revision?: string) => read<FileTree>('tree', path, revision),

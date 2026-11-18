@@ -25,5 +25,8 @@ public enum EntityType
     Artifact = 5,
 
     /// <summary>Task</summary>
-    Task = 6
+    Task = 6,
+
+    /// <summary>Project diagram</summary>
+    Diagram = 7
 }

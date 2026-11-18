@@ -31,10 +31,12 @@ public record ValidateRelationshipRequestDto(
 public class RelationshipsController : BaseApiController
 {
     private readonly ISender _sender;
+    private readonly DiagramRelationshipAccess _diagramAccess;
 
-    public RelationshipsController(ISender sender)
+    public RelationshipsController(ISender sender, DiagramRelationshipAccess diagramAccess)
     {
         _sender = sender;
+        _diagramAccess = diagramAccess;
     }
 
     [HttpPost]
@@ -64,6 +66,12 @@ public class RelationshipsController : BaseApiController
         {
             return userError;
         }
+
+        if (Enum.TryParse<EntityType>(dto.FromEntityType, out var fromType)
+            && Enum.TryParse<EntityType>(dto.ToEntityType, out var toType)
+            && GlobalUniqueId.TryParse(dto.FromEntityId, out var fromId)
+            && GlobalUniqueId.TryParse(dto.ToEntityId, out var toId))
+            await _diagramAccess.RequireLink(fromType, fromId, toType, toId, true, cancellationToken);
 
         var result = await _sender.Send(
             new CreateRelationshipCommand(tenantId, projectId, userId, dto),
@@ -110,7 +118,7 @@ public class RelationshipsController : BaseApiController
     }
 
     [HttpGet("entity/{entityType}/{entityId}")]
-    [ResourceScopeExempt("The route names a polymorphic entity type and id that no single entity type can be declared for; the handler returns only relationships of the requested tenant and project, so an id from another project yields nothing.")]
+    [ResourceScopeExempt("The route names a polymorphic entity type and id that no single entity type can be declared for; the handler checks the root and both endpoints against the requested tenant, project and reader.")]
     public async Task<IActionResult> GetRelationshipsByEntity(
         [FromHeader(Name = "X-Tenant-Id")] string? tenantIdHeader,
         [FromHeader(Name = "X-Project-Id")] string? projectIdHeader,
@@ -294,6 +302,8 @@ public class RelationshipsController : BaseApiController
             return BadRequest(ApiResponse<object>.Fail(ApiErrorCodes.InvalidEntity.ToEntityId, "Invalid ToEntityId"));
         }
 
+        await _diagramAccess.RequireLink(fromEntityType, fromEntityId, toEntityType, toEntityId, false, cancellationToken);
+
         var result = await _sender.Send(
             new ValidateRelationshipQuery(
                 tenantId,
@@ -331,6 +341,7 @@ public class RelationshipsController : BaseApiController
         }
 
         var relationshipId = GlobalUniqueId.FromGuid(id);
+        await _diagramAccess.RequireRelationshipUpdate(relationshipId, cancellationToken);
         var result = await _sender.Send(
             new InvalidateRelationshipCommand(tenantId, projectId, relationshipId),
             cancellationToken);

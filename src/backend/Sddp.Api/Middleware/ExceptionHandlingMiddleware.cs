@@ -1,3 +1,4 @@
+using Sddp.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using Sddp.Abstractions.DTOs;
@@ -88,6 +89,10 @@ public class ExceptionHandlingMiddleware
                     }
                 }),
 
+            DiagramSchemaConflictException schemaConflict => (
+                HttpStatusCode.Conflict,
+                ApiResponse<object>.Fail(schemaConflict.ErrorCode, schemaConflict.Message)),
+
             SddpException { ErrorCode: "NOT_ALLOWED" } notAllowed => (
                 HttpStatusCode.Forbidden,
                 ApiResponse<object>.Fail(notAllowed.ErrorCode, notAllowed.Message)),
@@ -135,22 +140,10 @@ public class ExceptionHandlingMiddleware
     private void LogException(Exception exception, HttpContext context, HttpStatusCode statusCode)
     {
         var correlationId = context.Items["CorrelationId"]?.ToString() ?? "unknown";
-        var requestPath = context.Request.Path;
-        var requestMethod = context.Request.Method;
-
-        if (statusCode == HttpStatusCode.InternalServerError)
-        {
-            _logger.LogError(
-                exception,
-                "Unhandled exception occurred. CorrelationId: {CorrelationId}, Path: {Path}, Method: {Method}",
-                correlationId, requestPath, requestMethod);
-        }
-        else
-        {
-            _logger.LogWarning(
-                "Handled exception occurred. CorrelationId: {CorrelationId}, Path: {Path}, Method: {Method}, StatusCode: {StatusCode}, Message: {Message}",
-                correlationId, requestPath, requestMethod, (int)statusCode, exception.Message);
-        }
+        _logger.Log(statusCode == HttpStatusCode.InternalServerError ? LogLevel.Error : LogLevel.Warning,
+            "Request failed. CorrelationId {CorrelationId}, HTTP {StatusCode}, path {Path}, {ErrorType}: {Reason} {StackTrace}",
+            correlationId, (int)statusCode, DiagnosticMask.Url(context.Request.Path),
+            exception.GetType().Name, DiagnosticMask.Text(exception.Message), DiagnosticMask.Text(exception.StackTrace, 16000));
     }
 }
 

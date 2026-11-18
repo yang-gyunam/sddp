@@ -6,6 +6,7 @@
     title: string;
     icon?: string;
     dirty?: boolean;
+    dirtyMarker?: 'dot' | 'asterisk';
     closable?: boolean;
   }
 
@@ -180,10 +181,12 @@
             </span>
 
             {#if tab.dirty}
-              <span
-                class="w-2 h-2 rounded-full bg-[var(--color-text-tertiary)]"
-                title="Unsaved changes"
-              ></span>
+              {#if tab.dirtyMarker === 'asterisk'}<span title="Unsaved changes" aria-hidden="true"
+                  >*</span
+                >{:else}<span
+                  class="w-2 h-2 rounded-full bg-[var(--color-text-tertiary)]"
+                  title="Unsaved changes"
+                ></span>{/if}
             {/if}
 
             {#if tab.closable !== false}

@@ -9,6 +9,7 @@ import { searchRequirements } from '../../requirements/services/RequirementServi
 import { searchConversations } from '../../conversations/services/ConversationService';
 import { autocomplete as glossaryAutocomplete } from '../../glossary/services/GlossaryService';
 import { searchArtifacts } from '../../artifact/services/ArtifactService';
+import { searchDiagrams } from '../../diagrams/services/DiagramService';
 import { searchTasks } from '../../task/services/TaskService';
 import type {
   EntityType,
@@ -296,6 +297,22 @@ export async function searchEntities(
           )
         )
         .catch((err) => console.warn('[searchEntities] Task search failed:', err))
+    );
+  }
+
+  if (!filterType || filterType === 'Diagram') {
+    searches.push(
+      searchDiagrams(tenantId, projectId, query, limit)
+        .then((items) =>
+          items.forEach((diagram) =>
+            results.push({
+              id: diagram.id,
+              entityType: 'Diagram',
+              label: diagram.title,
+            })
+          )
+        )
+        .catch((err) => console.warn('[searchEntities] Diagram search failed:', err))
     );
   }
 

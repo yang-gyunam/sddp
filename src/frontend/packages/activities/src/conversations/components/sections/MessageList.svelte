@@ -1,5 +1,7 @@
 <!-- Section: MessageList — Conversations (internal, used by MessageStream) -->
 <script lang="ts">
+  import ConversationEvidenceSection from '../../../ai/components/sections/ConversationEvidenceSection.svelte';
+  import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
   import { Spinner, Button } from '@sddp/ui';
   import { EmptyState, formatDateWithOptions } from '@sddp/shell';
   import MessageBubble from '../idioms/MessageBubble.svelte';
@@ -121,6 +123,10 @@
   });
 </script>
 
+{#snippet evidence(context: ConversationEvidenceContext)}
+  <ConversationEvidenceSection {...context} />
+{/snippet}
+
 <div
   bind:this={containerRef}
   onscroll={handleScroll}
@@ -172,6 +178,7 @@
             messageGroups.indexOf(group) === messageGroups.length - 1 &&
             msgIndex === group.messages.length - 1}
           <MessageBubble
+            {evidence}
             {message}
             {viewMode}
             {projectId}

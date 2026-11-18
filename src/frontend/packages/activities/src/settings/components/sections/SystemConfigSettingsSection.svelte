@@ -7,6 +7,7 @@
    * Right main: settings for selected category (per-item auto-save)
    */
 
+  import WeeklyStatisticsSection from './WeeklyStatisticsSection.svelte';
   import GitConnectionsSettingsSection from './GitConnectionsSettingsSection.svelte';
   import { untrack } from 'svelte';
   import { SettingItem, ConfirmResetModal } from '../idioms';
@@ -43,7 +44,8 @@
   const systemConfigPerformanceEnabled = appConfig.get('enableSystemConfigPerformance');
 
   // Active config group
-  type ConfigGroup = 'general' | 'auth' | 'storage' | 'performance' | 'aiAgent' | 'gitConnections';
+  type ConfigGroup =
+    'general' | 'auth' | 'storage' | 'performance' | 'aiAgent' | 'gitConnections' | 'statistics';
 
   let config = $state<SystemConfig | null>(null);
   let loading = $state(false);
@@ -82,6 +84,13 @@
       icon: 'git-branch',
       desc: 'Repository servers and credentials',
       count: 0,
+    },
+    {
+      id: 'statistics',
+      label: 'Usage statistics',
+      icon: 'activity',
+      desc: 'Local activity and weekly sharing',
+      count: 2,
     },
     { id: 'general', label: 'General', icon: 'settings', desc: 'Basic system settings', count: 3 },
     ...(systemConfigAuthEnabled
@@ -435,7 +444,7 @@
               >{activeGroupInfo?.desc ?? ''}</span
             >
             {#snippet actions()}
-              {#if activeGroup !== 'gitConnections'}<IconButton
+              {#if activeGroup !== 'gitConnections' && activeGroup !== 'statistics'}<IconButton
                   icon="check"
                   variant={isActiveGroupDirty ? 'success' : 'ghost'}
                   title="Save"
@@ -448,6 +457,8 @@
           <div class="config-content">
             {#if activeGroup === 'gitConnections'}
               <GitConnectionsSettingsSection tenantId={effectiveTenantId} />
+            {:else if activeGroup === 'statistics'}
+              <WeeklyStatisticsSection tenantId={effectiveTenantId} />
             {:else if activeGroup === 'general'}
               <SettingItem
                 category="General"

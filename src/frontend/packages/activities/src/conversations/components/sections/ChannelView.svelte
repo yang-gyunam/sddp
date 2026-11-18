@@ -1,5 +1,7 @@
 <!-- Section: ChannelView — Conversations > Channel/DM/Global, Projects > Conversations -->
 <script lang="ts">
+  import ConversationEvidenceSection from '../../../ai/components/sections/ConversationEvidenceSection.svelte';
+  import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
   import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
   import { keepMessageBottomVisible } from '../../actions/keepMessageBottomVisible';
@@ -488,7 +490,9 @@
       const detail = await requirementService.createRequirement(data);
 
       if (sourceType === 'channel') {
-        await requirementService.linkConversation(detail.id, { conversationId });
+        await requirementService.linkConversation(detail.id, {
+          conversationId,
+        });
       }
 
       toast.success('Requirement created', { title: detail.title });
@@ -560,7 +564,10 @@
           hasMore = page.hasMore;
         }
       } else {
-        const page = await service.getMessages(targetConversationId, { cursor, limit: 50 });
+        const page = await service.getMessages(targetConversationId, {
+          cursor,
+          limit: 50,
+        });
         if (targetConversationId !== conversationId || !isCurrent()) {
           return;
         }
@@ -615,7 +622,10 @@
 
       // Always scroll to bottom for own messages
       requestAnimationFrame(() => {
-        messagesContainer?.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+        messagesContainer?.scrollTo({
+          top: messagesContainer.scrollHeight,
+          behavior: 'smooth',
+        });
       });
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to send message';
@@ -839,6 +849,10 @@
   });
 </script>
 
+{#snippet evidence(context: ConversationEvidenceContext)}
+  <ConversationEvidenceSection {...context} />
+{/snippet}
+
 {#snippet headerActions()}
   {#if canConclude}
     <IconButton
@@ -900,7 +914,9 @@
             </Button>
           </div>
           {#if extractError}
-            <div class="px-3 pb-2 text-xs text-[var(--color-error-600)]">{extractError}</div>
+            <div class="px-3 pb-2 text-xs text-[var(--color-error-600)]">
+              {extractError}
+            </div>
           {/if}
           <div class="px-3 pb-4">
             <RequirementForm
@@ -946,6 +962,7 @@
 
           {#each uniqueMessages as message, index (message.id)}
             <MessageBubble
+              {evidence}
               {tenantId}
               {message}
               messages={uniqueMessages}

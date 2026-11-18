@@ -1,3 +1,4 @@
+using Sddp.Application.Features.Conversations;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
@@ -98,18 +99,7 @@ internal static class KnowledgeTargetVisibility
             return false;
         }
 
-        if (conversation.Visibility != ConversationVisibility.Private)
-        {
-            return true;
-        }
-
-        // Mirrors GetConversationByIdQueryHandler: a private conversation requires active membership.
-        var memberCount = await unitOfWork.Repository<ConversationMember>().CountAsync(
-            member => member.ConversationId == conversationId
-                && member.UserId == userId
-                && member.IsActive,
-            cancellationToken);
-        return memberCount > 0;
+        return await ConversationVisibilityPolicy.CanAccessAsync(unitOfWork, conversation, userId, cancellationToken);
     }
 
     private static async Task<bool> ExistsAsync<TEntity>(

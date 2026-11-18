@@ -2,6 +2,7 @@
 <script lang="ts">
   import MemberHistoryIndicator from '../idioms/MemberHistoryIndicator.svelte';
   import MemberParticipantActions from '../idioms/MemberParticipantActions.svelte';
+  import ConversationCandidateModal from '../../../ai/components/sections/ConversationCandidateModal.svelte';
   import { getMessageAuthor } from '../../utils/message-author';
   import { onDestroy, untrack } from 'svelte';
   import { Icon, Button, SearchField, Spinner } from '@sddp/ui';
@@ -92,6 +93,8 @@
   const canManageMembers = $derived(!isReadOnly && !!memberExtension?.canManage);
   const canInvite = $derived(!isReadOnly && (canInviteUsers || canManageMembers));
   const additionalParticipants = $derived(memberExtension?.participants ?? []);
+  let candidateMemberId = $state('');
+  let candidateScope = $state('');
   const inviteCandidates = $derived([
     ...(canInviteUsers
       ? inviteSearchResults.map((user) => ({
@@ -120,6 +123,18 @@
   const inviteScope = $derived(
     JSON.stringify([tenantId, projectId, currentUserId, conversationId])
   );
+  const candidateMember = $derived(
+    candidateScope === inviteScope
+      ? additionalParticipants.find((item) => item.id === candidateMemberId)
+      : undefined
+  );
+  $effect(() => {
+    void inviteScope;
+    untrack(() => {
+      candidateMemberId = '';
+      candidateScope = '';
+    });
+  });
 
   // Online users from ConversationHub presence tracking
   let onlineUsers = $state<Set<string>>(getConversationStoreState().onlineUsers);
@@ -247,7 +262,14 @@
         title="Participants ({participants.length + additionalParticipants.length})"
         allowOverflow
         actions={canInvite
-          ? [{ id: 'invite', icon: 'plus', label: 'Invite Members', onClick: toggleInviteSearch }]
+          ? [
+              {
+                id: 'invite',
+                icon: 'plus',
+                label: 'Invite Members',
+                onClick: toggleInviteSearch,
+              },
+            ]
           : []}
         expanded={participantsExpanded}
         onToggle={() => (participantsExpanded = !participantsExpanded)}
@@ -377,18 +399,26 @@
                 >
               </div>
               <span class="text-xs text-[var(--color-text-tertiary)]">AI</span>
-              {#if canManageMembers}
+              {#if canManageMembers || memberExtension?.canReadCandidates}
                 <div class="absolute inset-y-0 right-1 flex items-center">
                   <MemberParticipantActions
                     displayName={member.displayName}
-                    prepare={!member.history ||
-                    ['failed', 'unprepared'].includes(member.history.status)
+                    candidate={memberExtension?.canReadCandidates
+                      ? () => {
+                          candidateScope = inviteScope;
+                          candidateMemberId = member.id;
+                        }
+                      : undefined}
+                    prepare={canManageMembers &&
+                    (!member.history || ['failed', 'unprepared'].includes(member.history.status))
                       ? () => memberExtension?.retryPreparation(member.id)
                       : undefined}
                     prepareLabel={member.history?.status === 'failed'
                       ? 'Retry history preparation'
                       : 'Prepare history'}
-                    remove={() => handleRemoveMember(member.id, member.displayName)}
+                    remove={canManageMembers
+                      ? () => handleRemoveMember(member.id, member.displayName)
+                      : undefined}
                   />
                 </div>
               {/if}
@@ -522,3 +552,25 @@
     </div>
   {/if}
 </aside>
+
+{#if candidateMember && currentUserId}
+  <ConversationCandidateModal
+    scope={{
+      tenantId,
+      projectId,
+      userId: currentUserId,
+      requesterId: currentUserId,
+      conversationId,
+      memberId: candidateMember.id,
+    }}
+    displayName={candidateMember.displayName}
+    canRead={!!memberExtension?.canReadCandidates}
+    canManage={!isReadOnly && !!memberExtension?.canManageCandidates}
+    isCurrent={() =>
+      candidateScope === inviteScope && !!candidateMember && !!memberExtension?.canReadCandidates}
+    onClose={() => {
+      candidateMemberId = '';
+      candidateScope = '';
+    }}
+  />
+{/if}

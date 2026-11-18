@@ -70,6 +70,7 @@ services:
       - Git__RepoRoot=${SDDP_GIT__REPOROOT:-data/git-repos}
       - Git__ServerUrl=${SDDP_GIT__SERVERURL:-http://sddp-gitea:3000}
       - OpenTelemetry__Endpoint=http://sddp-aspire:18889
+      - Privacy__MetricsFile=/app/data/privacy-metrics/privacy-counts.json
     ports:
       - "127.0.0.1:5001:5001"
     depends_on:

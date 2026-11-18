@@ -37,3 +37,5 @@ export { default as TabBar } from './TabBar.svelte';
 // Layout Controls
 export { default as Divider } from './Divider.svelte';
 export { default as ResizeHandle } from './ResizeHandle.svelte';
+
+export { default as FileInput } from './FileInput.svelte';

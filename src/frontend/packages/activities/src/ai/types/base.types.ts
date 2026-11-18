@@ -254,14 +254,27 @@ export const AI_ANALYSIS_TYPE_STYLES: Record<AiAnalysisType, AiAnalysisTypeStyle
 
 // Durable invocation usage (independent of legacy report token totals).
 export interface AiUsageTotals {
-  attempts: number; completed: number; failed: number; cancelled: number;
-  unfinishedCalls: number; unknownTokenCalls: number;
-  knownInputTokens: number; knownOutputTokens: number; durationMs: number;
+  attempts: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+  unfinishedCalls: number;
+  unknownTokenCalls: number;
+  knownInputTokens: number;
+  knownOutputTokens: number;
+  durationMs: number;
 }
-export interface AiUsageGroup { id: string | null; usage: AiUsageTotals }
+export interface AiUsageGroup {
+  id: string | null;
+  usage: AiUsageTotals;
+}
 export interface AiUsageSummary {
-  from: string; until: string; collectionStartedAt: string | null;
+  from: string;
+  until: string;
+  collectionStartedAt: string | null;
   total: AiUsageTotals;
   daily: Array<{ date: string; usage: AiUsageTotals }>;
-  users: AiUsageGroup[]; members: AiUsageGroup[]; projects: AiUsageGroup[];
+  users: AiUsageGroup[];
+  members: AiUsageGroup[];
+  projects: AiUsageGroup[];
 }

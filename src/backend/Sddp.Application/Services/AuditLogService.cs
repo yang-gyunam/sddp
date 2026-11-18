@@ -46,10 +46,8 @@ public class AuditLogService : IAuditLogService
             ? JsonSerializer.Serialize(payload)
             : null;
 
-        // Auto-enrich from request context
-        var ipAddress = _requestContext?.IpAddress;
-        var userAgent = _requestContext?.UserAgent;
-        var correlationId = _requestContext?.CorrelationId;
+        var correlationId = Guid.TryParse(_requestContext?.CorrelationId, out var correlation)
+            ? correlation.ToString("N") : null;
 
         var auditLog = AuditLog.Create(
             actorId,
@@ -57,8 +55,8 @@ public class AuditLogService : IAuditLogService
             resourceType,
             resourceId,
             payloadJson,
-            ipAddress,
-            userAgent,
+            ipAddress: null,
+            userAgent: null,
             correlationId,
             tenantId,
             projectId);

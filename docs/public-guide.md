@@ -4,7 +4,7 @@ This guide covers the supported public-repository workflow for running SDDP, pro
 
 ## Scope
 
-This is the free edition. See [release notes](../RELEASE.md) for version 0.5.1 support and limitations.
+This is the free edition. See [release notes](../RELEASE.md) for the current support scope and limitations.
 
 The public repository includes:
 
@@ -119,7 +119,7 @@ make db-reset-full     # deletes ALL project volumes, then provisions the DB
 make demo-onbrick      # deletes ALL project volumes, rebuilds services and seeds OnBrick
 ```
 
-- `make db-provision` runs on a **clean database only**. Existing 0.4.0/0.4.1 installations must follow the [manual repository upgrade procedure](deploy/repository-050.md); older or customized schemas need a separate migration review. `make db-reset` destroys the database and is only for deliberate evaluation resets.
+- `make db-provision` runs on a **clean database only**. For an existing installation, follow the [version-specific upgrade steps](../RELEASE.md#upgrade-precautions). `make db-reset` destroys the database and is only for deliberate evaluation resets.
 - `make db-seed-test` loads the tracked public shared test dataset.
 - `make demo-onbrick` runs `docker compose down -v` before rebuilding and provisioning. It removes DB, Redis, API-file and Gitea volumes for this Compose project without an interactive confirmation. Use it only in a disposable evaluation environment.
 - The OnBrick seed below is **destructive**, even though it does not reset volumes.
@@ -161,7 +161,7 @@ coordinates and must verify those paths before confirmation. A missing URL can b
 connection. Moving an existing repository, changing its branch or reinterpreting its Artifact root requires
 a separate migration review; this release does not include an unlock/migration screen.
 
-Upgrading an existing installation requires **V016 and V017** before starting the updated API. Existing projects
+Repository connections on installations upgrading from 0.4.0/0.4.1 require **V016 and V017**. Existing projects
 are not silently marked confirmed: their owners must check and confirm them before new API or CLI file
 relationships can be saved. Existing data remains readable. See the
 [0.5.0 repository upgrade notes](deploy/repository-050.md).
@@ -347,8 +347,9 @@ Before replacing an existing API container, follow [API data preservation](deplo
 The `api_data` volume preserves descriptors and Git working directories. For older installations
 without that volume, copy existing container files into it before recreation. Database-only backups do not include these files.
 
-For 0.4.0/0.4.1, apply the [manual V016/V017 upgrade](deploy/repository-050.md) to a restored copy first,
-then follow the same reviewed procedure for the installation. Update the API and frontend together
+For Free 0.5.0/0.5.1, rehearse the [diagram migrations](../scripts/db/README.md#diagram-storage-and-permissions)
+on a restored copy before upgrading the installation. For Free 0.4.0/0.4.1, apply the
+[repository migrations](deploy/repository-050.md) first. Update the API and frontend together
 and reload open browser tabs. Check that the app status bar and API report the same version. If a
 tab kept open during deployment cannot load a screen, reload it to replace references to old assets.
 
@@ -360,9 +361,9 @@ Contact your deployment operator for separately managed generation. The legacy r
 returns HTTP 410; its `GENERATION_VIA_CLI` error code is retained for compatibility, not as an instruction
 to install a public CLI package.
 
-## Version 0.5.1 support scope
+## Free edition support scope
 
-The global Search UI and SLA policy management UI are not supported in 0.5.1. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its execution dependencies are excluded from this public distribution. Project list search, Files repository-path search and item navigation remain available; item URLs and browser back/forward navigation support multiple panels. Configure repositories in Settings → Project → General; the older Integrations entry redirects there.
+The global Search UI and SLA policy management UI are unavailable in this edition. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its execution dependencies are excluded from this public distribution. Project list search, Files repository-path search and item navigation remain available; item URLs and browser back/forward navigation support multiple panels. Configure repositories in Settings → Project → General; the older Integrations entry redirects there.
 
 ## Evaluation credentials and tests
 

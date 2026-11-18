@@ -12,6 +12,7 @@ public static class RolePermissionMatrix
         RoleType.Admin => PermissionCodes.All,
         RoleType.ProductOwner =>
         [
+            PermissionCodes.DiagramRead, PermissionCodes.DiagramCreate, PermissionCodes.DiagramUpdate,
             PermissionCodes.SpecCreate, PermissionCodes.SpecRead, PermissionCodes.SpecUpdate,
             PermissionCodes.SpecDelete, PermissionCodes.SpecApprove, PermissionCodes.SpecLock,
             PermissionCodes.ConversationCreate, PermissionCodes.ConversationRead,
@@ -31,6 +32,7 @@ public static class RolePermissionMatrix
         ],
         RoleType.DomainExpert =>
         [
+            PermissionCodes.DiagramRead, PermissionCodes.DiagramCreate, PermissionCodes.DiagramUpdate,
             PermissionCodes.SpecCreate, PermissionCodes.SpecRead, PermissionCodes.SpecUpdate,
             PermissionCodes.ConversationCreate, PermissionCodes.ConversationRead,
             PermissionCodes.ConversationPost, PermissionCodes.ConversationClose,
@@ -45,6 +47,7 @@ public static class RolePermissionMatrix
         ],
         RoleType.Developer =>
         [
+            PermissionCodes.DiagramRead, PermissionCodes.DiagramCreate, PermissionCodes.DiagramUpdate,
             PermissionCodes.SpecCreate, PermissionCodes.SpecRead, PermissionCodes.SpecUpdate,
             PermissionCodes.ConversationCreate, PermissionCodes.ConversationRead,
             PermissionCodes.ConversationPost, PermissionCodes.ConversationClose,
@@ -59,6 +62,7 @@ public static class RolePermissionMatrix
         ],
         RoleType.Reviewer =>
         [
+            PermissionCodes.DiagramRead,
             PermissionCodes.SpecRead, PermissionCodes.SpecApprove,
             PermissionCodes.ConversationCreate, PermissionCodes.ConversationRead,
             PermissionCodes.ConversationPost, PermissionCodes.ConversationClose,
@@ -68,6 +72,7 @@ public static class RolePermissionMatrix
         ],
         RoleType.QATester =>
         [
+            PermissionCodes.DiagramRead,
             PermissionCodes.SpecRead,
             PermissionCodes.ConversationCreate, PermissionCodes.ConversationRead,
             PermissionCodes.ConversationPost,

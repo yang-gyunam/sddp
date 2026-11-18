@@ -84,6 +84,9 @@ public class Permission : EntityBase
             string action) => new(code, name, description, resource, action, isSystemPermission: true);
 
         // Spec permissions
+        yield return SystemPermission(PermissionCodes.DiagramRead, "Read Diagrams", "Read diagrams and revisions", "diagram", "read");
+        yield return SystemPermission(PermissionCodes.DiagramCreate, "Create Diagrams", "Create project diagrams", "diagram", "create");
+        yield return SystemPermission(PermissionCodes.DiagramUpdate, "Update Diagrams", "Save diagram revisions", "diagram", "update");
         yield return SystemPermission(PermissionCodes.SpecCreate, "Create Spec", "Create a spec", "spec", "create");
         yield return SystemPermission(PermissionCodes.SpecRead, "Read Spec", "Read a spec", "spec", "read");
         yield return SystemPermission(PermissionCodes.SpecUpdate, "Update Spec", "Update a spec", "spec", "update");

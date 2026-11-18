@@ -67,11 +67,14 @@
     setSelectedProject,
     createProjectService,
     subscribeTimeline,
-    type ProjectTreeNode,
     type ProjectPageType,
     type TimelineEvent,
   } from '@sddp/activities/runtime';
-  import { getProjectBadges, PROJECT_PAGE_CONFIG } from '@sddp/activities/projects/types';
+  import {
+    getProjectBadges,
+    isProjectPageType,
+    PROJECT_PAGE_CONFIG,
+  } from '@sddp/activities/projects/types';
   // Tasks
   import {
     subscribeTask,
@@ -692,10 +695,45 @@
   async function openTabFromPath(path: string): Promise<boolean> {
     const canonicalPath = navigationService.normalizePath(path);
 
+    // A diagram work tab restores its explicit owning project and shared entity detail.
+    const diagramMatch = canonicalPath.match(/^\/project\/([^/]+)\/diagrams\/([^/]+)$/);
+    if (diagramMatch?.[1] && diagramMatch[2]) {
+      let pid: string;
+      let id: string;
+      try {
+        pid = decodeURIComponent(diagramMatch[1]);
+        id = decodeURIComponent(diagramMatch[2]);
+      } catch {
+        return false;
+      }
+      if (!projectState.projects.some((project) => project.id === pid)) {
+        openAccessDeniedTab(
+          'Access Denied',
+          'lock',
+          canonicalPath,
+          `diagram-denied-${pid}-${id}`,
+          'You are not a member of this project.'
+        );
+        return true;
+      }
+      tabActions.createTab({
+        title: `Diagram ${truncate(id, 8, '…')}`,
+        icon: 'git-branch',
+        path: canonicalPath,
+        component: activityComponents.DiagramDetailTab,
+        props: { entityType: 'Diagram', entityId: id, projectId: pid },
+        dirty: false,
+        closable: true,
+      });
+      return true;
+    }
+
     // Project paths: /project/{projectId}/{nodeType}
     const projectMatch = canonicalPath.match(/^\/project\/([^/]+)\/(.+)$/);
     if (projectMatch && projectMatch[1] && projectMatch[2]) {
       const targetProjectId = projectMatch[1];
+      const pageType = projectMatch[2];
+      if (!isProjectPageType(pageType)) return false;
 
       // Validate user has access to this project
       const hasAccess = projectState.projects.some((p) => p.id === targetProjectId);
@@ -710,7 +748,7 @@
         return true;
       }
 
-      handleProjectNodeSelect(targetProjectId, projectMatch[2] as ProjectPageType);
+      handleProjectNodeSelect(targetProjectId, pageType);
       return true;
     }
 
@@ -972,24 +1010,10 @@
     const project = projectState.projects.find((p) => p.id === projectId);
     const projectName = project?.name || '';
 
-    const nodeConfig: Record<ProjectTreeNode['type'], { icon: string; label: string }> = {
-      dashboard: { icon: 'layout-dashboard', label: 'Dashboard' },
-      conversations: { icon: 'message-square', label: 'Conversations' },
-      requirements: { icon: 'file-text', label: 'Requirements' },
-      specs: { icon: 'file-code', label: 'Specs' },
-      tasks: { icon: 'check-square', label: 'Tasks' },
-      glossary: { icon: 'book-open', label: 'Glossary' },
-      knowledge: PROJECT_PAGE_CONFIG.knowledge,
-      files: { icon: 'file-code', label: 'Files' },
-      artifacts: { icon: 'package', label: 'Artifacts' },
-      effort: { icon: 'clock', label: 'Effort' },
-      traceability: { icon: 'type-hierarchy', label: 'Traceability' },
-    };
-
-    const config = nodeConfig[nodeType];
+    const config = PROJECT_PAGE_CONFIG[nodeType];
     openTabWithComponent(
       config.label,
-      config.icon,
+      config.tabIcon ?? config.icon,
       `/project/${projectId}/${nodeType}`,
       `project-${projectId}-${nodeType}`,
       { meta: projectName, additionalProps: { projectName } }

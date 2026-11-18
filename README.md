@@ -47,6 +47,7 @@ Files is read-only in this release. File editing, branch switching and before/af
 | When you need to… | Use… |
 | --- | --- |
 | Understand what the team agreed | Conversations, requirements and versioned specs |
+| Draw and compare software designs | Diagrams, saved revisions and Visual diff |
 | See how the work connects | Artifact links and the Traceability graph |
 | Plan and account for implementation | Tasks, assignments and effort tracking |
 | Keep language and knowledge consistent | The glossary and Knowledge entries |
@@ -56,7 +57,7 @@ This repository is the **Free edition**, licensed under Apache-2.0. It supports 
 
 ## Quick Start
 
-**Upgrading from 0.4.0 or 0.4.1?** Complete the [manual database upgrade](docs/deploy/repository-050.md) before starting the updated API.
+**Upgrading an existing installation?** Follow the [version-specific upgrade steps](RELEASE.md#upgrade-precautions) before starting the updated API.
 
 ### Prerequisites
 

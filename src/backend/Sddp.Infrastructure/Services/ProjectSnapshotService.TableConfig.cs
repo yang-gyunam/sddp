@@ -11,6 +11,8 @@ public partial class ProjectSnapshotService
         "specs",
         "requirements",
         "glossary_terms",
+        "diagrams",
+        "diagram_versions",
         "relationships",
         "entity_metadata",
         "artifact_trackings",

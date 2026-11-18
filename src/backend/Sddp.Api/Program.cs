@@ -38,31 +38,7 @@ try
 
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        builder.Host.UseSerilog((context, services, configuration) =>
-        {
-            configuration
-                .ReadFrom.Configuration(context.Configuration)
-                .ReadFrom.Services(services)
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("MachineName", Environment.MachineName)
-                .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
-                .Destructure.ByTransforming<LoginRequest>(r => new { r.Username, Password = "***" })
-                .Destructure.ByTransforming<ChangePasswordRequest>(_ => new { CurrentPassword = "***", NewPassword = "***" });
-
-            var otlpEndpoint = context.Configuration["OpenTelemetry:Endpoint"];
-            if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-            {
-                configuration.WriteTo.OpenTelemetry(options =>
-                {
-                    options.Endpoint = otlpEndpoint;
-                    options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
-                    options.ResourceAttributes = new Dictionary<string, object>
-                    {
-                        ["service.name"] = "sddp-api"
-                    };
-                });
-            }
-        });
+        builder.Host.UseSerilog((context, _, configuration) => DiagnosticLogSink.Configure(context, configuration));
     }
 
     if (!builder.Environment.IsEnvironment("Testing"))
@@ -79,6 +55,11 @@ try
     builder.Services.AddActiveUserProtection(builder.Environment);
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddAuthorizationPolicies();
+    builder.Services.AddDiagramServices();
+    builder.Services.AddHttpClient(WeeklyStatistics.Client, client => client.Timeout = TimeSpan.FromSeconds(5))
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+    builder.Services.AddSingleton<WeeklyStatistics>();
+    builder.Services.AddHostedService<WeeklyStatisticsWorker>();
     builder.Services.AddCorsPolicy(builder.Configuration);
     builder.Services.AddSwaggerDocumentation();
 
@@ -147,6 +128,7 @@ try
         });
 
     var app = builder.Build();
+    _ = app.Services.GetService<PrivacyMetrics>();
 
     if (app.Environment.IsDevelopment())
     {
@@ -172,18 +154,6 @@ try
 
     app.UseRequestLogging();
     app.UseExceptionHandling();
-
-    if (!app.Environment.IsEnvironment("Testing"))
-    {
-        app.UseSerilogRequestLogging(options =>
-        {
-            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-            {
-                diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-                diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
-            };
-        });
-    }
 
     if (app.Environment.IsDevelopment())
     {

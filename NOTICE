@@ -61,6 +61,15 @@ Microsoft.AspNetCore.*, Microsoft.EntityFrameworkCore.*, Microsoft.Extensions.*
 
 -- Frontend Dependencies --
 
+Monaco Editor (monaco-editor 0.56.0)
+  License: MIT
+  Copyright (c) 2016 - present Microsoft Corporation
+  License text and upstream third-party notices are included at:
+    src/frontend/packages/web/public/licenses/monaco-editor/0.56.0/LICENSE.txt
+    src/frontend/packages/web/public/licenses/monaco-editor/0.56.0/ThirdPartyNotices.txt
+  Frontend distributions preserve these files under:
+    licenses/monaco-editor/0.56.0/
+
 Svelte
   License: MIT
   Copyright: (c) Svelte Contributors

@@ -1,5 +1,7 @@
 <!-- Section: TopicView — Conversations > Topic -->
 <script lang="ts">
+  import ConversationEvidenceSection from '../../../ai/components/sections/ConversationEvidenceSection.svelte';
+  import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
   import { untrack } from 'svelte';
   import { keepMessageBottomVisible } from '../../actions/keepMessageBottomVisible';
   import { Icon, IconButton, Spinner } from '@sddp/ui';
@@ -242,6 +244,10 @@
   }
 </script>
 
+{#snippet evidence(context: ConversationEvidenceContext)}
+  <ConversationEvidenceSection {...context} />
+{/snippet}
+
 <PageShell class={className}>
   <DetailHeader>
     {#snippet leading()}
@@ -298,6 +304,7 @@
       {:else}
         {#each messages as message, index (message.id)}
           <MessageBubble
+            {evidence}
             {tenantId}
             {message}
             {messages}

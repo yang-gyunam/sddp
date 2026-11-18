@@ -13,7 +13,7 @@ import type { UserRef } from '../../shared/types';
  * Entity types that can participate in relationships
  */
 export type EntityType =
-  'Spec' | 'Requirement' | 'Conversation' | 'GlossaryTerm' | 'Artifact' | 'Task';
+  'Spec' | 'Requirement' | 'Conversation' | 'GlossaryTerm' | 'Artifact' | 'Task' | 'Diagram';
 
 /**
  * 8 relationship types
@@ -366,6 +366,13 @@ export const ENTITY_TYPE_STYLES: Record<EntityType, EntityTypeStyle> = {
     borderColor: 'border-[var(--color-cyan-500)]/20',
     label: 'Artifact',
     icon: 'code',
+  },
+  Diagram: {
+    color: 'text-[var(--color-info-600)] dark:text-[var(--color-info-400)]',
+    bgColor: 'bg-[var(--color-info-500)]/10',
+    borderColor: 'border-[var(--color-info-500)]/20',
+    label: 'Diagram',
+    icon: 'git-branch',
   },
   Task: {
     color: 'text-[var(--color-teal-600)] dark:text-[var(--color-teal-400)]',

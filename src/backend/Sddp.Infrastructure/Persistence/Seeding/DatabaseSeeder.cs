@@ -121,8 +121,8 @@ public class DatabaseSeeder
         }
 
         // Look up the admin user ID
-        var adminUser = await (_context.Users.FirstOrDefaultAsync(u => u.Username == "admin")).ConfigureAwait(false);
-        GlobalUniqueId definedBy = adminUser?.Id ?? Guid.Empty;
+        var adminUser = await (_context.Users.FirstAsync(u => u.Username == "admin")).ConfigureAwait(false);
+        var definedBy = adminUser.Id;
 
         var terms = CreateSddpDomainTerms(systemTenantId, systemProjectId, definedBy);
         await (_context.GlossaryTerms.AddRangeAsync(terms)).ConfigureAwait(false);
@@ -334,6 +334,7 @@ public class DatabaseSeeder
             source: source,
             synonyms: synonyms,
             abbreviation: abbreviation);
+        glossaryTerm.SetCreatedBy(definedBy);
 
         // Set usage examples if provided
         if (usageExamples is { Count: > 0 })

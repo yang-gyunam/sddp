@@ -14,6 +14,8 @@
     closable?: boolean;
     closeOnOverlay?: boolean;
     closeOnEscape?: boolean;
+    /** Keep shared body padding outside the scrollport, including after scrolling. */
+    preserveBodyInset?: boolean;
     class?: string;
     onClose?: () => void;
     header?: import('svelte').Snippet;
@@ -28,6 +30,7 @@
     closable = true,
     closeOnOverlay = true,
     closeOnEscape = true,
+    preserveBodyInset = false,
     class: className = '',
     onClose,
     header,
@@ -167,11 +170,24 @@
       {/if}
 
       <!-- Body -->
-      <div class="px-4 py-4 max-h-[60vh] overflow-auto">
-        {#if children}
-          {@render children()}
-        {/if}
-      </div>
+      {#if preserveBodyInset}
+        <section
+          aria-label={`${title || 'Dialog'} content`}
+          class="flex min-h-0 max-h-[60vh] flex-col p-4"
+        >
+          <div class="min-h-0 flex-1 overflow-auto">
+            {#if children}
+              {@render children()}
+            {/if}
+          </div>
+        </section>
+      {:else}
+        <div class="px-4 py-4 max-h-[60vh] overflow-auto">
+          {#if children}
+            {@render children()}
+          {/if}
+        </div>
+      {/if}
 
       <!-- Footer -->
       {#if footer}

@@ -53,3 +53,46 @@ For non-default DB/storage values, export the shared settings before Make comman
 [Make and Compose settings](../../docs/public-guide.md#shared-make-and-compose-settings). Make does not load `.env`.
 
 Only the reviewed Free database assets are included in this distribution.
+
+
+## Diagram storage and permissions
+
+Fresh provisioning already includes the diagram schema. For a standard Free
+0.5.0 or 0.5.1 database, stop writers and take a matching database and API file
+backup. Rehearse on a restored copy. From the release root, set `DATABASE_URL`
+to the target database using its migration owner. Apply the four files together
+so a failure rolls back the transaction:
+
+```sh
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --single-transaction \
+  -f scripts/db/migrations/V021__diagram_revisions.sql \
+  -f scripts/db/migrations/V022__sync_role_permission_matrix.sql \
+  -f scripts/db/migrations/V023__diagram_schema2.sql \
+  -f scripts/db/migrations/V024__diagram_model_hash.sql
+```
+
+V021 creates the diagram and revision tables. V022 synchronizes the permissions
+of the six built-in Free roles. Review custom roles separately in role administration.
+V023 allows schema2 and preserves schema1 documents and revisions. V024 takes a
+table lock during the transaction and backfills the SHA-256 fingerprint of each
+stored model. The updated API requires that column.
+
+If the API uses a separate database role, check its access to the new tables
+before starting it. Where default privileges do not cover newly created tables,
+the migration owner can grant the runtime role the usual project-data permissions.
+Set `APP_DB_ROLE` to the existing API database role:
+
+```sh
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -v app_role="$APP_DB_ROLE" <<'SQL'
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.diagrams, public.diagram_versions TO :"app_role";
+SQL
+```
+
+Start the updated API and frontend together. In a project where you have access,
+save a diagram, make and save a second edit, then reopen it and compare the two revisions.
+
+To return to 0.5.x, restore the matching pre-upgrade database and API files with
+the previous application. For a rollback of V024 alone to a V023 application,
+switch to that application first and apply `R024__drop_diagram_model_hash.sql`
+in a transaction. R024 removes the derived fingerprint, including copies in
+project snapshots, and preserves diagram bodies and revisions.

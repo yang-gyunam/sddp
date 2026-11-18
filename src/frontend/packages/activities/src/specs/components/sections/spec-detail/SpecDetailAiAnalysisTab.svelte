@@ -73,7 +73,9 @@
 </script>
 
 {#if !aiCanRead}
-  <div class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-warning-10)] p-5">
+  <div
+    class="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-warning-10)] p-5"
+  >
     <div class="flex items-center gap-2">
       <Icon name="cpu" size="sm" />
       <span class="text-sm font-semibold text-[var(--color-text-primary)]">AI Analysis</span>

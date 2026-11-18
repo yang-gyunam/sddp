@@ -25,6 +25,8 @@ export function createProjectParticipantExtension(_scope: () => ParticipantScope
     get participants(): ExtensionMember[] {
       return [];
     },
+    get canReadCandidates() { return false; },
+    get canManageCandidates() { return false; },
     get canManage() {
       return false;
     },

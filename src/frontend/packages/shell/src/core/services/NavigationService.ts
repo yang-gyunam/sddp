@@ -5,7 +5,7 @@
  * Supports domain-specific navigation (Spec, Conversation, Requirement, Glossary).
  */
 
-import { tabActions, globalActiveTab, allTabs } from '../../stores/tabs.store';
+import { tabActions, globalActiveTab, allTabs, tabsStore } from '../../stores/tabs.store';
 import { requestCloseTab } from '../../stores/tab-close';
 import { get } from 'svelte/store';
 import type { Tab } from '../../types';
@@ -76,7 +76,10 @@ class NavigationServiceImpl {
     if (existingTab) {
       // Tab exists, just switch to it
       if (focus) {
-        tabActions.switchToTab(existingTab.id, groupId);
+        const owner = get(tabsStore).groups.find((group) =>
+          group.tabs.some((tab) => tab.id === existingTab.id)
+        );
+        tabActions.switchToTab(existingTab.id, owner?.id ?? groupId);
       }
       this.pushToHistory(target.path);
       this.notifyListeners(target.path, existingTab);

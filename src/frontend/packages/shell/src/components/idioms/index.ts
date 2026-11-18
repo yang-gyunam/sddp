@@ -14,6 +14,7 @@ export { default as ListItem } from './ListItem.svelte';
 export { default as RichListItem } from './RichListItem.svelte';
 export { default as SurfaceCard } from './SurfaceCard.svelte';
 export { default as CodeEditor } from './CodeEditor.svelte';
+export { default as CodeDiffViewer } from './CodeDiffViewer.svelte';
 
 // Panel Content Components
 export { default as TerminalContent } from './TerminalContent.svelte';

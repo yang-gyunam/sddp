@@ -27,12 +27,18 @@ export function createConversationPathOpener(callbacks: ConversationPathCallback
     const request = ++generation;
     const isCurrent = () => {
       const current = callbacks.getContext();
-      return request === generation && current.path === path &&
-        current.tenantId === context.tenantId && current.userId === context.userId;
+      return (
+        request === generation &&
+        current.path === path &&
+        current.tenantId === context.tenantId &&
+        current.userId === context.userId
+      );
     };
     try {
-      const conversation = await createConversationService(context.tenantId, '')
-        .getConversationById(conversationId);
+      const conversation = await createConversationService(
+        context.tenantId,
+        ''
+      ).getConversationById(conversationId);
       if (!isCurrent()) return;
       const isForum = conversation.conversationType === 'Forum';
       const isDm = conversation.conversationType === 'DirectMessage';
@@ -41,12 +47,14 @@ export function createConversationPathOpener(callbacks: ConversationPathCallback
         isForum ? 'list' : isDm ? 'message-circle' : 'hash',
         path,
         `${isForum ? 'forum' : isDm ? 'dm' : 'conversation'}-${conversationId}`,
-        { additionalProps: {
-          tenantId: context.tenantId,
-          projectId: conversation.projectId ?? '',
-          conversationType: conversation.conversationType,
-          channelStatus: conversation.channelStatus ?? null,
-        } }
+        {
+          additionalProps: {
+            tenantId: context.tenantId,
+            projectId: conversation.projectId ?? '',
+            conversationType: conversation.conversationType,
+            channelStatus: conversation.channelStatus ?? null,
+          },
+        }
       );
     } catch {
       if (isCurrent()) callbacks.showError(path, conversationId);

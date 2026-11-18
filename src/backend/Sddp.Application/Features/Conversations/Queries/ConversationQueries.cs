@@ -41,19 +41,8 @@ public sealed class GetConversationByIdQueryHandler : IRequestHandler<GetConvers
             return null;
         }
 
-        // Visibility check
-        if (conversation.Visibility == ConversationVisibility.Private)
-        {
-            var isMember = await (memberRepo.CountAsync(
-                m => m.ConversationId == request.ConversationId
-                    && m.UserId == request.UserId
-                    && m.IsActive,
-                cancellationToken)) .ConfigureAwait(false)> 0;
-            if (!isMember)
-            {
-                return null;
-            }
-        }
+        if (!await ConversationVisibilityPolicy.CanAccessAsync(_unitOfWork, conversation, request.UserId, cancellationToken))
+            return null;
 
         // Member count
         var memberCount = await (memberRepo.CountAsync(

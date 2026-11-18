@@ -305,7 +305,7 @@ export function useRealtimeBridge(params: RealtimeBridgeParams) {
       },
       onNewNotification: (payload) => {
         if (payload && payload.id) {
-          addNotificationToStore({
+          const inserted = addNotificationToStore({
             id: payload.id,
             type: payload.type,
             title: payload.title,
@@ -316,6 +316,8 @@ export function useRealtimeBridge(params: RealtimeBridgeParams) {
             actorName: payload.actorName,
             createdAt: payload.createdAt,
           });
+
+          if (!inserted || payload.isRead) return;
 
           if (payload.type === 'dm_invite') {
             toast.info(payload.message, {

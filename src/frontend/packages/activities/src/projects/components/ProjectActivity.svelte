@@ -40,6 +40,7 @@
     ProjectGlossaryPage,
     ProjectKnowledgePage,
     ProjectArtifactsPage,
+    ProjectDiagramsPage,
     ProjectFilesPage,
     ProjectEffortPage,
     ProjectTraceabilityPage,
@@ -211,6 +212,8 @@
         <ProjectKnowledgePage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'files'}
         <ProjectFilesPage projectId={selectedProjectId} />
+      {:else if selectedPageType === 'diagrams'}
+        <ProjectDiagramsPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'artifacts'}
         <ProjectArtifactsPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'tasks'}

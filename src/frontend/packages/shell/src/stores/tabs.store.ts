@@ -134,6 +134,7 @@ function normalizeTab(tab: Tab): unknown {
     meta: tab.meta ?? null,
     icon: tab.icon ?? null,
     dirty: tab.dirty,
+    dirtyMarker: tab.dirtyMarker ?? 'dot',
     closable: tab.closable,
     componentType: tab.component == null ? null : typeof tab.component,
     props: tab.props,

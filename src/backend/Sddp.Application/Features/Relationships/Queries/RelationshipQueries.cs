@@ -9,26 +9,22 @@ using Sddp.Domain.Entities;
 
 namespace Sddp.Application.Features.Relationships.Queries;
 
+public interface IRelationshipReadQuery;
+
 /// <summary>
 /// relationship get (ID)
 /// </summary>
 public sealed record GetRelationshipByIdQuery(
     GlobalUniqueId TenantId,
     GlobalUniqueId ProjectId,
-    GlobalUniqueId RelationshipId) : IQuery<RelationshipDto?>;
+    GlobalUniqueId RelationshipId) : IQuery<RelationshipDto?>, IRelationshipReadQuery;
 
-public sealed class GetRelationshipByIdQueryHandler : IRequestHandler<GetRelationshipByIdQuery, RelationshipDto?>
+public sealed class GetRelationshipByIdQueryHandler(IUnitOfWork unitOfWork, IRelationshipEndpointAccess access)
+    : IRequestHandler<GetRelationshipByIdQuery, RelationshipDto?>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetRelationshipByIdQueryHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<RelationshipDto?> Handle(GetRelationshipByIdQuery request, CancellationToken cancellationToken)
     {
-        var repo = _unitOfWork.Repository<Relationship>();
+        var repo = unitOfWork.Repository<Relationship>();
 
         var relationship = await (repo.GetByIdAsync(request.RelationshipId, cancellationToken)).ConfigureAwait(false);
         if (relationship is null
@@ -39,7 +35,9 @@ public sealed class GetRelationshipByIdQueryHandler : IRequestHandler<GetRelatio
             return null;
         }
 
-        return RelationshipMapping.MapToDto(relationship);
+        var readable = await access.ReadEndpointsAsync(request.TenantId, request.ProjectId, [relationship], cancellationToken);
+        return readable.ContainsKey(relationship.From()) && readable.ContainsKey(relationship.To())
+            ? RelationshipMapping.MapToDto(relationship) : null;
     }
 }
 
@@ -52,56 +50,34 @@ public sealed record GetRelationshipsByEntityQuery(
     EntityType EntityType,
     GlobalUniqueId EntityId,
     RelationType? TypeFilter,
-    bool IncludeInvalidated) : IQuery<RelationshipListDto>;
+    bool IncludeInvalidated) : IQuery<RelationshipListDto>, IRelationshipReadQuery;
 
-public sealed class GetRelationshipsByEntityQueryHandler : IRequestHandler<GetRelationshipsByEntityQuery, RelationshipListDto>
+public sealed class GetRelationshipsByEntityQueryHandler(IUnitOfWork unitOfWork, IRelationshipEndpointAccess access)
+    : IRequestHandler<GetRelationshipsByEntityQuery, RelationshipListDto>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetRelationshipsByEntityQueryHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<RelationshipListDto> Handle(GetRelationshipsByEntityQuery request, CancellationToken cancellationToken)
     {
-        var repo = _unitOfWork.Repository<Relationship>();
+        var repo = unitOfWork.Repository<Relationship>();
 
-        var outgoing = await (repo.FindAsync(
-            r => r.TenantId == request.TenantId
-                && r.ProjectId == request.ProjectId
-                && r.FromEntityType == request.EntityType
-                && r.FromEntityId == request.EntityId
-                && r.IsActive
-                && (request.IncludeInvalidated || r.ValidTo == null)
-                && (request.TypeFilter == null || r.Type == request.TypeFilter),
-            cancellationToken)).ConfigureAwait(false);
+        RelationshipEndpoint root = new(request.EntityType, request.EntityId);
+        await access.RequireRootAsync(request.TenantId, request.ProjectId, root, cancellationToken);
+        var relationships = await repo.FindAsync(r => r.TenantId == request.TenantId && r.ProjectId == request.ProjectId
+            && (r.FromEntityType == request.EntityType && r.FromEntityId == request.EntityId
+                || r.ToEntityType == request.EntityType && r.ToEntityId == request.EntityId)
+            && (request.IncludeInvalidated || r.ValidTo == null)
+            && (request.TypeFilter == null || r.Type == request.TypeFilter), cancellationToken);
 
-        var incoming = await (repo.FindAsync(
-            r => r.TenantId == request.TenantId
-                && r.ProjectId == request.ProjectId
-                && r.ToEntityType == request.EntityType
-                && r.ToEntityId == request.EntityId
-                && r.IsActive
-                && (request.IncludeInvalidated || r.ValidTo == null)
-                && (request.TypeFilter == null || r.Type == request.TypeFilter),
-            cancellationToken)).ConfigureAwait(false);
-
-        var incomingDtos = new List<RelationshipDto>();
-        foreach (var rel in incoming)
+        var endpoints = await access.ReadEndpointsAsync(request.TenantId, request.ProjectId, relationships, cancellationToken);
+        var incoming = new List<RelationshipDto>();
+        var outgoing = new List<RelationshipDto>();
+        foreach (var rel in relationships)
         {
-            incomingDtos.Add(await (RelationshipMapping.MapToDtoWithLabelsAsync(rel, _unitOfWork, cancellationToken)).ConfigureAwait(false));
+            if (!endpoints.TryGetValue(rel.From(), out var from) || !endpoints.TryGetValue(rel.To(), out var to)) continue;
+            var dto = RelationshipMapping.MapToDto(rel, from.Label, from.Code, to.Label, to.Code);
+            if (rel.From() == root) outgoing.Add(dto);
+            if (rel.To() == root) incoming.Add(dto);
         }
-
-        var outgoingDtos = new List<RelationshipDto>();
-        foreach (var rel in outgoing)
-        {
-            outgoingDtos.Add(await (RelationshipMapping.MapToDtoWithLabelsAsync(rel, _unitOfWork, cancellationToken)).ConfigureAwait(false));
-        }
-
-        return new RelationshipListDto(
-            Incoming: incomingDtos,
-            Outgoing: outgoingDtos);
+        return new RelationshipListDto(incoming, outgoing);
     }
 }
 
@@ -114,120 +90,46 @@ public sealed record GetRelationshipGraphQuery(
     EntityType RootEntityType,
     GlobalUniqueId RootEntityId,
     int MaxDepth,
-    RelationType[]? TypeFilter) : IQuery<RelationshipGraphDto>;
+    RelationType[]? TypeFilter) : IQuery<RelationshipGraphDto>, IRelationshipReadQuery;
 
-public sealed class GetRelationshipGraphQueryHandler : IRequestHandler<GetRelationshipGraphQuery, RelationshipGraphDto>
+public sealed class GetRelationshipGraphQueryHandler(IUnitOfWork unitOfWork, IRelationshipEndpointAccess access)
+    : IRequestHandler<GetRelationshipGraphQuery, RelationshipGraphDto>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetRelationshipGraphQueryHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<RelationshipGraphDto> Handle(GetRelationshipGraphQuery request, CancellationToken cancellationToken)
     {
-        var repo = _unitOfWork.Repository<Relationship>();
-        var nodes = new Dictionary<string, GraphNodeDto>();
-        var edges = new List<GraphEdgeDto>();
-
-        var queue = new Queue<(EntityType entityType, GlobalUniqueId entityId, int depth)>();
-        var visited = new HashSet<string>();
-
-        var rootKey = $"{request.RootEntityType}:{request.RootEntityId}";
-        queue.Enqueue((request.RootEntityType, request.RootEntityId, 0));
-        visited.Add(rootKey);
-
-        var rootLabel = await (RelationshipMapping.GetEntityLabelAsync(
-            _unitOfWork,
-            request.RootEntityType,
-            request.RootEntityId,
-            cancellationToken)).ConfigureAwait(false);
-        var rootStatus = await (RelationshipMapping.GetEntityStatusAsync(
-            _unitOfWork,
-            request.RootEntityType,
-            request.RootEntityId,
-            cancellationToken)).ConfigureAwait(false);
-
-        nodes[rootKey] = new GraphNodeDto(
-            Id: request.RootEntityId.ToString(),
-            EntityType: request.RootEntityType.ToString(),
-            Label: rootLabel,
-            Status: rootStatus,
-            Depth: 0);
-
-        while (queue.Count > 0)
+        var repo = unitOfWork.Repository<Relationship>();
+        RelationshipEndpoint root = new(request.RootEntityType, request.RootEntityId);
+        var display = await access.RequireRootAsync(request.TenantId, request.ProjectId, root, cancellationToken);
+        var nodes = new Dictionary<RelationshipEndpoint, GraphNodeDto> { [root] = Node(root, display, 0) };
+        var edges = new Dictionary<GlobalUniqueId, GraphEdgeDto>();
+        var frontier = new HashSet<RelationshipEndpoint> { root };
+        for (var depth = 1; depth <= request.MaxDepth && frontier.Count > 0; depth++)
         {
-            var (entityType, entityId, depth) = queue.Dequeue();
-
-            if (depth >= request.MaxDepth)
-                continue;
-
-            var relationships = await (repo.FindAsync(
-                r => r.TenantId == request.TenantId
-                    && r.ProjectId == request.ProjectId
-                    && ((r.FromEntityType == entityType && r.FromEntityId == entityId)
-                        || (r.ToEntityType == entityType && r.ToEntityId == entityId))
-                    && r.IsActive
-                    && r.ValidTo == null
-                    && (request.TypeFilter == null || request.TypeFilter.Contains(r.Type)),
-                cancellationToken)).ConfigureAwait(false);
-
-            foreach (var rel in relationships)
+            var ids = frontier.Select(e => e.Id).Distinct().ToArray();
+            var adjacent = await repo.FindAsync(r => r.TenantId == request.TenantId && r.ProjectId == request.ProjectId
+                && (ids.Contains(r.FromEntityId) || ids.Contains(r.ToEntityId))
+                && r.ValidTo == null && (request.TypeFilter == null || request.TypeFilter.Contains(r.Type)), cancellationToken);
+            // IDs are scoped by entity type. Only actual frontier endpoints can start a traversal step.
+            var candidates = adjacent.Where(r => !edges.ContainsKey(r.Id) && (frontier.Contains(r.From()) || frontier.Contains(r.To()))).ToArray();
+            var readable = await access.ReadEndpointsAsync(request.TenantId, request.ProjectId, candidates, cancellationToken);
+            var next = new HashSet<RelationshipEndpoint>();
+            foreach (var rel in candidates)
             {
-                edges.Add(new GraphEdgeDto(
-                    Id: rel.Id.ToString(),
-                    SourceId: rel.FromEntityId.ToString(),
-                    TargetId: rel.ToEntityId.ToString(),
-                    Type: rel.Type.ToString(),
-                    TypeLabel: RelationshipMapping.GetRelationTypeLabel(rel.Type)));
-
-                EntityType connectedType;
-                GlobalUniqueId connectedId;
-
-                if (rel.FromEntityType == entityType && rel.FromEntityId == entityId)
-                {
-                    connectedType = rel.ToEntityType;
-                    connectedId = rel.ToEntityId;
-                }
-                else
-                {
-                    connectedType = rel.FromEntityType;
-                    connectedId = rel.FromEntityId;
-                }
-
-                var connectedKey = $"{connectedType}:{connectedId}";
-                if (!visited.Contains(connectedKey))
-                {
-                    visited.Add(connectedKey);
-
-                    var label = await (RelationshipMapping.GetEntityLabelAsync(
-                        _unitOfWork,
-                        connectedType,
-                        connectedId,
-                        cancellationToken)).ConfigureAwait(false);
-                    var status = await (RelationshipMapping.GetEntityStatusAsync(
-                        _unitOfWork,
-                        connectedType,
-                        connectedId,
-                        cancellationToken)).ConfigureAwait(false);
-
-                    nodes[connectedKey] = new GraphNodeDto(
-                        Id: connectedId.ToString(),
-                        EntityType: connectedType.ToString(),
-                        Label: label,
-                        Status: status,
-                        Depth: depth + 1);
-
-                    queue.Enqueue((connectedType, connectedId, depth + 1));
-                }
+                var from = rel.From();
+                var to = rel.To();
+                if (!readable.TryGetValue(from, out var fromDisplay) || !readable.TryGetValue(to, out var toDisplay)) continue;
+                edges.Add(rel.Id, new(rel.Id.ToString(), from.Id.ToString(), to.Id.ToString(), rel.Type.ToString(),
+                    RelationshipMapping.GetRelationTypeLabel(rel.Type)));
+                if (nodes.TryAdd(from, Node(from, fromDisplay, depth))) next.Add(from);
+                if (nodes.TryAdd(to, Node(to, toDisplay, depth))) next.Add(to);
             }
+            frontier = next;
         }
-
-        return new RelationshipGraphDto(
-            Nodes: nodes.Values.ToList(),
-            Edges: edges.Distinct().ToList());
+        return new RelationshipGraphDto(nodes.Values.ToList(), edges.Values.ToList());
     }
+
+    private static GraphNodeDto Node(RelationshipEndpoint endpoint, EndpointDisplay display, int depth) =>
+        new(endpoint.Id.ToString(), endpoint.Type.ToString(), display.Label, display.Status, depth);
 }
 
 /// <summary>
@@ -236,20 +138,14 @@ public sealed class GetRelationshipGraphQueryHandler : IRequestHandler<GetRelati
 public sealed record GetDecisionImpactQuery(
     GlobalUniqueId TenantId,
     GlobalUniqueId ProjectId,
-    GlobalUniqueId DecisionMessageId) : IQuery<DecisionImpactDto>;
+    GlobalUniqueId DecisionMessageId) : IQuery<DecisionImpactDto>, IRelationshipReadQuery;
 
-public sealed class GetDecisionImpactQueryHandler : IRequestHandler<GetDecisionImpactQuery, DecisionImpactDto>
+public sealed class GetDecisionImpactQueryHandler(IUnitOfWork unitOfWork, IRelationshipEndpointAccess access)
+    : IRequestHandler<GetDecisionImpactQuery, DecisionImpactDto>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetDecisionImpactQueryHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<DecisionImpactDto> Handle(GetDecisionImpactQuery request, CancellationToken cancellationToken)
     {
-        var repo = _unitOfWork.Repository<Relationship>();
+        var repo = unitOfWork.Repository<Relationship>();
 
         var relationships = await (repo.FindAsync(
             r => r.TenantId == request.TenantId
@@ -259,16 +155,15 @@ public sealed class GetDecisionImpactQueryHandler : IRequestHandler<GetDecisionI
                 && r.ValidTo == null,
             cancellationToken)).ConfigureAwait(false);
 
+        var endpoints = await access.ReadEndpointsAsync(request.TenantId, request.ProjectId, relationships, cancellationToken);
         var items = new List<DecisionImpactItemDto>();
         foreach (var rel in relationships)
         {
-            var label = await (RelationshipMapping.GetEntityLabelAsync(
-                _unitOfWork, rel.ToEntityType, rel.ToEntityId, cancellationToken)).ConfigureAwait(false);
-
+            if (!endpoints.ContainsKey(rel.From()) || !endpoints.TryGetValue(rel.To(), out var target)) continue;
             items.Add(new DecisionImpactItemDto(
                 EntityType: rel.ToEntityType.ToString(),
                 EntityId: rel.ToEntityId.ToString(),
-                Label: label,
+                Label: target.Label,
                 RelationType: rel.Type.ToString()));
         }
 

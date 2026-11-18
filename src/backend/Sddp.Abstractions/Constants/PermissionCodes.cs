@@ -51,8 +51,13 @@ public static class PermissionCodes
     public const string KnowledgePublish = "knowledge:publish";
     public const string KnowledgeAdmin = "knowledge:admin";
 
+    public const string DiagramRead = "diagram:read";
+    public const string DiagramCreate = "diagram:create";
+    public const string DiagramUpdate = "diagram:update";
+
     public static IReadOnlyList<string> All { get; } =
     [
+        DiagramRead, DiagramCreate, DiagramUpdate,
         SpecCreate, SpecRead, SpecUpdate, SpecDelete, SpecApprove, SpecLock,
         ConversationCreate, ConversationRead, ConversationPost, ConversationClose,
         RequirementCreate, RequirementRead, RequirementUpdate, RequirementDelete,

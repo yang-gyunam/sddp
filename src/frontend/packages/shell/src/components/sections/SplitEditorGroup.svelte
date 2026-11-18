@@ -453,7 +453,6 @@
   {#each groups as group, index (group.id)}
     <!-- Editor Group - focusable container for keyboard navigation -->
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       class="relative min-w-0 min-h-0 {activeGroupId === group.id
         ? 'ring-1 ring-inset ring-[var(--color-accent-primary)]/20'
@@ -463,8 +462,8 @@
         : layoutDirection === 'horizontal'
           ? getGridArea(index)
           : `${index * 2 + 1} / 1 / ${index * 2 + 2} / 2`};"
-      onclick={() => handleGroupFocus(group.id)}
-      onkeydown={(e) => {
+      onclickcapture={() => handleGroupFocus(group.id)}
+      onkeydowncapture={(e) => {
         if (e.key === 'Enter' || e.key === ' ') handleGroupFocus(group.id);
       }}
       role="group"

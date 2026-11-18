@@ -6,6 +6,7 @@
   import { CollapsibleGroup } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
   import {
+    navigateTo,
     navigateToSpec,
     navigateToRequirement,
     navigateToConversation,
@@ -18,7 +19,7 @@
     invalidateRelationship,
   } from '../../services/RelationshipService';
   import TraceEntityButton from '../idioms/TraceEntityButton.svelte';
-  import RelationshipLinkSearch from '../idioms/RelationshipLinkSearch.svelte';
+  import RelationshipLinkSearch from './RelationshipLinkSearchSection.svelte';
   import EntityFullDetailTab from '../../../shared/components/sections/EntityFullDetailTab.svelte';
   import type {
     EntityType,
@@ -139,8 +140,14 @@
   const allRelationships = $derived(
     relationships
       ? [
-          ...relationships.incoming.map((r) => ({ ...r, direction: 'incoming' as const })),
-          ...relationships.outgoing.map((r) => ({ ...r, direction: 'outgoing' as const })),
+          ...relationships.incoming.map((r) => ({
+            ...r,
+            direction: 'incoming' as const,
+          })),
+          ...relationships.outgoing.map((r) => ({
+            ...r,
+            direction: 'outgoing' as const,
+          })),
         ]
       : []
   );
@@ -167,6 +174,15 @@
         break;
       case 'Artifact':
         navigateToArtifact(id, label, EntityFullDetailTab, detailProps);
+        break;
+      case 'Diagram':
+        navigateTo({
+          path: `/project/${encodeURIComponent(projectId)}/diagrams/${encodeURIComponent(id)}`,
+          title: label || `Diagram ${id.slice(0, 8)}`,
+          icon: 'git-branch',
+          component: EntityFullDetailTab,
+          props: detailProps,
+        });
         break;
       case 'Task':
         navigateToEntity(projectId, 'task', id);

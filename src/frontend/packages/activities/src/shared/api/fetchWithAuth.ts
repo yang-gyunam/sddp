@@ -34,6 +34,8 @@ export interface FetchOptions {
   /** Optional: If not provided, will be auto-resolved from auth state */
   tenantId?: string;
   projectId?: string;
+  /** Optional synchronous scope/actor check, repeated immediately before every HTTP attempt. */
+  beforeDispatch?: () => void;
 }
 
 // ============================================
@@ -182,6 +184,7 @@ export async function fetchWithAuth<T>(endpoint: string, options: FetchOptions =
   const { method = 'GET', body, formData } = options;
   const headers = await getAuthenticatedHeaders(options);
 
+  options.beforeDispatch?.();
   const response = await doFetch(endpoint, method, headers, body, formData);
 
   // 401 Unauthorized → attempt token refresh and retry once
@@ -190,6 +193,7 @@ export async function fetchWithAuth<T>(endpoint: string, options: FetchOptions =
     if (outcome === 'authenticated') {
       // Retry with fresh token
       const retryHeaders = await getAuthenticatedHeaders(options);
+      options.beforeDispatch?.();
       const retryResponse = await doFetch(endpoint, method, retryHeaders, body, formData);
       return handleResponse<T>(retryResponse);
     }

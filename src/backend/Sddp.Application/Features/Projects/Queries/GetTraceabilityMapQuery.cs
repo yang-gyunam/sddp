@@ -4,6 +4,7 @@ using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Features.Relationships;
+using Sddp.Application.Features.Relationships.Queries;
 using Sddp.Application.Requests;
 using Sddp.Domain.Entities;
 
@@ -15,16 +16,18 @@ namespace Sddp.Application.Features.Projects.Queries;
 /// </summary>
 public sealed record GetTraceabilityMapQuery(
     GlobalUniqueId TenantId,
-    GlobalUniqueId ProjectId) : IQuery<TraceabilityMapDto>;
+    GlobalUniqueId ProjectId) : IQuery<TraceabilityMapDto>, IRelationshipReadQuery;
 
 public sealed class GetTraceabilityMapQueryHandler
     : IRequestHandler<GetTraceabilityMapQuery, TraceabilityMapDto>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IRelationshipEndpointAccess _access;
 
-    public GetTraceabilityMapQueryHandler(IUnitOfWork unitOfWork)
+    public GetTraceabilityMapQueryHandler(IUnitOfWork unitOfWork, IRelationshipEndpointAccess access)
     {
         _unitOfWork = unitOfWork;
+        _access = access;
     }
 
     public async Task<TraceabilityMapDto> Handle(
@@ -114,16 +117,31 @@ public sealed class GetTraceabilityMapQueryHandler
                 ParentId: a.SpecId.ToString()));
         }
 
-        // 3. Load active relationships and convert to TraceabilityCrossLinkDto
-        var crossLinks = await (LoadCrossLinks(tenantId, projectId, cancellationToken)).ConfigureAwait(false);
+        // Authorize nodes and both relationship endpoints in one batch. A readable
+        // child survives a hidden parent; only the reference to that parent is removed.
+        var relationships = await LoadCrossLinks(tenantId, projectId, cancellationToken).ConfigureAwait(false);
+        static RelationshipEndpoint Key(TraceabilityNodeDto node) =>
+            new(Enum.Parse<EntityType>(node.EntityType), GlobalUniqueId.Parse(node.Id));
+        var readable = await _access.ReadAsync(tenantId, projectId,
+            nodes.Select(Key).Concat(relationships.SelectMany(r => new[] {
+                new RelationshipEndpoint(r.FromEntityType, r.FromEntityId), new(r.ToEntityType, r.ToEntityId) })),
+            cancellationToken).ConfigureAwait(false);
+        nodes = nodes.Where(n => readable.ContainsKey(Key(n))).ToList();
+        var visibleIds = nodes.Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
+        nodes = nodes.Select(n => n.ParentId is { } parent && !visibleIds.Contains(parent)
+            ? n with { ParentId = null } : n).ToList();
+        var crossLinks = relationships.Where(r => readable.ContainsKey(new(r.FromEntityType, r.FromEntityId))
+                && readable.ContainsKey(new(r.ToEntityType, r.ToEntityId)))
+            .Select(r => new TraceabilityCrossLinkDto(r.Id.ToString(), r.FromEntityId.ToString(), r.ToEntityId.ToString(),
+                r.Type.ToString(), RelationshipMapping.GetRelationTypeLabel(r.Type))).ToList();
 
         // 4. Build stats
         var stats = new TraceabilityMapStatsDto(
-            ConversationCount: conversations.Count,
-            RequirementCount: requirements.Count,
-            SpecCount: specs.Count,
-            TaskCount: tasks.Count,
-            ArtifactCount: artifacts.Count,
+            ConversationCount: nodes.Count(n => n.EntityType == "Conversation"),
+            RequirementCount: nodes.Count(n => n.EntityType == "Requirement"),
+            SpecCount: nodes.Count(n => n.EntityType == "Spec"),
+            TaskCount: nodes.Count(n => n.EntityType == "Task"),
+            ArtifactCount: nodes.Count(n => n.EntityType == "Artifact"),
             CrossLinkCount: crossLinks.Count);
 
         return new TraceabilityMapDto(nodes, crossLinks, stats);
@@ -200,25 +218,19 @@ public sealed class GetTraceabilityMapQueryHandler
         return items.OrderBy(a => a.ArtifactPath).ToList();
     }
 
-    private async Task<IReadOnlyList<TraceabilityCrossLinkDto>> LoadCrossLinks(
+    private async Task<IReadOnlyList<Relationship>> LoadCrossLinks(
         GlobalUniqueId tenantId, GlobalUniqueId projectId, CancellationToken ct)
     {
         var repo = _unitOfWork.Repository<Relationship>();
         var relationships = await (repo.FindAsync(
             predicate: r => r.TenantId == tenantId
                 && r.ProjectId == projectId
+                && r.FromEntityType != EntityType.Diagram && r.ToEntityType != EntityType.Diagram
                 && r.IsActive
                 && r.ValidTo == null,
             cancellationToken: ct)).ConfigureAwait(false);
 
-        return relationships
-            .Select(r => new TraceabilityCrossLinkDto(
-                Id: r.Id.ToString(),
-                SourceId: r.FromEntityId.ToString(),
-                TargetId: r.ToEntityId.ToString(),
-                Type: r.Type.ToString(),
-                TypeLabel: RelationshipMapping.GetRelationTypeLabel(r.Type)))
-            .ToList();
+        return relationships;
     }
 
     // ============================================

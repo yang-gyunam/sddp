@@ -216,6 +216,16 @@
       "svelte": "./dist/projects/pages/files.js",
       "types": "./dist/projects/pages/files.d.ts",
       "default": "./dist/projects/pages/files.js"
+    },
+    "./projects/pages/diagrams": {
+      "svelte": "./dist/projects/pages/diagrams.js",
+      "types": "./dist/projects/pages/diagrams.d.ts",
+      "default": "./dist/projects/pages/diagrams.js"
+    },
+    "./projects/pages/diagram-detail": {
+      "svelte": "./dist/projects/pages/diagram-detail.js",
+      "types": "./dist/projects/pages/diagram-detail.d.ts",
+      "default": "./dist/projects/pages/diagram-detail.js"
     }
   },
   "files": [

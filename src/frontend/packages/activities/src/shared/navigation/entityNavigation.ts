@@ -8,6 +8,7 @@ const routes: Record<string, { menu: string; standalone?: string }> = {
   glossaryterm: { menu: 'glossary', standalone: 'glossary' },
   artifact: { menu: 'artifacts' },
   task: { menu: 'tasks' },
+  diagram: { menu: 'diagrams' },
 };
 
 /** Route through the app's registered views; never create a tab without a component. */

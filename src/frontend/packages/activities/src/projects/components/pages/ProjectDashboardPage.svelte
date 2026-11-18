@@ -12,6 +12,7 @@
   import { loadRecentActivity, mapAuditLogDtoToActivityLogEntry } from '../../actions';
   import { subscribeConversation, getConversationStoreState } from '../../../conversations/stores';
   import OwnershipTreemap from '../sections/OwnershipTreemap.svelte';
+  import ProjectToolsExtension from '../sections/ProjectToolsExtension.svelte';
 
   interface Props {
     projectId: string;
@@ -131,6 +132,10 @@
 <PageShell class={className}>
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
     {#snippet actions()}
+      <ProjectToolsExtension
+        {projectId}
+        members={project?.id === projectId ? project.members : []}
+      />
       <IconButton
         icon="refresh-cw"
         size="sm"

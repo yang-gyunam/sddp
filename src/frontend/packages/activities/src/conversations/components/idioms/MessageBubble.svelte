@@ -19,7 +19,10 @@
   } from '@sddp/shell';
   import AutomaticAnalysisBody from '../../../ai/components/idioms/AutomaticAnalysisBody.svelte';
   import { parseAutomaticAnalysis } from '../../../ai/utils/automatic-analysis-display';
+  import type { Snippet } from 'svelte';
   import ConversationEvidence from '../../../ai/components/idioms/ConversationEvidence.svelte';
+  import { parseEvidenceReferences } from '../../../ai/utils/conversation-evidence';
+  import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
   import MessageTypeIcon from './MessageTypeIcon.svelte';
   import DecisionImpactBadge from './DecisionImpactBadge.svelte';
   import {
@@ -32,6 +35,7 @@
 
   interface Props {
     message: Message;
+    evidence?: Snippet<[ConversationEvidenceContext]>;
     isOwn?: boolean;
     isLast?: boolean;
     viewMode?: ConversationViewMode;
@@ -52,6 +56,7 @@
 
   let {
     message,
+    evidence,
     isOwn = false,
     isLast = false,
     viewMode = 'slack',
@@ -69,6 +74,8 @@
     messages = [],
     currentUserRole = 'Member',
   }: Props = $props();
+
+  const missingRequestNotice = 'This does not mean the information is absent or undecided.';
 
   // Edit/Delete state
   let showMenu = $state(false);
@@ -419,6 +426,25 @@
   }
 </script>
 
+{#snippet sourceEvidence(context: ConversationEvidenceContext)}
+  {#if evidence}
+    {@render evidence(context)}
+  {:else}
+    <ConversationEvidence
+      items={parseEvidenceReferences(context.references)}
+      compactUnresolved={context.compactUnresolved}
+      canLoad={false}
+      visible={false}
+      selected={null}
+      source={null}
+      loading={false}
+      failed={false}
+      onselect={() => {}}
+      onclose={() => {}}
+    />
+  {/if}
+{/snippet}
+
 {#snippet askAiAction()}
   {#if canAskAi}
     <Button
@@ -450,7 +476,9 @@
           distinguish them.
         </p>
         {#if memberSources.length}
-          <p class="mt-2">Sources selected for this reply ({memberSources.length})</p>
+          <p class="mt-2">
+            Sources selected for this reply ({memberSources.length})
+          </p>
           <p>Showing current messages; they may have changed since this reply.</p>
           <ol>
             {#each memberSources as entry, index (entry.id)}
@@ -489,7 +517,7 @@
         {:else}
           <p>
             Request message unavailable in the current view. Load earlier messages or check your
-            access. This does not mean the information is absent or undecided.
+            access. {missingRequestNotice}
           </p>
         {/if}
       </details>
@@ -594,7 +622,9 @@
       <div class="text-xs text-[var(--color-text-secondary)] font-medium">
         {displayAuthor?.name ?? 'Unknown'}
       </div>
-      <div class="text-[0.6875rem] text-[var(--color-text-muted)]">{formattedTime}</div>
+      <div class="text-[0.6875rem] text-[var(--color-text-muted)]">
+        {formattedTime}
+      </div>
     </div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 mb-1 text-xs">
@@ -794,13 +824,13 @@
           {/if}
           {@render memberReplyContext()}
           {#if isAiMessage}
-            <ConversationEvidence
-              messageId={message.id}
-              references={domainReferences}
-              compactUnresolved={!!automaticAnalysis}
-              {projectId}
-              {tenantId}
-            />
+            {@render sourceEvidence({
+              messageId: message.id,
+              references: domainReferences,
+              projectId,
+              tenantId,
+              compactUnresolved: !!automaticAnalysis,
+            })}
           {:else if referenceItems.length > 0}
             <div class="mt-2 pt-2 border-t border-[var(--color-border-secondary)]">
               <span class="text-xs text-[var(--color-text-muted)]">References:</span>
@@ -1144,13 +1174,13 @@
       {/if}
       {@render memberReplyContext()}
       {#if isAiMessage}
-        <ConversationEvidence
-          messageId={message.id}
-          references={domainReferences}
-          compactUnresolved={!!automaticAnalysis}
-          {projectId}
-          {tenantId}
-        />
+        {@render sourceEvidence({
+          messageId: message.id,
+          references: domainReferences,
+          projectId,
+          tenantId,
+          compactUnresolved: !!automaticAnalysis,
+        })}
       {:else if referenceItems.length > 0}
         <div class="mt-2 pt-2 border-t border-[var(--color-border-secondary)]">
           <span class="text-xs text-[var(--color-text-muted)]">References:</span>
@@ -1546,13 +1576,13 @@
           <!-- References -->
           {@render memberReplyContext()}
           {#if isAiMessage}
-            <ConversationEvidence
-              messageId={message.id}
-              references={domainReferences}
-              compactUnresolved={!!automaticAnalysis}
-              {projectId}
-              {tenantId}
-            />
+            {@render sourceEvidence({
+              messageId: message.id,
+              references: domainReferences,
+              projectId,
+              tenantId,
+              compactUnresolved: !!automaticAnalysis,
+            })}
           {:else if referenceItems.length > 0}
             <div class="mt-2 pt-2 border-t border-[var(--color-border-secondary)]">
               <span class="text-xs text-[var(--color-text-muted)]">References:</span>
