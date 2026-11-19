@@ -85,6 +85,15 @@ Open `http://localhost:18888` after the container starts. Without the dashboard,
 Aspire is defined in the default Compose configuration, so running `docker compose up -d`
 without service names also starts it.
 
+### Optional weekly statistics sharing
+
+To offer weekly statistics sharing, set `ProductStatistics__Recipient` to an approved HTTPS
+collector URL, `ProductStatistics__Token` to its dedicated token, and
+`ProductStatistics__RecipientRetentionDays` to the disclosed retention period in days in the
+local `.env`. Recreate the API container to apply the settings. Each tenant administrator can
+preview the counts and opt in from **Settings → System Config → Usage statistics**. Sharing is off
+by default. Keep the collector token in the deployment configuration.
+
 ### Local frontend development (optional)
 
 After completing the Docker setup, run the local frontend from the repository root:
@@ -346,9 +355,13 @@ Issues and pull requests are reviewed on a best-effort basis.
 Before replacing an existing API container, follow [API data preservation](deploy/api-data.md).
 The `api_data` volume preserves descriptors and Git working directories. For older installations
 without that volume, copy existing container files into it before recreation. Database-only backups do not include these files.
+When restoring a backup, [replay recorded deletions and reset restored statistics consent](deploy/api-data.md#restore-a-backup-safely)
+before restarting the API.
 
-For Free 0.5.0/0.5.1, rehearse the [diagram migrations](../scripts/db/README.md#diagram-storage-and-permissions)
-on a restored copy before upgrading the installation. For Free 0.4.0/0.4.1, apply the
+For Free 0.5.0/0.5.1, rehearse [migrations V021 through V025](../scripts/db/README.md#diagram-storage-and-permissions)
+on a restored copy before upgrading the installation. If a Free 0.6.0 upgrade applied
+only V021 through V024, apply [V025 for weekly statistics consent](../scripts/db/README.md#weekly-statistics-consent).
+For Free 0.4.0/0.4.1, apply the
 [repository migrations](deploy/repository-050.md) first. Update the API and frontend together
 and reload open browser tabs. Check that the app status bar and API report the same version. If a
 tab kept open during deployment cannot load a screen, reload it to replace references to old assets.

@@ -3,7 +3,7 @@
 # Build: make docker-build-base
 # Usage: legacy/optional (not required for the default Dockerfile build)
 
-ARG DOTNET_ASPNET_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.13@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac
+ARG DOTNET_ASPNET_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:12b1135f5f8b3c0a214f2a680ff2033dff4f684f445d6c697d9524ceeb303586
 FROM ${DOTNET_ASPNET_IMAGE}
 
 # Install runtime native deps needed by Npgsql (GSSAPI)

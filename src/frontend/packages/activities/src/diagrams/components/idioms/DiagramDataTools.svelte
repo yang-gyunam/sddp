@@ -35,7 +35,7 @@
     labels: Record<string, string>;
     results: EntitySearchResult[];
     searching: boolean;
-    onkind: (kind: 'authored' | 'derived') => void;
+    onkind: (kind: 'authored' | 'derived') => Promise<void>;
     onyaml: (text: string) => void;
     onimport: () => void;
     onfile: (file: File) => void;
@@ -45,21 +45,27 @@
     onremove: (origin: DiagramOrigin) => void;
     onproject: () => void;
   } = $props();
+  let kindChoice = $derived(kind);
   let query = $state('');
   let type = $state<EntityType>('Spec');
   const types = ['Spec', 'Requirement', 'Conversation', 'GlossaryTerm', 'Artifact', 'Task'];
+
+  async function chooseKind(value: string) {
+    await onkind(value as 'authored' | 'derived');
+    kindChoice = kind;
+  }
 </script>
 
 {#if !hasDiagram && canChange}
   <Select
     label="Diagram kind"
-    value={kind}
+    bind:value={kindChoice}
     options={[
       { value: 'authored', label: 'Authored diagram' },
       { value: 'derived', label: 'Automatic diagram' },
     ]}
     disabled={busy}
-    onchange={(value) => onkind(value as 'authored' | 'derived')}
+    onchange={chooseKind}
   />
 {/if}
 {#if kind === 'derived'}

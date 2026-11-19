@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Sddp.Abstractions.Models.Diagrams.V2;
 using MediatR;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Exceptions;
@@ -12,7 +11,8 @@ using Sddp.Domain.Entities;
 
 namespace Sddp.Application.Features.Diagrams;
 
-public sealed class DiagramHandlers(IUnitOfWork unitOfWork, IDiagramOriginAccess origins, IDiagramListReader lists) :
+public sealed class DiagramHandlers(IUnitOfWork unitOfWork, IDiagramOriginAccess origins, IDiagramListReader lists,
+    IStoredDiagramReader models) :
     IRequestHandler<CreateDiagramCommand, DiagramDto>,
     IRequestHandler<UpdateDiagramCommand, DiagramDto>,
     IRequestHandler<ListDiagramsQuery, DiagramListDto>,
@@ -82,24 +82,29 @@ public sealed class DiagramHandlers(IUnitOfWork unitOfWork, IDiagramOriginAccess
         var diagram = await Get(request.TenantId, request.ProjectId, request.DiagramId, ct);
         var versions = await unitOfWork.Repository<DiagramVersion>().FindAsync(
             v => v.TenantId == request.TenantId && v.ProjectId == request.ProjectId && v.DiagramId == request.DiagramId, ct);
-        var readable = new List<DiagramVersion>();
-        foreach (var v in versions)
-            if (await origins.CanReadModel(Read(v.ModelJson), diagram.Kind, ct)) readable.Add(v);
-        return readable.OrderByDescending(v => v.Revision).Select(v => new DiagramVersionListItemDto(
+        var candidates = new List<(DiagramVersion Version, DiagramOrigin[] Origins)>();
+        foreach (var version in versions)
+        {
+            var inspected = models.Inspect(diagram.Id, version.ModelJson, diagram.Kind);
+            if (inspected is { Document.StoredSchemaVersion: 1 }) candidates.Add((version, inspected.Origins));
+        }
+        var readable = await origins.ReadableOrigins(candidates.SelectMany(v => v.Origins), ct);
+        return candidates.Where(v => v.Origins.All(readable.Contains)).Select(v => v.Version)
+            .OrderByDescending(v => v.Revision).Select(v => new DiagramVersionListItemDto(
             v.Revision, v.Title, v.ChangeSummary, v.CreatedBy.ToString(), v.CreatedAt.ToDateTimeOffset())).ToArray();
     }
 
     public async Task<DiagramVersionDto> Handle(GetDiagramVersionQuery request, CancellationToken ct)
     {
-        await Get(request.TenantId, request.ProjectId, request.DiagramId, ct);
-        return Map(await Version(request.TenantId, request.ProjectId, request.DiagramId, request.Revision, ct));
+        var diagram = await Get(request.TenantId, request.ProjectId, request.DiagramId, ct);
+        return Map(await Version(diagram, request.Revision, ct));
     }
 
     public async Task<DiagramComparisonDto> Handle(CompareDiagramVersionsQuery request, CancellationToken ct)
     {
-        await Get(request.TenantId, request.ProjectId, request.DiagramId, ct);
-        var left = await Version(request.TenantId, request.ProjectId, request.DiagramId, request.Left, ct);
-        var right = await Version(request.TenantId, request.ProjectId, request.DiagramId, request.Right, ct);
+        var diagram = await Get(request.TenantId, request.ProjectId, request.DiagramId, ct);
+        var left = await Version(diagram, request.Left, ct);
+        var right = await Version(diagram, request.Right, ct);
         return new DiagramComparisonDto(request.DiagramId.ToString(), request.Left, request.Right,
             DiagramDiff.Compare(Read(left.ModelJson), Read(right.ModelJson)));
     }
@@ -109,21 +114,25 @@ public sealed class DiagramHandlers(IUnitOfWork unitOfWork, IDiagramOriginAccess
         var diagram = await unitOfWork.Repository<Diagram>().GetByIdAsync(id, ct);
         if (diagram is null || diagram.TenantId != tenantId || diagram.ProjectId != projectId)
             throw new NotFoundException("Diagram", id.ToString());
-        var stored = DiagramStorage2.Read(diagram.ModelJson);
-        await origins.RequireModel(DiagramStorage2.AccessView(stored.Model), diagram.Kind, ct);
-        if (stored.StoredSchemaVersion != 1) throw new DiagramSchemaConflictException();
+        await RequireLegacyModel(diagram, diagram.ModelJson, "Diagram", id.ToString(), ct);
         return diagram;
     }
 
-    private async Task<DiagramVersion> Version(GlobalUniqueId tenantId, GlobalUniqueId projectId,
-        GlobalUniqueId id, int revision, CancellationToken ct)
+    private async Task<DiagramVersion> Version(Diagram diagram, int revision, CancellationToken ct)
     {
         var versions = await unitOfWork.Repository<DiagramVersion>().FindAsync(
-            v => v.TenantId == tenantId && v.ProjectId == projectId && v.DiagramId == id && v.Revision == revision, ct);
-        var version = versions.SingleOrDefault() ?? throw new NotFoundException("Diagram revision", revision.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        var diagram = await Get(tenantId, projectId, id, ct);
-        await origins.RequireModel(Read(version.ModelJson), diagram.Kind, ct);
+            v => v.TenantId == diagram.TenantId && v.ProjectId == diagram.ProjectId && v.DiagramId == diagram.Id && v.Revision == revision, ct);
+        var revisionId = revision.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var version = versions.SingleOrDefault() ?? throw new NotFoundException("Diagram revision", revisionId);
+        await RequireLegacyModel(diagram, version.ModelJson, "Diagram revision", revisionId, ct);
         return version;
+    }
+
+    private async Task RequireLegacyModel(Diagram diagram, string modelJson, string entity, string id, CancellationToken ct)
+    {
+        var inspected = models.Inspect(diagram.Id, modelJson, diagram.Kind) ?? throw new NotFoundException(entity, id);
+        await origins.RequireOrigins(inspected.Origins, ct);
+        if (inspected.Document.StoredSchemaVersion != 1) throw new DiagramSchemaConflictException();
     }
 
     private static DiagramRevision Prepare(DiagramRevision? model, GlobalUniqueId id, int revision)

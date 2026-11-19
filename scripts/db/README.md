@@ -57,10 +57,10 @@ Only the reviewed Free database assets are included in this distribution.
 
 ## Diagram storage and permissions
 
-Fresh provisioning already includes the diagram schema. For a standard Free
+Fresh provisioning already includes the diagram and weekly statistics consent schemas. For a standard Free
 0.5.0 or 0.5.1 database, stop writers and take a matching database and API file
 backup. Rehearse on a restored copy. From the release root, set `DATABASE_URL`
-to the target database using its migration owner. Apply the four files together
+to the target database using its migration owner. Apply V021 through V025 together
 so a failure rolls back the transaction:
 
 ```sh
@@ -68,14 +68,15 @@ psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --single-transaction \
   -f scripts/db/migrations/V021__diagram_revisions.sql \
   -f scripts/db/migrations/V022__sync_role_permission_matrix.sql \
   -f scripts/db/migrations/V023__diagram_schema2.sql \
-  -f scripts/db/migrations/V024__diagram_model_hash.sql
+  -f scripts/db/migrations/V024__diagram_model_hash.sql \
+  -f scripts/db/migrations/V025__weekly_statistics_consent.sql
 ```
 
 V021 creates the diagram and revision tables. V022 synchronizes the permissions
 of the six built-in Free roles. Review custom roles separately in role administration.
 V023 allows schema2 and preserves schema1 documents and revisions. V024 takes a
 table lock during the transaction and backfills the SHA-256 fingerprint of each
-stored model. The updated API requires that column.
+stored model. V025 creates the table the API uses to read and store weekly statistics consent.
 
 If the API uses a separate database role, check its access to the new tables
 before starting it. Where default privileges do not cover newly created tables,
@@ -84,7 +85,8 @@ Set `APP_DB_ROLE` to the existing API database role:
 
 ```sh
 psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -v app_role="$APP_DB_ROLE" <<'SQL'
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.diagrams, public.diagram_versions TO :"app_role";
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON public.diagrams, public.diagram_versions, public.statistics_consents TO :"app_role";
 SQL
 ```
 
@@ -96,3 +98,27 @@ the previous application. For a rollback of V024 alone to a V023 application,
 switch to that application first and apply `R024__drop_diagram_model_hash.sql`
 in a transaction. R024 removes the derived fingerprint, including copies in
 project snapshots, and preserves diagram bodies and revisions.
+
+## Weekly statistics consent
+
+If you upgraded to Free 0.6.0 by applying only V021 through V024, follow the
+same backup and rehearsal steps above and apply V025 on its own. V025 can also
+be run on a database that already has the consent table.
+
+Starting with Free 0.6.1, `/health` returns HTTP 503 if the consent table is
+missing or the API role lacks a required table privilege. See `database_readiness`
+in the response for the reason.
+
+```sh
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --single-transaction \
+  -f scripts/db/migrations/V025__weekly_statistics_consent.sql
+```
+
+If the API uses a separate role without default privileges on new tables, grant
+that role access before starting it:
+
+```sh
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -v app_role="$APP_DB_ROLE" <<'SQL'
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.statistics_consents TO :"app_role";
+SQL
+```

@@ -45,6 +45,27 @@ public sealed class DatabaseReadinessHealthCheck(IConfiguration configuration) :
                 return HealthCheckResult.Unhealthy("Database base data is missing.");
             }
 
+            const string consentReadinessSql = """
+                SELECT consent.table_oid IS NOT NULL,
+                       COALESCE(has_table_privilege(consent.table_oid, 'SELECT')
+                            AND has_table_privilege(consent.table_oid, 'INSERT')
+                            AND has_table_privilege(consent.table_oid, 'UPDATE')
+                            AND has_table_privilege(consent.table_oid, 'DELETE'), FALSE)
+                FROM (SELECT to_regclass('public.statistics_consents')::oid AS table_oid) AS consent;
+                """;
+
+            await using var consentCommand = new NpgsqlCommand(consentReadinessSql, connection);
+            await using var consent = await consentCommand.ExecuteReaderAsync(cancellationToken);
+            if (!await consent.ReadAsync(cancellationToken) || !consent.GetBoolean(0))
+            {
+                return HealthCheckResult.Unhealthy("Weekly statistics consent table is missing. Apply migration V025.");
+            }
+
+            if (!consent.GetBoolean(1))
+            {
+                return HealthCheckResult.Unhealthy("The API database role lacks required privileges on the weekly statistics consent table.");
+            }
+
             return HealthCheckResult.Healthy("Database schema and base data are ready.");
         }
         catch (Exception ex)

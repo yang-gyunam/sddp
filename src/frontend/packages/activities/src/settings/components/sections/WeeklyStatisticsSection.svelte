@@ -5,6 +5,7 @@
 
   interface View {
     enabled: boolean;
+    hasSavedConsent?: boolean;
     recipient: string | null;
     retentionDays: number | null;
     week: string;
@@ -38,7 +39,7 @@
     };
   });
 
-  async function toggle() {
+  async function setSharing(enabled: boolean) {
     const current = view;
     const tenant = tenantId;
     if (!current || busy) return;
@@ -49,7 +50,7 @@
         tenantId: tenant,
         method: 'PUT',
         body: {
-          enabled: !current.enabled,
+          enabled,
           recipient: current.recipient,
           retentionDays: current.retentionDays,
         },
@@ -59,7 +60,11 @@
       });
       if (tenant === tenantId) reload++;
     } catch {
-      if (tenant === tenantId) error = 'Could not update sharing. Reload to review the recipient.';
+      if (tenant === tenantId) {
+        error = enabled
+          ? 'Could not update sharing. Reload to review the recipient.'
+          : 'Could not withdraw permission. Reload to check the sharing state.';
+      }
     } finally {
       busy = false;
     }
@@ -98,11 +103,18 @@
       {:else}
         <p>No counts qualify for transfer this week.</p>
       {/each}
-      <Button size="sm" variant="secondary" onclick={toggle} disabled={busy}>
-        {view.enabled ? 'Withdraw permission' : 'Allow weekly transfer'}
-      </Button>
     {:else}
       <p>The installation has no configured recipient.</p>
+    {/if}
+    {#if view.recipient && !view.enabled}
+      <Button size="sm" variant="secondary" onclick={() => setSharing(true)} disabled={busy}>
+        Allow weekly transfer
+      </Button>
+    {/if}
+    {#if view.enabled || view.hasSavedConsent}
+      <Button size="sm" variant="secondary" onclick={() => setSharing(false)} disabled={busy}>
+        {view.enabled ? 'Withdraw permission' : 'Withdraw saved permission'}
+      </Button>
     {/if}
   </SettingItem>
 {/if}

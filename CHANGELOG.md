@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.1] - 2026-11-19
+
+- Update the container runtime to ASP.NET Core and .NET 10.0.15 using the
+  official multi-platform image digest.
+- Report the same release version in the API and web application.
+- Complete the Free upgrade instructions with V025 for weekly statistics consent.
+- Fail API readiness when the weekly statistics consent table or runtime grants
+  are missing, and allow other tenants' reports to continue after a delivery error.
+- Fix Diagram draft switching, automatic refresh with a saved display order,
+  canceled type selection, and a history comparison that could reopen after saving.
+- Correct Mermaid Class parameter source locations and keep readable V1 revisions
+  available when another stored revision is corrupt.
+- Preserve unapplied YAML during file import, refresh source previews after draft
+  edits, and accept ordinary State event names beginning with `entry` or `exit`.
+- Load the saved origin selections and labels when refreshing an unedited derived
+  diagram. Clear diagram drafts when the details view loses access.
+- Preserve readable diagram drafts when write access is denied.
+- Preserve readable diagram drafts when access to a historical comparison is lost.
+- Keep stored statistics consent withdrawable when the recipient changes or is
+  removed. Keep UTC report weeks stable across PostgreSQL session time zones.
+- Include recorded delete activity in weekly totals and forward optional recipient
+  settings from Compose to the API.
+- Document how to replay recorded deletions and clear older statistics consent before
+  reopening a restored installation.
+
 ## [v0.6.0] - 2026-11-18
 
 - Apply project and private conversation read checks to Primary Flow and

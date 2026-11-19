@@ -172,7 +172,8 @@ public sealed class MermaidSubsetParser2 : IDiagramParser2
             c.Line = line; var m = Match(line.Text, $"(?<from>{Id}|\\[\\*\\])\\s+-->\\s+(?<to>{Id}|\\[\\*\\])(?:\\s*:\\s*(?<event>.+))?");
             if (!m.Success) throw new InvalidDataException("Unsupported state transition.");
             var label = m.Groups["event"].Success ? Text(m.Groups["event"].Value) : "";
-            if (label.Contains('/') || label.StartsWith("entry", StringComparison.Ordinal) || label.StartsWith("exit", StringComparison.Ordinal) || label.StartsWith("do ", StringComparison.Ordinal))
+            if (label.Contains('/') || label.StartsWith("do ", StringComparison.Ordinal) ||
+                Regex.IsMatch(label, @"^(?:entry|exit)(?:\s|$)", RegexOptions.CultureInvariant))
                 throw new InvalidDataException("Unsupported state guard/action.");
             transitions.Add(c.Add("transitions"), new() { From = Endpoint(m.Groups["from"].Value, true), To = Endpoint(m.Groups["to"].Value, false), Event = label, Presentation = Presentation() });
         }
@@ -285,19 +286,24 @@ public sealed class MermaidSubsetParser2 : IDiagramParser2
             if (method.Success)
             {
                 var args = method.Groups["parameters"].Value;
-                var parts = args.Length == 0 ? [] : args.Split(',').Select(part => part.Trim()).ToArray();
-                var parsed = parts.Select(part => Match(part, $"(?:(?<type>{Id})\\s+)?(?<name>{Id})")).ToList();
+                var parts = args.Length == 0 ? [] : args.Split(',');
+                var parsed = parts.Select(part => Match(part.Trim(), $"(?:(?<type>{Id})\\s+)?(?<name>{Id})")).ToArray();
                 if (parsed.Any(part => !part.Success)) throw new InvalidDataException("Unsupported method parameter.");
                 var known = parsed.All(part => part.Groups["type"].Success);
                 string[]? key = known ? ["operations", ownerSource!, method.Groups["name"].Value, .. parsed.Select(part => part.Groups["type"].Value)] : null;
                 var op = c.Add("operations", key: key); var order = new List<string>();
-                foreach (var part in parsed)
+                var offset = line.Start + method.Groups["parameters"].Index;
+                for (var i = 0; i < parsed.Length; i++)
                 {
+                    var part = parsed[i];
                     var name = part.Groups["name"].Value; var id = c.Add("parameters", key: key is null ? null : [.. key, "parameter", name]);
                     parameters.Add(id, new() { Name = name, TypeName = part.Groups["type"].Success ? part.Groups["type"].Value : null, Presentation = Presentation() }); order.Add(id);
                     // Parameter ranges distinguish anonymous parameters on the same line.
-                    var binding = c.Bindings[^1]; var start = line.Start + method.Groups["parameters"].Index + args.IndexOf(part.Value, StringComparison.Ordinal);
+                    var raw = parts[i];
+                    var start = offset + raw.Length - raw.TrimStart().Length;
+                    var binding = c.Bindings[^1];
                     c.Bindings[^1] = binding with { Range = new() { Start = start, End = start + part.Value.Length } };
+                    offset += raw.Length + 1;
                 }
                 operations.Add(op, new() { Owner = owner, Name = method.Groups["name"].Value, Visibility = Visibility(method.Groups["visibility"].Value), ReturnType = method.Groups["return"].Success ? method.Groups["return"].Value : null, ParameterOrder = order, Presentation = Presentation() }); continue;
             }

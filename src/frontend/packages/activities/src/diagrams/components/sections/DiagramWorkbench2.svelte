@@ -17,6 +17,7 @@
   import {
     createDiagram2 as createDiagram,
     saveDiagram2 as saveDiagram,
+    getDiagram2 as getDiagram,
     getDiagramVersions2 as getDiagramVersions,
     getDiagramVersion2 as getDiagramVersion,
     compareDiagramVersions2 as compareDiagramVersions,
@@ -27,6 +28,11 @@
     listDiagramParsers2,
   } from '../../services/DiagramService2';
   import { diagramFileContent } from '../../services/DiagramService';
+  import {
+    clearDiagramDraft,
+    diagramDraftKey,
+    diagramDraftScope,
+  } from '../../services/DiagramDraftState';
   import {
     commonEditor2 as commonEditor,
     stencils2,
@@ -41,6 +47,7 @@
     owner2,
     promoteModel1,
     refKey2,
+    repairOrders2,
     validate2,
   } from '../../model/model2';
   import { modelKey } from '../../model/editor';
@@ -131,6 +138,18 @@
       return [];
     }
   }
+  const originKey = ({ type, id }: DiagramOrigin) => `${type}:${id}`;
+  function originsChanged(value: DiagramRevision, selected?: DiagramOrigin[]): boolean {
+    if (!selected) return false;
+    const keys = (items: DiagramOrigin[]) => items.map(originKey).sort();
+    return modelKey(keys(selected)) !== modelKey(keys(readOrigins(value)));
+  }
+  function readOriginLabels(value: DiagramRevision): Record<string, string> {
+    if (value.diagramType !== 'graph') return {};
+    return Object.fromEntries(
+      Object.entries(value.content.nodes).map(([id, node]) => [id, node.label])
+    );
+  }
   let tool = $state<'select' | 'connect'>('select');
   let connectFrom = $state<DiagramSelection | null>(null);
   let inspector: { focusLabel: () => void } | undefined = $state();
@@ -181,31 +200,18 @@
   });
   const tenantId = $derived($authStore.user?.tenantId ?? '');
   const userId = $derived($authStore.user?.id ?? '');
-  const scope = $derived(JSON.stringify([tenantId, userId, projectId, diagram?.id ?? 'new']));
-  const stateKey = $derived(tabId || `diagram-${projectId}-${diagram?.id ?? 'new'}`);
+  const scope = $derived(diagramDraftScope(tenantId, userId, projectId, diagram?.id ?? 'new'));
+  const stateKey = $derived(diagramDraftKey(tabId, projectId, diagram?.id ?? 'new'));
   // Until the saved detail mounts, subsequent effects must persist under the server identity.
   let createdId = $state('');
-  const draftScope = $derived(
-    JSON.stringify([tenantId, userId, projectId, diagram?.id ?? (createdId || 'new')])
-  );
-  const draftStateKey = $derived(
-    tabId || `diagram-${projectId}-${diagram?.id ?? (createdId || 'new')}`
-  );
+  const draftId = $derived(diagram?.id ?? (createdId || 'new'));
+  const draftScope = $derived(diagramDraftScope(tenantId, userId, projectId, draftId));
+  const draftStateKey = $derived(diagramDraftKey(tabId, projectId, draftId));
+  const draftModelKey = $derived(modelKey(model));
   const pendingText = $derived(!!sourceText || !!yaml);
-  const projectionPending = $derived(
-    kind === 'derived' &&
-      modelKey(origins.map((item) => `${item.type}:${item.id}`).sort()) !==
-        modelKey(
-          readOrigins(model)
-            .map((item) => `${item.type}:${item.id}`)
-            .sort()
-        )
-  );
+  const projectionPending = $derived(kind === 'derived' && originsChanged(model, origins));
   const dirty = $derived(
-    title !== baseTitle ||
-      modelKey(model) !== modelKey(baseModel) ||
-      pendingText ||
-      projectionPending
+    title !== baseTitle || draftModelKey !== modelKey(baseModel) || pendingText || projectionPending
   );
   const readDenied = (e: unknown) =>
     e instanceof AccessDeniedError || (e instanceof ApiRequestError && e.status === 404);
@@ -226,9 +232,7 @@
   const capabilityScope = $derived(JSON.stringify([projectId, tenantId, userId]));
   function forgetDeniedRead() {
     initialized = '';
-    sourcePreview = null;
-    sourceRequest = null;
-    sourceText = '';
+    clearSourceInput();
     undoModels = [];
     redoModels = [];
     origins = [];
@@ -245,12 +249,29 @@
     comparison = null;
     history = [];
     selection = null;
-    setTabState(stateKey, {
-      ...getTabState(stateKey),
-      diagramWorkspace2: undefined,
-      diagramWorkspace: undefined,
-    });
+    clearDiagramDraft(stateKey, scope);
     onreaddenied?.();
+  }
+  async function recheckDraftRead(isCurrent: () => boolean, ...originGroups: DiagramOrigin[][]) {
+    const beforeDispatch = () => {
+      if (!isCurrent()) throw new Error('The diagram scope has changed.');
+    };
+    try {
+      const saved = diagram
+        ? await getDiagram(tenantId, projectId, diagram.id, beforeDispatch)
+        : undefined;
+      let checked = new Set((saved ? readOrigins(saved.model) : []).map(originKey));
+      // Keep each group within the projection limit and skip origins covered by the saved read.
+      for (const group of originGroups) {
+        if (!isCurrent()) return;
+        const unchecked = group.filter((origin) => !checked.has(originKey(origin)));
+        if (!unchecked.length) continue;
+        await projectDiagram(tenantId, projectId, unchecked, beforeDispatch);
+        checked = new Set([...checked, ...unchecked.map(originKey)]);
+      }
+    } catch (e) {
+      if (isCurrent() && readDenied(e)) forgetDeniedRead();
+    }
   }
   function downloadDraft() {
     const url = URL.createObjectURL(
@@ -288,30 +309,19 @@
           modelKey(saved.model) !== modelKey(saved.baseModel) ||
           !!saved.sourceText ||
           !!saved.yaml ||
-          (saved.kind === 'derived' &&
-            modelKey(saved.origins ?? []) !== modelKey(readOrigins(saved.model))));
+          ((saved.kind ?? diagram?.kind) === 'derived' &&
+            originsChanged(saved.model, saved.origins)));
       const incoming = diagram?.model ?? emptyModel();
       title = restore ? saved.title : (diagram?.title ?? '');
       model = cloneModel(restore ? saved.model : incoming);
       baseTitle = restore ? saved.baseTitle : (diagram?.title ?? '');
       baseModel = cloneModel(restore ? saved.baseModel : incoming);
-      kind =
-        saved?.scope === key
-          ? (saved.kind ?? diagram?.kind ?? 'authored')
-          : (diagram?.kind ?? 'authored');
-      origins = saved?.scope === key ? (saved.origins ?? readOrigins(model)) : readOrigins(model);
-      originLabels =
-        saved?.scope === key
-          ? (saved.originLabels ?? {})
-          : Object.fromEntries(
-              Object.entries(model.diagramType === 'graph' ? model.content.nodes : {}).map(
-                ([id, node]) => [id, node.label]
-              )
-            );
-      yaml = saved?.scope === key ? (saved.yaml ?? '') : '';
-      sourceText = saved?.scope === key ? (saved.sourceText ?? '') : '';
+      kind = (restore ? saved.kind : undefined) ?? diagram?.kind ?? 'authored';
+      origins = (restore ? saved.origins : undefined) ?? readOrigins(model);
+      originLabels = (restore ? saved.originLabels : undefined) ?? readOriginLabels(model);
+      yaml = restore ? (saved.yaml ?? '') : '';
+      sourceText = restore ? (saved.sourceText ?? '') : '';
       sourcePreview = null;
-      sourceRequest = null;
       results = [];
       searching = false;
       ++searchGeneration;
@@ -400,13 +410,12 @@
     });
     if (action === 'save') return save();
     if (action === 'discard') {
-      sourceText = '';
+      clearSourceInput();
       yaml = '';
-      sourcePreview = null;
-      sourceRequest = null;
       title = baseTitle;
       model = cloneModel(baseModel);
       origins = readOrigins(baseModel);
+      originLabels = readOriginLabels(baseModel);
       results = [];
       undoModels = [];
       redoModels = [];
@@ -529,7 +538,8 @@
   async function replaceCandidate(
     candidate: DiagramRevision,
     candidateKind: 'authored' | 'derived',
-    key: string
+    key: string,
+    replacesPastedYaml = false
   ) {
     if (key !== scope || comparison || !canSave) return false;
     validate2(candidate);
@@ -548,10 +558,15 @@
       !!model.source.text ||
       Object.keys(model.presentation.properties).length > 0 ||
       model.presentation.order.length > 0;
-    if (hasContent && modelKey(model) !== modelKey(baseModel)) {
+    const discardedInputs: string[] = [];
+    if (candidateKind === 'derived' && sourceText) discardedInputs.push('unapplied source');
+    if (replacesPastedYaml) discardedInputs.push('pasted YAML');
+    if (discardedInputs.length || (hasContent && draftModelKey !== modelKey(baseModel))) {
       const action = await chooseAction({
         title: 'Replace diagram draft',
-        message: 'Replace your unsaved diagram with this validated candidate?',
+        message: discardedInputs.length
+          ? `Replace your draft with this validated candidate and discard the ${discardedInputs.join(' and ')}?`
+          : 'Replace your unsaved diagram with this validated candidate?',
         choices: [{ value: 'replace', label: 'Replace draft', variant: 'danger' }],
       });
       if (action !== 'replace' || key !== scope) return false;
@@ -562,13 +577,9 @@
     redoModels = [];
     model = { ...cloneModel(candidate), diagramId: model.diagramId, revision: baseModel.revision };
     kind = candidateKind;
+    if (candidateKind === 'derived') clearSourceInput();
     origins = readOrigins(model);
-    originLabels = Object.fromEntries(
-      Object.entries(model.diagramType === 'graph' ? model.content.nodes : {}).map(([id, node]) => [
-        id,
-        node.label,
-      ])
-    );
+    originLabels = readOriginLabels(model);
     selection = null;
     connectFrom = null;
     return true;
@@ -591,7 +602,8 @@
         (await replaceCandidate(
           result.model,
           result.model.source.format === 'sddp-projection' ? 'derived' : 'authored',
-          key
+          key,
+          !!file && !!yaml
         ))
       )
         yaml = '';
@@ -605,14 +617,16 @@
     if (busy) return;
     const key = scope;
     const request = ++generation;
+    const pair = comparison;
     busy = true;
     error = '';
-    const current = () => key === scope && request === generation;
+    const sameRequest = () => key === scope && request === generation;
+    const current = () => sameRequest() && pair === comparison;
     try {
       const result = await encodeDiagramYaml(
         tenantId,
         projectId,
-        cloneModel(comparison?.right ?? model),
+        cloneModel(pair?.right ?? model),
         () => {
           if (!current()) throw new Error('The diagram scope has changed.');
         }
@@ -627,12 +641,15 @@
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      if (current()) {
+      if (!current()) return;
+      if (pair && readDenied(e)) {
+        await handleComparisonDenial(e, 'Failed to export YAML');
+      } else {
         if (kind === 'derived' && readDenied(e)) forgetDeniedRead();
         error = e instanceof Error ? e.message : 'Failed to export YAML';
       }
     } finally {
-      if (current()) busy = false;
+      if (sameRequest()) busy = false;
     }
   }
   async function searchOrigins(query: string, type: EntityType) {
@@ -696,6 +713,7 @@
         for (const [id, edge] of Object.entries(candidate.content.edges))
           if (model.content.edges[id])
             edge.presentation = cloneModel(model.content.edges[id]!.presentation);
+        repairOrders2(candidate);
       }
       await replaceCandidate(candidate, 'derived', key);
     } catch (e) {
@@ -720,6 +738,8 @@
       if (action !== 'discard' || key !== scope) return;
     }
     kind = next;
+    clearSourceInput();
+    yaml = '';
     model = emptyModel(next === 'derived' ? 'graph' : 'flowchart');
     origins = [];
     results = [];
@@ -794,7 +814,7 @@
       setTabState(draftStateKey, {
         ...getTabState(draftStateKey),
         diagramWorkspace2: {
-          scope: JSON.stringify([tenantId, userId, projectId, saved.id]),
+          scope: diagramDraftScope(tenantId, userId, projectId, saved.id),
           title,
           model: cloneModel(model),
           baseTitle,
@@ -810,14 +830,16 @@
           sourceText,
         } satisfies Draft,
       });
-      comparison = null;
+      closeHistory();
       history = [];
-      historyOpen = false;
       onsaved(saved);
       return true;
     } catch (e) {
       if (isCurrent()) {
-        if (kind === 'derived' && readDenied(e)) forgetDeniedRead();
+        if (kind === 'derived' && readDenied(e)) {
+          await recheckDraftRead(isCurrent, readOrigins(candidate));
+          if (!isCurrent()) return false;
+        }
         error =
           e instanceof ApiRequestError && e.status === 409
             ? 'A newer revision exists. Your draft is preserved. Download it before discarding your changes or reloading.'
@@ -829,6 +851,25 @@
     } finally {
       if (isCurrent()) busy = false;
     }
+  }
+  function closeHistory() {
+    ++compareGeneration;
+    historyLoading = false;
+    comparison = null;
+    historyOpen = false;
+  }
+  async function handleComparisonDenial(cause: unknown, fallback: string) {
+    const key = scope;
+    const draftRequest = generation;
+    closeHistory();
+    history = [];
+    error = cause instanceof Error ? cause.message : fallback;
+    const request = compareGeneration;
+    await recheckDraftRead(
+      () => key === scope && request === compareGeneration && draftRequest === generation,
+      readOrigins(model),
+      [...origins]
+    );
   }
   async function loadHistory() {
     if (!diagram || busy) return;
@@ -870,9 +911,8 @@
       comparison = { left: left.model, right: right.model, diff };
     } catch (e) {
       if (key === scope && request === compareGeneration) {
-        if (e instanceof AccessDeniedError || (kind === 'derived' && readDenied(e)))
-          forgetDeniedRead();
-        error = e instanceof Error ? e.message : 'Failed to compare revisions';
+        if (readDenied(e)) await handleComparisonDenial(e, 'Failed to compare revisions');
+        else error = e instanceof Error ? e.message : 'Failed to compare revisions';
       }
     } finally {
       if (key === scope && request === compareGeneration) historyLoading = false;
@@ -914,6 +954,10 @@
     { value: 'c4.context', label: 'C4 Context' },
     { value: 'c4.container', label: 'C4 Container' },
   ];
+  const currentType = $derived(
+    model.diagramType === 'c4' ? `c4.${model.content.view}` : model.diagramType
+  );
+  let typeChoice = $derived(currentType);
   async function changeType(value: string) {
     if (diagram || kind !== 'authored' || busy || comparison) return;
     const key = scope;
@@ -934,7 +978,6 @@
     redoModels = [];
     selection = null;
     connectFrom = null;
-    sourcePreview = null;
   }
   let sourceAdapters = $state<DiagramParserCapability2[]>([]);
   let sourceAdapter = $state('');
@@ -978,42 +1021,51 @@
         });
     });
   });
-  let sourcePreview = $state<DiagramIdentityPreview2 | null>(null);
-  let sourceRequest: DiagramSourcePreviewDto | null = null;
-  let sourceDraftKey = '';
-  let sourceScope = '';
+  let sourcePreview = $state.raw<{
+    result: DiagramIdentityPreview2;
+    request: DiagramSourcePreviewDto;
+    draftKey: string;
+    scope: string;
+  } | null>(null);
+  const currentSourcePreview = $derived(
+    sourcePreview && sourcePreview.draftKey === draftModelKey && sourcePreview.scope === scope
+      ? sourcePreview
+      : null
+  );
+  const staleSourceMessage = 'The draft changed. Preview the source again.';
+  function clearSourceInput() {
+    sourceText = '';
+    sourcePreview = null;
+  }
   async function previewSource(resolution?: DiagramIdentityResolution2) {
     if (!editable || !sourceAdapter) return;
-    const key = scope;
-    const request = ++generation;
-    const draft = modelKey(model);
-    const input = sourceText;
-    if (resolution && (!sourceRequest || sourceDraftKey !== draft || sourceScope !== key)) {
-      error = 'The draft changed. Preview the source again.';
+    const previous = currentSourcePreview;
+    if (resolution && !previous) {
+      error = staleSourceMessage;
       return;
     }
-    const body: DiagramSourcePreviewDto = resolution
-      ? { ...cloneModel(sourceRequest!), resolution }
-      : {
-          text: input,
-          adapterId: sourceAdapter,
-          baseline: cloneModel(model),
-          ...(diagram ? { diagramId: diagram.id, expectedRevision: baseModel.revision } : {}),
-        };
+    const key = scope;
+    const request = ++generation;
+    const draft = draftModelKey;
+    const input = sourceText;
+    const body: DiagramSourcePreviewDto =
+      resolution && previous
+        ? { ...cloneModel(previous.request), resolution }
+        : {
+            text: input,
+            adapterId: sourceAdapter,
+            baseline: cloneModel(model),
+            ...(diagram ? { diagramId: diagram.id, expectedRevision: baseModel.revision } : {}),
+          };
     busy = true;
     error = '';
     const current = () =>
-      key === scope && request === generation && draft === modelKey(model) && input === sourceText;
+      key === scope && request === generation && draft === draftModelKey && input === sourceText;
     try {
       const result = await previewDiagramSource2(tenantId, projectId, body, () => {
         if (!current()) throw new Error('Source preview changed.');
       });
-      if (current()) {
-        sourcePreview = result;
-        sourceRequest = body;
-        sourceDraftKey = draft;
-        sourceScope = key;
-      }
+      if (current()) sourcePreview = { result, request: body, draftKey: draft, scope: key };
     } catch (e) {
       if (current()) {
         if (readDenied(e)) forgetDeniedRead();
@@ -1024,16 +1076,17 @@
     }
   }
   async function applySource() {
-    if (!sourcePreview?.candidate || sourceDraftKey !== modelKey(model) || sourceScope !== scope)
-      return;
+    const candidate = currentSourcePreview?.result.candidate;
+    if (!editable || !candidate) return;
+    const key = scope;
+    const request = ++generation;
+    busy = true;
     try {
-      if (await replaceCandidate(sourcePreview.candidate, 'authored', scope)) {
-        sourcePreview = null;
-        sourceText = '';
-        sourceRequest = null;
-      }
+      if (await replaceCandidate(candidate, 'authored', key)) clearSourceInput();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Invalid source candidate';
+    } finally {
+      if (key === scope && request === generation) busy = false;
     }
   }
   async function showComparison(view: 'visual' | 'yaml' | 'source') {
@@ -1057,8 +1110,7 @@
       if (isCurrent()) comparisonYaml = { left: left.text, right: right.text };
     } catch (e) {
       if (!isCurrent()) return;
-      if (e instanceof AccessDeniedError || (kind === 'derived' && readDenied(e)))
-        forgetDeniedRead();
+      if (readDenied(e)) await handleComparisonDenial(e, 'Failed to read comparison YAML');
       else textError = e instanceof Error ? e.message : 'Failed to read comparison YAML';
     } finally {
       if (isCurrent()) textLoading = false;
@@ -1123,33 +1175,32 @@
     {#if kind === 'authored'}
       <Select
         label="Diagram type"
-        value={model.diagramType === 'c4' ? `c4.${model.content.view}` : model.diagramType}
+        bind:value={typeChoice}
         placeholder=""
         options={model.diagramType === 'graph'
           ? [{ value: 'graph', label: 'Graph (schema 1 compatibility)' }, ...typeOptions]
           : typeOptions}
         disabled={!!diagram || busy || !!comparison || !canSave}
-        onchange={(value) => {
-          void changeType(value);
+        onchange={async (value) => {
+          await changeType(value);
+          typeChoice = currentType;
         }}
       />
       <DiagramSourceTools2
         adapters={sourceAdapters}
         adapterId={sourceAdapter}
-        {parserStatus}
+        parserStatus={sourcePreview && !currentSourcePreview ? staleSourceMessage : parserStatus}
         onadapter={(id) => {
           sourceAdapter = id;
           sourcePreview = null;
-          sourceRequest = null;
         }}
         text={sourceText}
         {busy}
         disabled={!editable}
-        preview={sourcePreview}
+        preview={currentSourcePreview?.result ?? null}
         ontext={(text) => {
           sourceText = text;
           sourcePreview = null;
-          sourceRequest = null;
         }}
         onpreview={() => {
           void previewSource();
@@ -1173,9 +1224,7 @@
       labels={originLabels}
       {results}
       {searching}
-      onkind={(next) => {
-        void changeKind(next);
-      }}
+      onkind={changeKind}
       onyaml={(text) => (yaml = text)}
       onimport={() => {
         void importYaml();
@@ -1221,16 +1270,7 @@
           <Button size="sm" disabled={historyLoading || history.length === 0} onclick={compare}
             >Compare revisions</Button
           >
-          <Button
-            size="sm"
-            variant="secondary"
-            onclick={() => {
-              ++compareGeneration;
-              historyLoading = false;
-              comparison = null;
-              historyOpen = false;
-            }}>Return to draft</Button
-          >
+          <Button size="sm" variant="secondary" onclick={closeHistory}>Return to draft</Button>
         </SurfaceCard>
       </section>
     {/if}

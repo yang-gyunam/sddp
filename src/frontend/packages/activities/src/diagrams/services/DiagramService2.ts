@@ -13,9 +13,14 @@ const route = (project: string, tail = '') =>
 export function getDiagram2(
   tenantId: string,
   projectId: string,
-  id: string
+  id: string,
+  beforeDispatch?: () => void
 ): Promise<DiagramV2Dto> {
-  return fetchWithAuth(route(projectId, `/${encodeURIComponent(id)}`), { tenantId, projectId });
+  return fetchWithAuth(route(projectId, `/${encodeURIComponent(id)}`), {
+    tenantId,
+    projectId,
+    beforeDispatch,
+  });
 }
 export function createDiagram2(
   tenantId: string,

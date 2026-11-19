@@ -4,7 +4,6 @@
   import { navigateToEntity } from '../../navigation/entityNavigation';
   import { Icon, IconButton, Spinner, ResizeHandle } from '@sddp/ui';
   import { getAuthState } from '@sddp/shell/auth';
-  import { getTabState, setTabState } from '@sddp/shell';
   import { AccessDeniedError, ApiRequestError } from '../../api/fetchWithAuth';
   import DetailHeader from '../idioms/DetailHeader.svelte';
   import RequirementLevelBadge from '../../../requirements/components/idioms/RequirementLevelBadge.svelte';
@@ -16,6 +15,11 @@
   import ArtifactContent from '../../../artifact/components/sections/ArtifactContent.svelte';
   import DiagramWorkbench from '../../../diagrams/components/sections/DiagramWorkbench2.svelte';
   import { getDiagram2 as getDiagram } from '../../../diagrams/services/DiagramService2';
+  import {
+    clearDiagramDraft,
+    diagramDraftKey,
+    diagramDraftScope,
+  } from '../../../diagrams/services/DiagramDraftState';
   import type { DiagramV2Dto as DiagramDto } from '../../../diagrams/types2';
   import TraceGraphSection from '../../../relationship/components/sections/TraceGraphSection.svelte';
 
@@ -161,7 +165,8 @@
 
   async function loadEntity(): Promise<void> {
     const request = ++loadGeneration;
-    const tenant = getAuthState().user?.tenantId ?? '';
+    const user = getAuthState().user;
+    const tenant = user?.tenantId ?? '';
     const refresh = refreshKey;
     const id = entityId;
     const type = entityType;
@@ -226,11 +231,13 @@
       if (isCurrent()) {
         if (
           type === 'Diagram' &&
-          tabId &&
           (err instanceof AccessDeniedError ||
             (err instanceof ApiRequestError && err.status === 404))
         ) {
-          setTabState(tabId, { ...getTabState(tabId), diagramWorkspace: undefined });
+          clearDiagramDraft(
+            diagramDraftKey(tabId, pid, id),
+            diagramDraftScope(tenant, user?.id ?? '', pid, id)
+          );
         }
         error = err instanceof Error ? err.message : 'Failed to load entity';
       }
