@@ -47,6 +47,7 @@
     {#each tabs as tab (tab.id)}
       <button
         type="button"
+        aria-pressed={tab.id === activeTab}
         onclick={() => handleTabClick(tab.id)}
         disabled={tab.disabled}
         class="h-9 px-3 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-px
@@ -76,6 +77,7 @@
     {#each tabs as tab (tab.id)}
       <button
         type="button"
+        aria-pressed={tab.id === activeTab}
         onclick={() => handleTabClick(tab.id)}
         disabled={tab.disabled}
         class="px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5

@@ -26,12 +26,22 @@
   interface Props {
     projectId: string;
     projectName?: string;
+    readonly?: boolean;
+    referencePath?: string;
     project?: ProjectDetail;
     tabId?: string;
     class?: string;
   }
 
-  let { projectId, projectName = '', project, tabId = '', class: className = '' }: Props = $props();
+  let {
+    projectId,
+    readonly: readOnly = false,
+    referencePath,
+    projectName = '',
+    project,
+    tabId = '',
+    class: className = '',
+  }: Props = $props();
 
   const pageTitle = 'Traceability';
   const pageMeta = $derived(project?.name || projectName || undefined);
@@ -207,7 +217,7 @@
   }
   useDetailRoute({
     tabId: () => tabId,
-    path: () => `/project/${projectId}/traceability`,
+    path: () => referencePath ?? `/project/${projectId}/traceability`,
     selection: () => activeEntityId || null,
     ready: () => !loading,
     restore: (id) => {
@@ -484,6 +494,7 @@
               {#if activeEntity}
                 {#key activeEntity.id}
                   <EntityFullDetailTab
+                    readonly={readOnly}
                     entityId={activeEntity.id}
                     entityType={activeEntity.entityType}
                     {projectId}

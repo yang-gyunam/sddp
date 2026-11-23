@@ -362,8 +362,10 @@ For Free 0.5.0/0.5.1, rehearse [migrations V021 through V025](../scripts/db/READ
 on a restored copy before upgrading the installation. If a Free 0.6.0 upgrade applied
 only V021 through V024, apply [V025 for weekly statistics consent](../scripts/db/README.md#weekly-statistics-consent).
 For Free 0.4.0/0.4.1, apply the
-[repository migrations](deploy/repository-050.md) first. Update the API and frontend together
-and reload open browser tabs. Check that the app status bar and API report the same version. If a
+[repository migrations](deploy/repository-050.md) first. For all existing installations, including
+Free 0.6.1, apply the [V027 search migration and runtime grants](../scripts/db/README.md#project-search)
+before starting the updated API. Update the API and frontend together and reload open browser tabs.
+Check that the app status bar and API report the same version. If a
 tab kept open during deployment cannot load a screen, reload it to replace references to old assets.
 
 ## Artifact generation scope
@@ -376,7 +378,7 @@ to install a public CLI package.
 
 ## Free edition support scope
 
-The global Search UI and SLA policy management UI are unavailable in this edition. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its execution dependencies are excluded from this public distribution. Project list search, Files repository-path search and item navigation remain available; item URLs and browser back/forward navigation support multiple panels. Configure repositories in Settings → Project → General; the older Integrations entry redirects there.
+The global Search UI and SLA policy management UI are unavailable in this edition. SLA policy APIs remain available; no SLA management screen is included. Semantic search (`POST /api/search`) and its execution dependencies are excluded from this public distribution. Under Projects, open Search to search all 12 menus of the selected project. Choose AND or OR, or combine terms with quotes and parentheses. The list shows 10 matches at a time. Select a result to open its read-only source. Files search includes paths and previewable text at the configured branch revision. Project list search, Files repository-path search and item navigation remain available; item URLs and browser back/forward navigation support multiple panels. Configure repositories in Settings → Project → General; the older Integrations entry redirects there.
 
 ## Evaluation credentials and tests
 

@@ -13,6 +13,7 @@ export interface FileSelection {
   path: string;
   revision?: string;
   revisionPath?: string;
+  line?: number;
 }
 const message = (error: unknown) =>
   error instanceof Error ? error.message : 'Unable to load repository data.';
@@ -166,13 +167,23 @@ export class FileViewer {
     this.relations = null;
     this.historyError = '';
     this.relationsError = '';
+    if (!selection.path) {
+      ++this.contentGeneration;
+      this.content = null;
+      this.contentError = '';
+      this.contentLoading = false;
+      this.historyLoading = false;
+      this.relationsLoading = false;
+      return;
+    }
     this.historyLoading = true;
     this.relationsLoading = true;
     await Promise.all([
       this.showVersion(
         selection.revision
           ? { commit: selection.revision, path: selection.revisionPath ?? selection.path }
-          : null
+          : null,
+        selection.line
       ),
       this.loadHistory(generation),
       this.loadRelations(generation),
@@ -193,12 +204,13 @@ export class FileViewer {
     );
   }
 
-  async showVersion(version: Pick<FileCommit, 'commit' | 'path'> | null) {
+  async showVersion(version: Pick<FileCommit, 'commit' | 'path'> | null, line?: number) {
     const generation = ++this.contentGeneration;
     this.selection = {
       path: this.selection.path,
       revision: version?.commit,
       revisionPath: version?.path,
+      ...(line ? { line } : {}),
     };
     this.content = null;
     this.contentError = '';

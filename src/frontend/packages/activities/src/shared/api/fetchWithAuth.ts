@@ -25,6 +25,7 @@ export interface ApiResponse<T> {
 }
 
 export interface FetchOptions {
+  signal?: AbortSignal;
   method?: string;
   body?: unknown;
   /** Additional request headers such as If-Match. Auth and scope headers cannot be overridden. */
@@ -78,6 +79,14 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function isApiAccessFailure(error: unknown): boolean {
+  return (
+    error instanceof AccessDeniedError ||
+    error instanceof AuthExpiredError ||
+    (error instanceof ApiRequestError && error.status === 401)
+  );
+}
+
 function tryRefreshToken(): Promise<RefreshOutcome> {
   return refreshToken();
 }
@@ -102,12 +111,14 @@ function doFetch(
   method: string,
   headers: Record<string, string>,
   body: unknown | undefined,
-  formData?: FormData
+  formData?: FormData,
+  signal?: AbortSignal
 ): Promise<Response> {
   return fetch(`${config.getBaseApiUrl()}${endpoint}`, {
     method,
     headers,
     credentials: 'include',
+    signal,
     body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
 }
@@ -185,7 +196,7 @@ export async function fetchWithAuth<T>(endpoint: string, options: FetchOptions =
   const headers = await getAuthenticatedHeaders(options);
 
   options.beforeDispatch?.();
-  const response = await doFetch(endpoint, method, headers, body, formData);
+  const response = await doFetch(endpoint, method, headers, body, formData, options.signal);
 
   // 401 Unauthorized → attempt token refresh and retry once
   if (response.status === 401) {
@@ -194,7 +205,14 @@ export async function fetchWithAuth<T>(endpoint: string, options: FetchOptions =
       // Retry with fresh token
       const retryHeaders = await getAuthenticatedHeaders(options);
       options.beforeDispatch?.();
-      const retryResponse = await doFetch(endpoint, method, retryHeaders, body, formData);
+      const retryResponse = await doFetch(
+        endpoint,
+        method,
+        retryHeaders,
+        body,
+        formData,
+        options.signal
+      );
       return handleResponse<T>(retryResponse);
     }
     throw refreshFailure(outcome);

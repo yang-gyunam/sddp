@@ -695,6 +695,77 @@
   async function openTabFromPath(path: string): Promise<boolean> {
     const canonicalPath = navigationService.normalizePath(path);
 
+    const reference = canonicalPath.match(/^\/project\/([^/]+)\/view\/([a-z]+)\/([^/]+)$/);
+    if (reference) {
+      const [, pid, menu, key] = reference;
+      if (!pid || !key || !menu || !isProjectPageType(menu) || menu === 'search') return false;
+      const project = projectState.projects.find((p) => p.id === pid);
+      if (!project) {
+        openAccessDeniedTab(
+          'Access Denied',
+          'lock',
+          canonicalPath,
+          'reference-denied',
+          'Project access required.'
+        );
+        return true;
+      }
+      const args = new URLSearchParams(window.location.search);
+      const id = args.get('id') || decodeURIComponent(key);
+      const kind = args.get('kind') || '';
+      const revision = args.get('revision') || '';
+      const query = {
+        projectId: pid,
+        projectName: project.name,
+        readonly: true,
+        referenceKind: kind,
+        referenceId: id,
+        referenceRevision: revision,
+        referencePath: canonicalPath,
+      };
+      const entityTypes: Record<string, string> = { artifacts: 'Artifact', diagrams: 'Diagram' };
+      const entity = entityTypes[menu];
+      const config = PROJECT_PAGE_CONFIG[menu];
+      const options = {
+        title: config.label + ' (view)',
+        icon: config.icon,
+        path: canonicalPath,
+        dirty: false,
+        closable: true,
+      };
+      if (entity) {
+        tabActions.createTab({
+          ...options,
+          component: activityComponents.DiagramDetailTab,
+          props: { ...query, entityId: id, entityType: entity },
+        });
+      } else if (menu === 'conversations') {
+        const forum = ['forum', 'topic', 'topic-message'].includes(kind);
+        tabActions.createTab({
+          ...options,
+          component: forum ? activityComponents.ForumView : activityComponents.ChannelView,
+          props: {
+            ...query,
+            tenantId: authState.user?.tenantId,
+            conversationId: id,
+            conversationName: config.label,
+            sourceType: 'conversation',
+            selectedTopicId: forum ? revision : undefined,
+            referenceMessage: kind.endsWith('message') ? key : undefined,
+            referenceTime:
+              args.get('at') && Number.isFinite(Date.parse(args.get('at')!))
+                ? new Date(Date.parse(args.get('at')!) + 1).toISOString()
+                : undefined,
+          },
+        });
+      } else {
+        openTabWithComponent(options.title, config.icon, canonicalPath, `project-${pid}-${menu}`, {
+          additionalProps: query,
+        });
+      }
+      return true;
+    }
+
     // A diagram work tab restores its explicit owning project and shared entity detail.
     const diagramMatch = canonicalPath.match(/^\/project\/([^/]+)\/diagrams\/([^/]+)$/);
     if (diagramMatch?.[1] && diagramMatch[2]) {
@@ -890,6 +961,41 @@
     // All entity tabs opened via URL are ALWAYS readonly (system-enforced).
     const parsed = navigationService.parsePath(canonicalPath);
     if (!parsed) return false;
+    const linkedProject = new URLSearchParams(window.location.search).get('projectId');
+    const readTypes: Record<string, string> = {
+      spec: 'Spec',
+      requirement: 'Requirement',
+      glossary: 'GlossaryTerm',
+      conversation: 'Conversation',
+    };
+    if (linkedProject && readTypes[parsed.type]) {
+      if (!projectState.projects.some((project) => project.id === linkedProject)) {
+        openAccessDeniedTab(
+          'Access Denied',
+          'lock',
+          canonicalPath,
+          'reference-denied',
+          'Project access required.'
+        );
+        return true;
+      }
+      const entityType = readTypes[parsed.type]!;
+      tabActions.createTab({
+        title: entityType + ' (view)',
+        icon: {
+          spec: 'file-code',
+          requirement: 'clipboard-list',
+          glossary: 'book-open',
+          conversation: 'message-square',
+        }[parsed.type as 'spec' | 'requirement' | 'glossary' | 'conversation'],
+        path: canonicalPath,
+        component: activityComponents.DiagramDetailTab,
+        props: { entityId: parsed.id, entityType, projectId: linkedProject, readonly: true },
+        dirty: false,
+        closable: true,
+      });
+      return true;
+    }
     // Resolve Channel scope without consulting the legacy sidebar/channel caches.
     if (parsed.type === 'conversation' || parsed.type === 'space') {
       await openConversationPath(canonicalPath, parsed.id);

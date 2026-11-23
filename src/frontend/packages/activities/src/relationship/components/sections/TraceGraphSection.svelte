@@ -39,6 +39,7 @@
     primaryFlow?: PrimaryFlowNode[];
     hidePrimaryFlow?: boolean;
     hideFilter?: boolean;
+    readonly?: boolean;
     onNodeClick?: (node: PrimaryFlowNode) => void;
     revisionHistory?: Snippet;
     class?: string;
@@ -52,6 +53,7 @@
     primaryFlow = [],
     hidePrimaryFlow = false,
     hideFilter = false,
+    readonly: readOnly = false,
     onNodeClick,
     revisionHistory,
     class: className = '',
@@ -284,14 +286,16 @@
           title="Related Items"
           expanded={isRelationshipsExpanded}
           onToggle={() => (isRelationshipsExpanded = !isRelationshipsExpanded)}
-          actions={[
-            {
-              id: 'add-relationship',
-              icon: 'plus',
-              label: 'Link entity',
-              onClick: () => (showLinkSearch = !showLinkSearch),
-            },
-          ]}
+          actions={readOnly
+            ? []
+            : [
+                {
+                  id: 'add-relationship',
+                  icon: 'plus',
+                  label: 'Link entity',
+                  onClick: () => (showLinkSearch = !showLinkSearch),
+                },
+              ]}
         >
           <div class="px-4 pt-2 pb-3">
             {#if showLinkSearch}
@@ -339,17 +343,17 @@
                       onclick={() =>
                         handleRelationshipItemClick(targetType, targetId, targetLabel ?? undefined)}
                     />
-                    <IconButton
-                      icon="x"
-                      variant="ghost"
-                      size="sm"
-                      class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        handleUnlink(rel.id);
-                      }}
-                      title="Remove link"
-                    />
+                    {#if !readOnly}<IconButton
+                        icon="x"
+                        variant="ghost"
+                        size="sm"
+                        class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          handleUnlink(rel.id);
+                        }}
+                        title="Remove link"
+                      />{/if}
                   </div>
                 {/each}
               </div>

@@ -81,13 +81,18 @@ public record AuditLogsDto(
 
 public record HealthCheckDto(
     string Status,
-    IReadOnlyList<ServiceHealthDto> Services);
+    IReadOnlyList<ServiceHealthDto> Services,
+    DateTimeOffset CheckedAt);
 
 public record ServiceHealthDto(
     string Name,
     string Status,
     string? Message,
-    long? ResponseTimeMs);
+    long? ResponseTimeMs,
+    string Id,
+    string Group,
+    string Check,
+    bool Required = true);
 
 // ============================================
 // Dashboard Phase 1 Widget DTOs

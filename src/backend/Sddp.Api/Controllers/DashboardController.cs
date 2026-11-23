@@ -349,11 +349,12 @@ public class DashboardController : BaseApiController
     /// GET /api/dashboard/system/health
     /// </summary>
     [HttpGet("system/health")]
-        [ResourceScopeExempt("System health probe that reads no tenant or project owned data whatsoever.")]
-    public async Task<IActionResult> GetSystemHealth()
+    [Authorize(Policy = "RequireAdmin")]
+    [ResourceScopeExempt("Administrative deployment health report with no resource id in the route.")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> GetSystemHealth(CancellationToken cancellationToken = default)
     {
-        // - status
-        var health = await _sender.Send(new GetSystemHealthQuery());
+        var health = await _sender.Send(new GetSystemHealthQuery(), cancellationToken);
         return Ok(ApiResponse<HealthCheckDto>.Ok(health));
     }
 

@@ -62,6 +62,7 @@ services:
       - Authentication__DevelopmentCredentials__AllowKnownCredentials=true
       - Authentication__DevelopmentCredentials__ExposureMode=Loopback
       - ConnectionStrings__DefaultConnection=Host=sddp-db;Port=5432;Database=${POSTGRES_DB:-sddp};Username=${POSTGRES_USER:-sddp};Password=${POSTGRES_PASSWORD:-sddp_password}
+      - ServiceHealth__WebUrl=http://sddp-front:8080/healthz
       - Redis__ConnectionString=sddp-redis:6379
       - SpeechToText__Url=http://sddp-whisper:8000
       - SpeechToText__Model=Systran/faster-whisper-small

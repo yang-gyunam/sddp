@@ -206,10 +206,12 @@ public sealed class GetConversationMessagesCommandHandler : IRequestHandler<GetC
             }
         }
 
+        var hasUpperBound = request.Cursor.HasValue;
+        var upperBound = Timestamp.FromDateTimeOffset(request.Cursor.GetValueOrDefault());
         var messages = await (messageRepo.FindAsync(
             m => m.ConversationId == request.ConversationId
                 && m.IsActive
-                && (request.Cursor == null || m.CreatedAt.ToDateTimeOffset() < request.Cursor),
+                && (!hasUpperBound || m.CreatedAt < upperBound),
             cancellationToken)).ConfigureAwait(false);
 
         var sortedMessages = messages

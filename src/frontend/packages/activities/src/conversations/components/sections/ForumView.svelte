@@ -27,6 +27,9 @@
     conversationId: string;
     conversationName: string;
     selectedTopicId?: string;
+    readonly?: boolean;
+    referenceMessage?: string;
+    referenceTime?: string;
     class?: string;
   }
 
@@ -36,6 +39,9 @@
     conversationId,
     conversationName,
     selectedTopicId,
+    readonly: readOnly = false,
+    referenceMessage,
+    referenceTime,
     class: className = '',
   }: Props = $props();
 
@@ -96,7 +102,13 @@
     loading = true;
     try {
       const result = await conversationService.getTopics(conversationId);
-      topics = result.topics.map(convertToTopic);
+      const items = result.topics.map(convertToTopic);
+      if (readOnly && selectedTopicId && !items.some((item) => item.id === selectedTopicId)) {
+        items.push(
+          convertToTopic(await conversationService.getTopicById(conversationId, selectedTopicId))
+        );
+      }
+      topics = items;
     } catch (err) {
       console.error('Failed to load forum topics:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to load forum topics');
@@ -309,13 +321,13 @@
     <div class="flex flex-col h-full bg-[var(--color-bg-section)]">
       <ConversationHeader icon="list" title={conversationName} badge={topics.length}>
         {#snippet actions()}
-          <IconButton
-            icon="plus"
-            size="sm"
-            variant="ghost"
-            onclick={handleCreateTopic}
-            title="New Topic"
-          />
+          {#if !readOnly}<IconButton
+              icon="plus"
+              size="sm"
+              variant="ghost"
+              onclick={handleCreateTopic}
+              title="New Topic"
+            />{/if}
         {/snippet}
       </ConversationHeader>
 
@@ -615,13 +627,18 @@
         </PageBody>
       </PageShell>
     {:else if selectedTopic}
-      <TopicView
-        topic={selectedTopic}
-        {tenantId}
-        {projectId}
-        onBack={handleBackToList}
-        onTopicClosed={handleTopicClosed}
-      />
+      {#key selectedTopic.id}
+        <TopicView
+          readonly={readOnly}
+          referenceMessage={selectedTopic.id === selectedTopicId ? referenceMessage : undefined}
+          referenceTime={selectedTopic.id === selectedTopicId ? referenceTime : undefined}
+          topic={selectedTopic}
+          {tenantId}
+          {projectId}
+          onBack={handleBackToList}
+          onTopicClosed={handleTopicClosed}
+        />
+      {/key}
     {:else}
       <!-- Forum Statistics -->
       <PageShell class="h-full">

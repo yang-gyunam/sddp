@@ -149,19 +149,22 @@ public sealed class GetTopicMessagesQueryHandler : IRequestHandler<GetTopicMessa
             return null;
         }
 
+        var hasUpperBound = request.Cursor.HasValue;
+        var upperBound = Timestamp.FromDateTimeOffset(request.Cursor.GetValueOrDefault());
         var messages = await (messageRepo.FindAsync(
             m => m.TopicId == request.TopicId
                 && m.IsActive
-                && (request.Cursor == null || m.CreatedAt.ToDateTimeOffset() < request.Cursor),
+                && (!hasUpperBound || m.CreatedAt < upperBound),
             cancellationToken)).ConfigureAwait(false);
 
-        var sortedMessages = messages
-            .OrderBy(m => m.CreatedAt.ToDateTimeOffset())
-            .Take(request.Limit + 1)
-            .ToList();
-
-        var hasMore = sortedMessages.Count > request.Limit;
-        var resultMessages = sortedMessages.Take(request.Limit).ToList();
+        // A reference supplies an upper bound and needs the messages closest to that bound.
+        var ordered = request.Cursor is null
+            ? messages.OrderBy(m => m.CreatedAt.ToDateTimeOffset())
+            : messages.OrderByDescending(m => m.CreatedAt.ToDateTimeOffset());
+        var window = ordered.Take(request.Limit + 1).ToList();
+        var hasMore = window.Count > request.Limit;
+        var resultMessages = window.Take(request.Limit).ToList();
+        if (request.Cursor is not null) resultMessages.Reverse();
 
         var users = await (userRepo.GetAllAsync(cancellationToken)).ConfigureAwait(false);
         var userMap = users.ToDictionary(u => u.Id, u => u);
@@ -174,7 +177,7 @@ public sealed class GetTopicMessagesQueryHandler : IRequestHandler<GetTopicMessa
         });
 
         var nextCursor = hasMore && resultMessages.Any()
-            ? resultMessages.Last().CreatedAt.ToDateTimeOffset().ToString("O")
+            ? (request.Cursor is null ? resultMessages[^1] : resultMessages[0]).CreatedAt.ToDateTimeOffset().ToString("O")
             : null;
 
         return new ForumMessagesPageDto(

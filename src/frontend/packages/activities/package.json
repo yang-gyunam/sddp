@@ -152,6 +152,11 @@
       "types": "./dist/projects/pages/glossary.d.ts",
       "default": "./dist/projects/pages/glossary.js"
     },
+    "./projects/pages/search": {
+      "svelte": "./dist/projects/pages/search.js",
+      "types": "./dist/projects/pages/search.d.ts",
+      "default": "./dist/projects/pages/search.js"
+    },
     "./projects/pages/knowledge": {
       "svelte": "./dist/projects/pages/knowledge.js",
       "types": "./dist/projects/pages/knowledge.d.ts",

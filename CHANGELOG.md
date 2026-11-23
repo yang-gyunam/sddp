@@ -2,74 +2,99 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2026-11-23
+
+Project Search and Service Health are included by default in Free and Pro.
+
+### Project Search and Service Health
+
+- Search all 12 menus of the selected project. Results and menu counts respect project, item and private conversation access.
+- Combine terms with AND, OR, quoted phrases and parentheses. Filter by menu or field and sort by relevance or last update.
+- Load 10 matches at a time and open read-only details. Search committed file paths and previewable text, then open a matching revision and line.
+- Check each configured service in **Overview**, including its status, probe and duration when available. Refresh on demand or wait for the next one-minute check.
+- Use **Timeline** to review up to 12 observations while the view is open. Filter by service or status change and expand readings to see failures, recoveries and refresh gaps.
+
+### Installation and upgrade
+
+- New installations create the search tables and indexes during normal database provisioning.
+- Back up the database and API files together before upgrading and rehearse on a restored copy. [Backup and recovery](docs/deploy/api-data.md)
+- Apply outstanding migrations, then run [V027](scripts/db/README.md#project-search) with the migration role before starting the updated API and web app.
+- The first file search indexes the configured Git revision. Later searches refresh the index when that revision changes.
+
 ## [v0.6.1] - 2026-11-19
 
-- Update the container runtime to ASP.NET Core and .NET 10.0.15 using the
-  official multi-platform image digest.
+### Security and upgrades
+
+- Pin the API container to the official multi-platform ASP.NET Core and .NET
+  10.0.15 image digest.
 - Report the same release version in the API and web application.
-- Complete the Free upgrade instructions with V025 for weekly statistics consent.
-- Fail API readiness when the weekly statistics consent table or runtime grants
-  are missing, and allow other tenants' reports to continue after a delivery error.
+- Follow the [upgrade guide](docs/public-guide.md#preserve-files-when-upgrading)
+  for V025, which adds weekly statistics consent storage.
+- Replay recorded deletions and clear restored statistics consent before reopening
+  an installation. [Recovery guide](docs/deploy/api-data.md#restore-a-backup-safely)
+
+### Diagrams
+
 - Fix Diagram draft switching, automatic refresh with a saved display order,
   canceled type selection, and a history comparison that could reopen after saving.
 - Correct Mermaid Class parameter source locations and keep readable V1 revisions
   available when another stored revision is corrupt.
 - Preserve unapplied YAML during file import, refresh source previews after draft
   edits, and accept ordinary State event names beginning with `entry` or `exit`.
-- Load the saved origin selections and labels when refreshing an unedited derived
-  diagram. Clear diagram drafts when the details view loses access.
-- Preserve readable diagram drafts when write access is denied.
-- Preserve readable diagram drafts when access to a historical comparison is lost.
+- Use saved origin selections and labels when refreshing an unedited derived diagram.
+- Keep readable drafts if saving or comparing revisions is denied. Clear a draft
+  when the details view loses access.
+
+### Weekly statistics
+
+- Fail API readiness when consent storage or database grants are missing. Continue
+  delivering other tenants' reports when one delivery fails.
 - Keep stored statistics consent withdrawable when the recipient changes or is
   removed. Keep UTC report weeks stable across PostgreSQL session time zones.
 - Include recorded delete activity in weekly totals and forward optional recipient
   settings from Compose to the API.
-- Document how to replay recorded deletions and clear older statistics consent before
-  reopening a restored installation.
 
 ## [v0.6.0] - 2026-11-18
 
-- Apply project and private conversation read checks to Primary Flow and
-  Traceability Map. Hide unreadable parent references and links while retaining
-  independently readable children, and count only visible results.
-- Isolate corrupt stored models in V1 diagram lists and preserve HTTP 409
-  `UNSUPPORTED_MODEL_SCHEMA` responses when legacy clients access schema2 documents.
-- Add typed Flowchart, Sequence, Class, State, ERD and C4 Context/Container diagrams
-  with interchangeable editors/renderers, type-specific shapes and properties,
-  palette creation, movement, resizing and immutable saved revisions.
-- Add a strict SDDP Mermaid-subset parser with source/identity preview, explicit
-  ambiguity review and preserved source/profile metadata. Visual edits mark the
-  preserved source as stale; generating edited Mermaid text is not supported.
-- Add schema2 YAML and structural comparison, separating semantic, presentation
-  and provenance changes. Compare saved Visual, YAML and Source views using the
-  existing read-only Monaco diff editor.
-- Store a database-maintained SHA-256 fingerprint for diagram list reads (V024).
-- Add opt-in V2 Diagram APIs and V023 CHECK-constraint migration. Existing schema1
-  documents/history remain intact; V2 explicit saves promote old documents.
-  Old V1 clients receive a schema conflict for schema2 documents after access checks.
+### Diagrams
 
-- Add eight resize handles to selected authored diagram nodes, with live previews,
-  Undo/Redo, persistent sizes and connections that follow the resized boundaries.
-- Add YAML text/file import and export to the diagram workspace with strict validation
-  and draft preservation, plus automatic snapshots of selected existing entities and
-  current relationships. Refresh previews do not save; saved snapshots recheck current
-  origin visibility, including private conversation membership.
-- Add the common diagram model, strict YAML codec and semantic/presentation comparison.
-- Extend relationship APIs and target search with diagrams while preserving stored
-  entity type values and filtering inaccessible relationship endpoints.
-- Add project-shared diagram storage, immutable revisions and revision conflict checks,
-  with dedicated read/create/update permissions and V021/V022 upgrade SQL.
-- Add the project Diagrams menu, saved model details and bidirectional related-entity
-  work tabs using the existing right panel and tab navigation. Match the shared
-  list search, kind filter menu and column-header pattern.
-- Add interchangeable Canvas/Table views, authored node/connection editing and
-  visual comparison of saved revisions, including removed elements. Preserve
-  conflicted drafts and protect unsaved changes when leaving or closing a tab.
-  Drag nodes from the palette, connect their handles, rename on double click,
-  undo/redo edits and zoom or fit the canvas using the shared control patterns.
-  Keep zoom controls inside the canvas card and align its top border with the palette.
+- Add the project Diagrams menu, searchable lists with a type filter,
+  saved diagram details and links between diagrams and related items.
+- Create Flowchart, Sequence, Class, State, ERD and C4 Context/Container diagrams.
+  Use Canvas or Table view, drag nodes from the palette, connect them, rename on
+  double-click and resize with live previews. Connections follow resized nodes.
+  The canvas supports undo, redo, zoom and fit.
+- Import or export validated SDDP YAML as text or a file. Preview the supported
+  Mermaid subset, review ambiguous input and retain source metadata. Visual edits
+  mark the original source as stale. Mermaid export of edited diagrams is unavailable.
+- Build a snapshot from selected project items and current relationships. Refresh
+  previews without saving. Saving checks whether source items are still readable.
+- Save immutable revisions and compare them in Visual, YAML or Source view, including
+  removed elements and differences in semantics, presentation and provenance.
+  Preserve conflicted drafts and prompt to save before leaving with unsaved edits.
+
+### Project access
+
+- Primary Flow and Traceability Map enforce project and private conversation read
+  permissions. Hide unreadable references, keep independently readable items
+  visible and count only visible results.
+- Apply separate permissions for reading, creating and updating diagrams.
+- Include diagrams in relationship search and filter inaccessible endpoints while
+  preserving stored entity type values.
+
+### Compatibility and upgrades
+
+- V021 adds shared diagram and revision storage, and V022 synchronizes built-in role
+  permissions. [Migration guide](scripts/db/README.md#diagram-storage-and-permissions)
+- V023 enables schema2 for the opt-in V2 API. Existing schema1 documents and
+  history stay readable. An explicit V2 save upgrades a document.
+- V024 adds a diagram fingerprint for list reads.
+- V1 lists skip corrupt models. V1 clients receive HTTP 409
+  `UNSUPPORTED_MODEL_SCHEMA` for schema2 documents after access checks.
 
 ## [v0.5.1] - 2026-10-23
+
+### Knowledge editor
 
 - Improve shared rich-text typography with 16px body text, 24px line height,
   8px paragraph spacing and consistent headings and lists in Knowledge views.
@@ -78,20 +103,25 @@ All notable changes to this project will be documented in this file.
 - Preserve ordered-list numbering types and table-cell alignment through save and
   reopen, alongside start numbers, nested lists, column widths and merged cells.
   Unsupported attribute values remain rejected.
+
+### Security and deployment
+
 - Patch the Monaco DOMPurify dependency and refresh compatible Vite, Storybook and
   Vitest dependencies to address newly reported security advisories.
 - Correct the bundled Gitea API origin to container port 3000 and allow
   `SDDP_GIT__SERVERURL` overrides for customized installations.
 - Specify the API origin when starting the local Vite frontend.
+- No application database schema changes or new migrations are introduced in 0.5.1.
+
+### Documentation
+
 - Clarify destructive OnBrick seeding, fresh-database provisioning limits, test
   side effects and the separate default-credential guards.
 - Update the public introduction for Files and mark Aspire as optional in setup instructions.
-
 - Refresh the README and animated walkthroughs, and document the included test paths,
   commands and limited coverage without implying full product verification.
 - Correct the OnBrick smoke description: it creates and reads back a unique Spec, then
   deactivates it. It does not create a temporary Conversation.
-- No application database schema changes or new migrations are introduced in 0.5.1.
 
 ## [v0.5.0] - 2026-10-20
 

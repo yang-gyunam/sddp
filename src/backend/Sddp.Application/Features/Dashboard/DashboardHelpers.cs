@@ -98,12 +98,4 @@ internal static class DashboardHelpers
         Notifications: [],
         UnreadCount: 0);
 
-    internal static HealthCheckDto BuildDefaultHealth() => new(
-        Status: "Healthy",
-        Services: new List<ServiceHealthDto>
-        {
-            new("API Server", "Healthy", null, 45),
-            new("Database", "Healthy", null, 12),
-            new("Redis Cache", "Healthy", null, 3)
-        });
 }

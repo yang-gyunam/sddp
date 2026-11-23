@@ -45,25 +45,31 @@ public sealed class DatabaseReadinessHealthCheck(IConfiguration configuration) :
                 return HealthCheckResult.Unhealthy("Database base data is missing.");
             }
 
-            const string consentReadinessSql = """
-                SELECT consent.table_oid IS NOT NULL,
-                       COALESCE(has_table_privilege(consent.table_oid, 'SELECT')
-                            AND has_table_privilege(consent.table_oid, 'INSERT')
-                            AND has_table_privilege(consent.table_oid, 'UPDATE')
-                            AND has_table_privilege(consent.table_oid, 'DELETE'), FALSE)
-                FROM (SELECT to_regclass('public.statistics_consents')::oid AS table_oid) AS consent;
+            const string storageReadinessSql = """
+                SELECT name, to_regclass(name) IS NOT NULL AS present,
+                       bool_and(coalesce(has_table_privilege(to_regclass(name), privilege), false)) AS usable
+                FROM (VALUES
+                    (1, 'public.statistics_consents', ARRAY['SELECT','INSERT','UPDATE','DELETE']),
+                    (2, 'public.project_search_file_heads', ARRAY['SELECT','INSERT','UPDATE']),
+                    (3, 'public.project_search_files', ARRAY['SELECT','INSERT','UPDATE','DELETE'])
+                ) AS storage(priority, name, privileges)
+                CROSS JOIN LATERAL unnest(privileges) AS required(privilege)
+                GROUP BY priority, name ORDER BY priority;
                 """;
 
-            await using var consentCommand = new NpgsqlCommand(consentReadinessSql, connection);
-            await using var consent = await consentCommand.ExecuteReaderAsync(cancellationToken);
-            if (!await consent.ReadAsync(cancellationToken) || !consent.GetBoolean(0))
+            await using var storageCommand = new NpgsqlCommand(storageReadinessSql, connection);
+            await using var storage = await storageCommand.ExecuteReaderAsync(cancellationToken);
+            while (await storage.ReadAsync(cancellationToken))
             {
-                return HealthCheckResult.Unhealthy("Weekly statistics consent table is missing. Apply migration V025.");
-            }
-
-            if (!consent.GetBoolean(1))
-            {
-                return HealthCheckResult.Unhealthy("The API database role lacks required privileges on the weekly statistics consent table.");
+                var consent = storage.GetString(0) == "public.statistics_consents";
+                if (!storage.GetBoolean(1))
+                    return HealthCheckResult.Unhealthy(consent
+                        ? "Weekly statistics consent table is missing. Apply migration V025."
+                        : "Project search storage is missing. Apply migration V027.");
+                if (!storage.GetBoolean(2))
+                    return HealthCheckResult.Unhealthy(consent
+                        ? "The API database role lacks required privileges on the weekly statistics consent table."
+                        : "The API database role lacks required privileges on project search storage.");
             }
 
             return HealthCheckResult.Healthy("Database schema and base data are ready.");

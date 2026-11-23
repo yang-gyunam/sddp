@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS ix_project_search_task_text, ix_project_search_message_text, ix_project_search_requirement_text, ix_project_search_spec_text;
+DROP TABLE IF EXISTS project_search_files, project_search_file_heads;

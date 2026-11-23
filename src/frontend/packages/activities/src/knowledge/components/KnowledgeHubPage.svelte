@@ -72,12 +72,26 @@
   interface Props {
     projectId: string;
     projectName?: string;
+    readonly?: boolean;
+    referenceId?: string;
+    referenceRevision?: string;
+    referencePath?: string;
     project?: ProjectDetail;
     tabId?: string;
     class?: string;
   }
 
-  let { projectId, projectName = '', project, tabId = '', class: className = '' }: Props = $props();
+  let {
+    projectId,
+    readonly: readOnly = false,
+    referenceId: linkedPageId,
+    referenceRevision,
+    referencePath,
+    projectName = '',
+    project,
+    tabId = '',
+    class: className = '',
+  }: Props = $props();
 
   const instanceId = $props.id();
 
@@ -239,7 +253,8 @@
   const capabilities = createProjectCapabilityStore();
   let capabilityIdentity = $state({ userId: '', tenantId: '', revision: 0 });
   const projectPermissions = $derived(
-    $capabilities.userId === capabilityIdentity.userId &&
+    !readOnly &&
+      $capabilities.userId === capabilityIdentity.userId &&
       $capabilities.data?.tenantId === capabilityIdentity.tenantId &&
       $capabilities.data?.projectId === projectId &&
       $capabilities.data.canWrite
@@ -335,8 +350,13 @@
     };
     window.addEventListener('blur', rememberBlur);
     window.addEventListener('focus', refreshCapabilities);
-    const restored = restoreTabState();
-    void loadTree(restored?.selectedPageId ?? undefined);
+    const restored = readOnly ? null : restoreTabState();
+    void loadTree(linkedPageId ?? restored?.selectedPageId ?? undefined).then(async () => {
+      if (readOnly && referenceRevision && selectedPage?.id === linkedPageId) {
+        await toggleHistory();
+        await compareVersion(Number(referenceRevision));
+      }
+    });
 
     // The shell asks before it closes this tab; unsaved work answers for itself.
     const unregisterCloseGuard = registerTabCloseGuard(tabStateKey, {
@@ -1124,7 +1144,7 @@
   }
   useDetailRoute({
     tabId: () => tabId,
-    path: () => `/project/${projectId}/knowledge`,
+    path: () => referencePath ?? `/project/${projectId}/knowledge`,
     selection: () => selectedPage?.id ?? null,
     ready: () => !loadingTree,
     restore: async (id) => {

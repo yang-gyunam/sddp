@@ -109,6 +109,7 @@ try
 
     builder.Services.AddMemoryCache();
 
+    builder.Services.AddServiceStatus(builder.Configuration);
     var healthChecks = builder.Services.AddHealthChecks();
     if (!builder.Environment.IsEnvironment("Testing"))
     {

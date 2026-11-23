@@ -11,3 +11,4 @@ export { default as ProjectEffortPage } from './ProjectEffortPage.svelte';
 export { default as ProjectTraceabilityPage } from './ProjectTraceabilityPage.svelte';
 export { default as ProjectFilesPage } from './ProjectFilesPage.svelte';
 export { default as ProjectDiagramsPage } from './ProjectDiagramsPage.svelte';
+export { default as ProjectSearchPage } from './ProjectSearchPage.svelte';

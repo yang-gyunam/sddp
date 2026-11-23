@@ -105,6 +105,7 @@ export interface ProjectWithBadges extends Project {
 }
 
 export type ProjectPageType =
+  | 'search'
   | 'dashboard'
   | 'conversations'
   | 'requirements'
@@ -152,6 +153,7 @@ export const PROJECT_PAGE_CONFIG: Record<
   { label: string; icon: string; tabIcon?: string }
 > = {
   dashboard: { label: 'Dashboard', icon: ENTITY_SVG_ICONS.dashboard },
+  search: { label: 'Search', icon: 'search' },
   conversations: { label: 'Conversations', icon: ENTITY_SVG_ICONS.conversations },
   requirements: {
     label: 'Requirements',

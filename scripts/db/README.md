@@ -122,3 +122,21 @@ psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -v app_role="$APP_DB_ROLE" <<'SQL'
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.statistics_consents TO :"app_role";
 SQL
 ```
+
+## Project search
+
+For an existing installation, apply V027 as the migration owner before starting the updated API. New installations create the search tables and indexes during provisioning. The first file search indexes the configured project branch.
+
+```sh
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --single-transaction \
+  -f scripts/db/migrations/V027__project_search.sql
+```
+
+If the API uses a separate role and default privileges do not cover new tables, grant it access to the search cache. Replace `APP_DB_ROLE` with the existing API role. The database readiness check reports missing tables or privileges.
+
+```sh
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -v app_role="$APP_DB_ROLE" <<'SQL'
+GRANT SELECT, INSERT, UPDATE ON public.project_search_file_heads TO :"app_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.project_search_files TO :"app_role";
+SQL
+```

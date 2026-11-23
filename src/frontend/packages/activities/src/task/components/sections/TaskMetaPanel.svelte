@@ -15,6 +15,8 @@
     projectId?: string;
     categoryName?: string;
     loading?: boolean;
+    readonly?: boolean;
+    expandTimeLogs?: boolean;
     onEdit?: () => void;
     onLogTime?: () => void;
     onDelete?: () => void;
@@ -27,6 +29,8 @@
     projectId = '',
     categoryName = '',
     loading = false,
+    readonly: readOnly = false,
+    expandTimeLogs = false,
     onEdit,
     onLogTime,
     onDelete,
@@ -35,6 +39,9 @@
   }: Props = $props();
 
   let showTimeLogs = $state(false);
+  $effect(() => {
+    if (expandTimeLogs) showTimeLogs = true;
+  });
 
   const progress = $derived(task ? calculateProgress(task.actualHours, task.estimatedHours) : 0);
   const progressLabel = $derived(
@@ -311,6 +318,7 @@
 
       <!-- Trace Graph (Related Items) -->
       <TraceGraphSection
+        readonly={readOnly}
         entityType="Task"
         entityId={task.id}
         entityCode={`Task #${task.id.slice(-4)}`}

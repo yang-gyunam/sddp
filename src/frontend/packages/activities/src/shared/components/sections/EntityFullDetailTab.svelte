@@ -40,6 +40,7 @@
 
   interface Props {
     entityId: string;
+    readonly?: boolean;
     entityType: string;
     projectId?: string;
     tabId?: string;
@@ -50,6 +51,7 @@
 
   let {
     entityId,
+    readonly: readOnly = false,
     entityType,
     projectId,
     tabId,
@@ -330,6 +332,7 @@
       <div class="flex-1 min-w-0 overflow-auto">
         {#if entityType === 'Diagram' && diagramData}
           <DiagramWorkbench
+            readonly={readOnly}
             bind:this={diagramWorkbench}
             diagram={diagramData}
             projectId={projectId ?? ''}
@@ -412,6 +415,7 @@
       >
         {#key JSON.stringify([projectId, entityType, entityId])}
           <TraceGraphSection
+            readonly={readOnly}
             entityType={entityType as EntityType}
             {entityId}
             projectId={projectId ?? ''}

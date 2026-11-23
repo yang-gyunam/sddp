@@ -9,6 +9,7 @@
     language?: string;
     /** v1 is review-only; annotation will flip this. */
     readOnly?: boolean;
+    revealLine?: number;
     /** Height of the editor surface. */
     height?: string;
     /** Fill a parent editor pane without a nested card frame. */
@@ -20,6 +21,7 @@
     value,
     language = 'plaintext',
     readOnly = true,
+    revealLine,
     height = '100%',
     embedded = false,
     class: className = '',
@@ -31,7 +33,13 @@
   // Monaco is large, so it is imported on demand rather than bundled into the initial
   // chunk. Anything holding editor state lives outside $state — Svelte proxies would
   // interfere with Monaco's own object identity.
-  let editor: { dispose(): void; setValue(v: string): void; getValue(): string } | null = null;
+  let editor: {
+    revealLineInCenter(line: number): void;
+    setPosition(position: { lineNumber: number; column: number }): void;
+    dispose(): void;
+    setValue(v: string): void;
+    getValue(): string;
+  } | null = null;
   let model: { dispose(): void } | null = null;
   let monacoModule: typeof import('monaco-editor/editor/editor.api') | null = null;
 
@@ -89,7 +97,16 @@
       lineNumbers: 'on',
       theme: prefersDark() ? 'vs-dark' : 'vs',
     });
+    reveal(revealLine);
   }
+
+  function reveal(line: number | undefined) {
+    if (line && Number.isSafeInteger(line) && line > 0) {
+      editor?.setPosition({ lineNumber: line, column: 1 });
+      editor?.revealLineInCenter(line);
+    }
+  }
+  $effect(() => reveal(revealLine));
 
   function prefersDark(): boolean {
     const root = document.documentElement;

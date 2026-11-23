@@ -9,7 +9,7 @@ export { default as ProjectGeneralSettingsSection } from './ProjectGeneralSettin
 export { default as ProjectRolesSettingsSection } from './ProjectRolesSettingsSection.svelte';
 export { default as ProjectIntegrationsSettingsSection } from './ProjectIntegrationsSettingsSection.svelte';
 export { default as SystemConfigSettingsSection } from './SystemConfigSettingsSection.svelte';
-export { default as SystemHealthSection } from './SystemHealthSection.svelte';
+export { default as SystemHealthSection } from '../../../dashboard/components/sections/ServiceHealthPanel.svelte';
 export { default as UserDetailPanel } from './UserDetailPanel.svelte';
 export { default as ProjectDetailPanel } from './ProjectDetailPanel.svelte';
 export { default as MemberDetailPanel } from './MemberDetailPanel.svelte';

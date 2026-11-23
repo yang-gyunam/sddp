@@ -44,12 +44,26 @@
   interface Props {
     projectId: string;
     projectName?: string;
+    readonly?: boolean;
+    referenceId?: string;
+    referenceKind?: string;
+    referencePath?: string;
     project?: ProjectDetail;
     tabId?: string;
     class?: string;
   }
 
-  let { projectId, projectName = '', project, tabId = '', class: className = '' }: Props = $props();
+  let {
+    projectId,
+    readonly: readOnly = false,
+    referenceId,
+    referenceKind,
+    referencePath,
+    projectName = '',
+    project,
+    tabId = '',
+    class: className = '',
+  }: Props = $props();
 
   const pageTitle = 'Tasks';
   const pageMeta = $derived(project?.name || projectName || undefined);
@@ -126,7 +140,9 @@
   $effect(() => {
     if (!tabStateKey || restoredKey === tabStateKey) return;
     const saved = getTabState<ProjectTasksTabState>(tabStateKey);
-    if (saved) {
+    if (readOnly && referenceId) {
+      selectedTaskId = referenceId;
+    } else if (saved) {
       selectedTaskId = saved.selectedTaskId ?? null;
       panelMode = saved.panelMode ?? 'view';
       createTaskStatus =
@@ -426,7 +442,7 @@
   }
   useDetailRoute({
     tabId: () => tabId,
-    path: () => `/project/${projectId}/tasks`,
+    path: () => referencePath ?? `/project/${projectId}/tasks`,
     selection: () => selectedTaskId,
     restore: (id) => {
       selectedTaskId = id;
@@ -447,13 +463,13 @@
         title="Refresh tasks"
         onclick={handleRefresh}
       />
-      <IconButton
-        icon="plus"
-        size="sm"
-        variant="ghost"
-        title="New Task"
-        onclick={() => handleNewTask('ToDo')}
-      />
+      {#if !readOnly}<IconButton
+          icon="plus"
+          size="sm"
+          variant="ghost"
+          title="New Task"
+          onclick={() => handleNewTask('ToDo')}
+        />{/if}
     {/snippet}
   </PageHeader>
 
@@ -468,6 +484,14 @@
         <p class="text-[var(--color-text-secondary)]">{error}</p>
         <Button variant="secondary" size="sm" onclick={handleRefresh}>Retry</Button>
       </div>
+    {:else if readOnly}
+      <TaskMetaPanel
+        readonly
+        expandTimeLogs={referenceKind === 'task-time-log'}
+        task={currentTask}
+        {projectId}
+        loading={loadingTask}
+      />
     {:else}
       <ContentDetailLayout
         showDetailPanel={true}

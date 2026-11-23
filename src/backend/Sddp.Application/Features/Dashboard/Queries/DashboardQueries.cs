@@ -270,11 +270,11 @@ public sealed class GetSystemAuditLogsQueryHandler : IRequestHandler<GetSystemAu
 /// </summary>
 public sealed record GetSystemHealthQuery : IQuery<HealthCheckDto>;
 
-public sealed class GetSystemHealthQueryHandler : IRequestHandler<GetSystemHealthQuery, HealthCheckDto>
+public sealed class GetSystemHealthQueryHandler(IServiceHealthReader reader) : IRequestHandler<GetSystemHealthQuery, HealthCheckDto>
 {
     public Task<HealthCheckDto> Handle(GetSystemHealthQuery request, CancellationToken cancellationToken)
     {
-        return Task.FromResult(DashboardHelpers.BuildDefaultHealth());
+        return reader.ReadAsync(cancellationToken);
     }
 }
 

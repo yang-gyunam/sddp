@@ -12,6 +12,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./status": {
+      "svelte": "./dist/status.js",
+      "types": "./dist/status.d.ts",
+      "default": "./dist/status.js"
+    },
     "./components": {
       "svelte": "./dist/components/index.js",
       "types": "./dist/components/index.d.ts",

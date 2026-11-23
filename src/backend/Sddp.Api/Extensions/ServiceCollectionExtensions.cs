@@ -85,7 +85,10 @@ public static class ServiceCollectionExtensions
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddScoped<IArtifactRepositoryService, GitArtifactRepositoryService>();
         services.AddScoped<IRepositoryConnectionChecker, GitRepositoryConnectionChecker>();
-        services.AddScoped<IProjectFileRepository, GitProjectFileRepository>();
+        services.AddScoped<GitProjectFileRepository>();
+        services.AddScoped<IProjectFileRepository>(sp => sp.GetRequiredService<GitProjectFileRepository>());
+        services.AddScoped<IProjectSearchFileIndex, GitProjectSearchIndex>();
+        services.AddScoped<IProjectSearchSession, Sddp.Infrastructure.Persistence.ProjectSearchSession>();
 
         // Artifact descriptors (SDDP-owned storage, separate from the customer checkout)
         services.Configure<ArtifactDescriptorOptions>(configuration.GetSection("ArtifactDescriptor"));

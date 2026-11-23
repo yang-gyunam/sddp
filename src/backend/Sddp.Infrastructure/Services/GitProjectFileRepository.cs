@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
@@ -27,9 +28,8 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
             throw Invalid("Use a search query of 1–256 characters and a non-negative offset.");
         var (context, commit) = await OpenAsync(tenantId, projectId, revision, ct).ConfigureAwait(false);
         // Read every committed path, independently of folders loaded by the client. Query text is never a Git argument.
-        var output = await GitAsync(context, ["ls-tree", "-r", "-l", "-z", "--full-tree", commit], ct).ConfigureAwait(false);
-        var matches = ParseTree(output).Where(e => e.Kind != "directory" && e.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(e => e.Name, StringComparer.Ordinal).ToList();
+        var matches = await ListFilesAsync(context, commit, ct, query).ConfigureAwait(false);
+        matches.Sort((left, right) => StringComparer.Ordinal.Compare(left.Name, right.Name));
         const int searchPageSize = 100;
         var entries = matches.Skip(skip).Take(searchPageSize)
             .Select(e => new ProjectFileEntryDto(e.Name[(e.Name.LastIndexOf('/') + 1)..], e.Name, e.Kind, e.Size)).ToList();
@@ -42,8 +42,8 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
         ValidatePath(path, allowRoot: true);
         var (context, commit) = await OpenAsync(tenantId, projectId, revision, ct).ConfigureAwait(false);
         var tree = path.Length == 0 ? commit : $"{commit}:{path}";
-        var result = await GitAsync(context, ["ls-tree", "-l", "-z", tree], ct).ConfigureAwait(false);
-        var entries = ParseTree(result).Select(e => new ProjectFileEntryDto(e.Name,
+        var result = await ReadTreeAsync(context, ["ls-tree", "-l", "-z", tree], ct).ConfigureAwait(false);
+        var entries = result.Select(e => new ProjectFileEntryDto(e.Name,
             path.Length == 0 ? e.Name : $"{path}/{e.Name}", e.Kind, e.Size)).OrderBy(e => e.Kind != "directory")
             .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();
         return new(context.RepoBranch, commit, path, entries);
@@ -82,7 +82,7 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
         return new(commit, history.Take(PageSize).ToList(), history.Count > PageSize && skip + PageSize <= 2000 ? skip + PageSize : null);
     }
 
-    private async Task<(ArtifactRepositoryContext Context, string Commit)> OpenAsync(GlobalUniqueId tenantId, GlobalUniqueId projectId, string? revision, CancellationToken ct)
+    internal async Task<(ArtifactRepositoryContext Context, string Commit)> OpenAsync(GlobalUniqueId tenantId, GlobalUniqueId projectId, string? revision, CancellationToken ct)
     {
         if (revision is not null && !Sha.IsMatch(revision)) throw Invalid("Revision must be a full commit SHA.");
         var gate = SyncLocks.GetOrAdd($"{tenantId}/{projectId}", _ => new SemaphoreSlim(1, 1));
@@ -108,8 +108,8 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
 
     private static async Task<TreeEntry> FindEntryAsync(ArtifactRepositoryContext context, string commit, string path, CancellationToken ct)
     {
-        var result = await GitAsync(context, ["ls-tree", "-l", "-z", "--full-tree", commit, "--", path], ct).ConfigureAwait(false);
-        var entry = ParseTree(result).FirstOrDefault(e => e.Name == path && e.Kind != "directory");
+        var result = await ReadTreeAsync(context, ["ls-tree", "-l", "-z", "--full-tree", commit, "--", path], ct).ConfigureAwait(false);
+        var entry = result.FirstOrDefault(e => e.Name == path && e.Kind != "directory");
         return entry ?? throw new NotFoundException("File", path);
     }
 
@@ -147,15 +147,41 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
         return items.Skip(skip).ToList();
     }
 
-    private sealed record TreeEntry(string Name, string Kind, string ObjectId, long? Size);
-    private static IEnumerable<TreeEntry> ParseTree(string text)
-    {
-        foreach (var record in text.Split('\0', StringSplitOptions.RemoveEmptyEntries))
+    internal sealed record TreeEntry(string Name, string Kind, string ObjectId, long? Size);
+    internal static Task<List<TreeEntry>> ListFilesAsync(ArtifactRepositoryContext context, string commit,
+        CancellationToken ct, string? query = null) =>
+        ReadTreeAsync(context, ["ls-tree", "-r", "-l", "-z", "--full-tree", commit], ct, query);
+
+    private static Task<List<TreeEntry>> ReadTreeAsync(ArtifactRepositoryContext context, string[] args,
+        CancellationToken ct, string? query = null) =>
+        ReadGitAsync(context, args, async (process, token) =>
         {
-            var tab = record.IndexOf('\t');
-            var fields = record[..tab].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var kind = fields[1] == "tree" ? "directory" : fields[1] == "commit" ? "submodule" : fields[0] == "120000" ? "symlink" : "file";
-            yield return new(record[(tab + 1)..], kind, fields[2], long.TryParse(fields[3], out var size) ? size : null);
+            var entries = new List<TreeEntry>();
+            await foreach (var record in ReadNulRecords(process.StandardOutput, token))
+            {
+                var tab = record.IndexOf('\t');
+                var name = record[(tab + 1)..];
+                if (query is not null && !name.Contains(query, StringComparison.OrdinalIgnoreCase)) continue;
+                var fields = record[..tab].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var kind = fields[1] == "tree" ? "directory" : fields[1] == "commit" ? "submodule" : fields[0] == "120000" ? "symlink" : "file";
+                entries.Add(new(name, kind, fields[2], long.TryParse(fields[3], out var size) ? size : null));
+            }
+            return entries;
+        }, ct);
+
+    internal static async IAsyncEnumerable<string> ReadNulRecords(StreamReader reader, [EnumeratorCancellation] CancellationToken ct)
+    {
+        var buffer = new char[8192];
+        var token = new StringBuilder();
+        int read;
+        while ((read = await reader.ReadAsync(buffer.AsMemory(), ct)) > 0)
+        {
+            for (var i = 0; i < read; i++)
+            {
+                if (buffer[i] != '\0') { token.Append(buffer[i]); continue; }
+                yield return token.ToString();
+                token.Clear();
+            }
         }
     }
 
@@ -170,12 +196,27 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
     private static async Task<string> GitAsync(ArtifactRepositoryContext context, string[] args, CancellationToken ct)
         => Encoding.UTF8.GetString(await GitBytesAsync(context, args, ct).ConfigureAwait(false));
 
-    private static async Task<byte[]> GitBytesAsync(ArtifactRepositoryContext context, string[] args, CancellationToken ct)
+    private static Task<byte[]> GitBytesAsync(ArtifactRepositoryContext context, string[] args, CancellationToken ct) =>
+        ReadGitAsync(context, args, async (process, token) =>
+        {
+            using var output = new MemoryStream();
+            var buffer = new byte[8192];
+            int read;
+            while ((read = await process.StandardOutput.BaseStream.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
+            {
+                if (output.Length + read > OutputLimit) throw Invalid("Repository response is too large. Select a smaller directory or file.");
+                output.Write(buffer, 0, read);
+            }
+            return output.ToArray();
+        }, ct);
+
+    private static async Task<T> ReadGitAsync<T>(ArtifactRepositoryContext context, string[] args,
+        Func<Process, CancellationToken, Task<T>> readOutput, CancellationToken ct)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
         var start = new ProcessStartInfo("git") { WorkingDirectory = context.RepoPath, RedirectStandardOutput = true,
-            RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+            RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, UseShellExecute = false, CreateNoWindow = true };
         start.Environment["GIT_TERMINAL_PROMPT"] = "0";
         start.Environment["GIT_LITERAL_PATHSPECS"] = "1";
         start.ArgumentList.Add("--no-pager");
@@ -185,18 +226,11 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
         try
         {
             var stderr = process.StandardError.BaseStream.CopyToAsync(Stream.Null, timeout.Token);
-            using var output = new MemoryStream();
-            var buffer = new byte[8192];
-            int read;
-            while ((read = await process.StandardOutput.BaseStream.ReadAsync(buffer, timeout.Token).ConfigureAwait(false)) > 0)
-            {
-                if (output.Length + read > OutputLimit) throw Invalid("Repository response is too large. Select a smaller directory or file.");
-                output.Write(buffer, 0, read);
-            }
+            var output = await readOutput(process, timeout.Token).ConfigureAwait(false);
             await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
             await stderr.ConfigureAwait(false);
             if (process.ExitCode != 0) throw Invalid("The requested file or revision is unavailable in the configured branch.");
-            return output.ToArray();
+            return output;
         }
         finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
     }

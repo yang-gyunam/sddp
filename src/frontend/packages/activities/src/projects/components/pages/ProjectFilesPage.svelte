@@ -71,7 +71,9 @@
     tabId: () => stateKey,
     path: () => `/project/${projectId}/files`,
     selection: () => viewer?.selection.path || null,
+    keepInitialTabSelection: true,
     query: () => ({
+      line: viewer?.selection.line ? String(viewer.selection.line) : null,
       revision: viewer?.selection.revision ?? null,
       revisionPath: viewer?.selection.revision
         ? (viewer.selection.revisionPath ?? viewer.selection.path)
@@ -79,12 +81,14 @@
     }),
     ready: () => !!viewer?.tip && !viewer?.loading,
     restore: (path, query) => {
-      if (path && viewer) {
+      if (viewer) {
+        if (!path) return viewer.select({ path: '' });
         const revision = query?.get('revision') || undefined;
         return viewer.select({
           path,
           revision,
           revisionPath: revision ? query?.get('revisionPath') || path : undefined,
+          line: Number(query?.get('line')) > 0 ? Number(query?.get('line')) : undefined,
         });
       }
     },
@@ -168,7 +172,8 @@
                             commit: model.selection.revision,
                             path: model.selection.revisionPath ?? model.selection.path,
                           }
-                        : null
+                        : null,
+                      model.selection.line
                     )}>Retry file</Button
                 >
               </div>
@@ -189,6 +194,7 @@
                 value={model.content.content ?? ''}
                 language={fileLanguage(model.content.path)}
                 readOnly
+                revealLine={model.selection.line}
                 embedded
               />
             {/if}

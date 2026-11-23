@@ -1,12 +1,6 @@
-<!-- Activity: Settings > Nav: System Health (settings-system-health) -->
+<!-- Activity: Settings > System > Health -->
 <script lang="ts">
-  import SystemHealthSection from '../sections/SystemHealthSection.svelte';
-
-  interface Props {
-    tabId?: string;
-  }
-
-  let { tabId = '' }: Props = $props();
+  import ServiceHealthPanel from '../../../dashboard/components/sections/ServiceHealthPanel.svelte';
 </script>
 
-<SystemHealthSection {tabId} />
+<ServiceHealthPanel />

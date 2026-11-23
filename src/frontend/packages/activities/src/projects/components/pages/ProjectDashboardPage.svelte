@@ -1,6 +1,8 @@
 <!-- Activity: Projects > Nav: Dashboard (project-{id}-dashboard) | Screen ID: PRJ-DASH-001 -->
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
+  import { fetchWithAuth } from '../../../shared/api';
+  import type { AuditLogDto } from '../../services/TimelineService';
   import { Icon, Button, IconButton, CardGrid, Spinner } from '@sddp/ui';
   import { PageShell, PageHeader, PageBody, RouterService, Avatar, toast } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
@@ -17,13 +19,25 @@
   interface Props {
     projectId: string;
     projectName?: string;
+    readonly?: boolean;
+    referenceKind?: string;
+    referenceId?: string;
     tabId?: string;
     class?: string;
   }
 
   // _tabId: accepted for tab system compatibility but unused — no persistent UI state to save
-  let { projectId, projectName = '', tabId: _tabId = '', class: className = '' }: Props = $props();
+  let {
+    projectId,
+    readonly: readOnly = false,
+    referenceKind,
+    referenceId,
+    projectName = '',
+    tabId: _tabId = '',
+    class: className = '',
+  }: Props = $props();
 
+  let dashboard = $state<HTMLDivElement>();
   let project = $state<ProjectDetail | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
@@ -94,7 +108,15 @@
 
     activitiesLoading = true;
     try {
-      const entries = await loadRecentActivity(tenantId, userId, projectId);
+      const entries =
+        readOnly && referenceKind === 'activity' && referenceId
+          ? [
+              await fetchWithAuth<AuditLogDto>(`/audit-logs/${encodeURIComponent(referenceId)}`, {
+                tenantId,
+                projectId,
+              }),
+            ]
+          : await loadRecentActivity(tenantId, userId, projectId);
       recentActivities = entries.map((dto) =>
         mapAuditLogDtoToActivityLogEntry(dto, project?.name ?? '')
       );
@@ -122,6 +144,17 @@
     }
   }
 
+  $effect(() => {
+    if (!readOnly || loading || activitiesLoading || !referenceKind) return;
+    const anchor = referenceKind === 'member' ? referenceId : referenceKind;
+    if (anchor)
+      void tick().then(() =>
+        dashboard
+          ?.querySelector(`[data-target="${CSS.escape(anchor)}"]`)
+          ?.scrollIntoView({ block: 'nearest' })
+      );
+  });
+
   function handleRefresh() {
     loadProject();
     loadMyRecentActivity();
@@ -132,10 +165,10 @@
 <PageShell class={className}>
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
     {#snippet actions()}
-      <ProjectToolsExtension
-        {projectId}
-        members={project?.id === projectId ? project.members : []}
-      />
+      {#if !readOnly}<ProjectToolsExtension
+          {projectId}
+          members={project?.id === projectId ? project.members : []}
+        />{/if}
       <IconButton
         icon="refresh-cw"
         size="sm"
@@ -158,7 +191,10 @@
         <Button variant="ghost" size="sm" class="mt-4" onclick={handleRefresh}>Retry</Button>
       </div>
     {:else if project && stats}
-      <div class="dashboard-content mx-3">
+      <div class="dashboard-content mx-3" bind:this={dashboard}>
+        {#if readOnly && referenceKind === 'project' && project.description}
+          <p class="text-sm text-[var(--color-text-secondary)]">{project.description}</p>
+        {/if}
         <!-- Statistics Grid -->
         <CardGrid cols={4} gap="md">
           <StatCard
@@ -221,6 +257,7 @@
             <div class="flex flex-wrap gap-2">
               {#each project.members as member (member.userId)}
                 <div
+                  data-target={member.userId}
                   class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
                 >
                   <Avatar
@@ -252,7 +289,7 @@
             </div>
           </div>
         {:else if ownershipItems.length > 0}
-          <div>
+          <div data-target="ownership">
             <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
               Ownership Map
             </h3>
@@ -261,16 +298,19 @@
         {/if}
 
         <!-- Recent Activity (Today) -->
-        <div>
+        <div data-target="activity">
           <h3 class="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
-            Recent Activity (Today)
+            {readOnly && referenceKind === 'activity' ? 'Activity' : 'Recent Activity (Today)'}
           </h3>
           {#if activitiesLoading}
             <div class="flex items-center justify-center py-8">
               <Spinner size="sm" />
             </div>
           {:else}
-            <ActivityLog activities={recentActivities} />
+            <ActivityLog
+              activities={recentActivities}
+              selectedActivityId={referenceKind === 'activity' ? referenceId : undefined}
+            />
           {/if}
         </div>
       </div>

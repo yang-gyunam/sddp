@@ -87,6 +87,7 @@
     onsaved,
     onreaddenied,
     editor = commonEditor,
+    readonly: readOnly = false,
   }: {
     diagram?: DiagramDto;
     projectId: string;
@@ -94,6 +95,7 @@
     onsaved: (saved: DiagramDto) => void;
     onreaddenied?: () => void;
     editor?: DiagramEditorAdapter;
+    readonly?: boolean;
   } = $props();
   interface Draft {
     scope: string;
@@ -226,7 +228,9 @@
       ? $capabilities.data.permissions
       : []
   );
-  const canSave = $derived(allowed.includes(diagram ? 'diagram:update' : 'diagram:create'));
+  const canSave = $derived(
+    !readOnly && allowed.includes(diagram ? 'diagram:update' : 'diagram:create')
+  );
   const editable = $derived(canSave && !busy && !comparison && kind === 'authored');
   const { chooseAction } = createConfirmation(() => scope);
   const capabilityScope = $derived(JSON.stringify([projectId, tenantId, userId]));

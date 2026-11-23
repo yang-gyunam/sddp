@@ -1,3 +1,4 @@
+import type { StatusReport as HealthCheckDto } from '@sddp/shell/status';
 /**
  * Dashboard Service
  * Handles dashboard API calls with fallback to mock data
@@ -79,17 +80,10 @@ interface AuditLogsDto {
   totalCount: number;
 }
 
-interface HealthCheckDto {
-  status: string;
-  services: ServiceHealthDto[];
-}
-
-interface ServiceHealthDto {
-  name: string;
-  status: string;
-  message: string | null;
-  responseTimeMs: number | null;
-}
+export type {
+  StatusReading as ServiceHealthDto,
+  StatusReport as HealthCheckDto,
+} from '@sddp/shell/status';
 
 interface AuditLogEntryDto {
   id: string;
@@ -439,21 +433,19 @@ export async function getSystemAuditLogs(
   };
 }
 
-export async function getSystemHealth(tenantId?: string): Promise<HealthCheckDto> {
-  try {
-    return await fetchWithAuth<HealthCheckDto>(
-      '/dashboard/system/health',
-      tenantId ? { tenantId } : undefined
-    );
-  } catch (error) {
-    console.warn('System Health API failed:', error);
-    return {
-      status: 'Unknown',
-      services: [
-        { name: 'API Server', status: 'Unknown', message: 'Could not check', responseTimeMs: null },
-      ],
-    };
+export async function getSystemHealth(
+  tenantId?: string,
+  signal?: AbortSignal
+): Promise<HealthCheckDto> {
+  const options =
+    tenantId || signal
+      ? { ...(tenantId ? { tenantId } : {}), ...(signal ? { signal } : {}) }
+      : undefined;
+  const report = await fetchWithAuth<HealthCheckDto>('/dashboard/system/health', options);
+  if (!Number.isFinite(Date.parse(report.checkedAt)) || !Array.isArray(report.services)) {
+    throw new Error('This server did not return a measured health report.');
   }
+  return report;
 }
 
 // ============================================
@@ -558,8 +550,8 @@ export class DashboardService {
     return getSystemAuditLogs(this.tenantId, page, pageSize);
   }
 
-  getSystemHealth(): Promise<HealthCheckDto> {
-    return getSystemHealth(this.tenantId);
+  getSystemHealth(signal?: AbortSignal): Promise<HealthCheckDto> {
+    return getSystemHealth(this.tenantId, signal);
   }
 
   getMyNotifications(page = 1, pageSize = 20): Promise<NotificationsData> {

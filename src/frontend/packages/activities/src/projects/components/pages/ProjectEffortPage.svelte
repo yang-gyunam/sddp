@@ -48,12 +48,26 @@
   interface Props {
     projectId: string;
     projectName?: string;
+    readonly?: boolean;
+    referenceId?: string;
+    referenceRevision?: string;
+    referencePath?: string;
     project?: ProjectDetail;
     tabId?: string;
     class?: string;
   }
 
-  let { projectId, projectName = '', project, tabId = '', class: className = '' }: Props = $props();
+  let {
+    projectId,
+    readonly: readOnly = false,
+    referenceId,
+    referenceRevision,
+    referencePath,
+    projectName = '',
+    project,
+    tabId = '',
+    class: className = '',
+  }: Props = $props();
 
   const pageTitle = 'Effort';
   const pageMeta = $derived(project?.name || projectName || undefined);
@@ -90,7 +104,14 @@
 
   $effect(() => {
     if (!tabStateKey || restoredKey === tabStateKey) return;
-    pendingRestore = getTabState<ProjectEffortTabState>(tabStateKey) ?? null;
+    pendingRestore =
+      readOnly && referenceId && referenceRevision
+        ? {
+            selectedMemberId: referenceId,
+            viewMode: 'week',
+            dateRange: { start: referenceRevision, end: referenceRevision },
+          }
+        : (getTabState<ProjectEffortTabState>(tabStateKey) ?? null);
     restoredKey = tabStateKey;
     isRestored = true;
   });
@@ -229,7 +250,6 @@
 
   // Initialize
   $effect(() => {
-    pendingRestore = getTabState<ProjectEffortTabState>(tabStateKey) ?? null;
     const unsubscribe = effortScope.subscribe((state: EffortState) => {
       members = state.members;
       ownership = state.ownership;
@@ -445,7 +465,7 @@
   }
   useDetailRoute({
     tabId: () => tabId,
-    path: () => `/project/${projectId}/effort`,
+    path: () => referencePath ?? `/project/${projectId}/effort`,
     selection: () => selectedMemberId,
     ready: () => !isLoading,
     restore: (id) => {
@@ -488,7 +508,7 @@
                 onNextPeriod={handleNextPeriod}
                 onCurrentPeriod={handleCurrentPeriod}
                 onViewModeChange={handleViewModeChange}
-                onSettings={handleSettingsClick}
+                onSettings={readOnly ? undefined : handleSettingsClick}
                 {isLoading}
               />
             </ProjectListLayout>
@@ -568,7 +588,7 @@
                           weekData={activeWeekData}
                           userId={selectedMember.userId}
                           userName={selectedMember.userName}
-                          editable={true}
+                          editable={!readOnly}
                           showHeader={false}
                           variant="embedded"
                           onUpdateAllocation={effortScope.updateAllocation}
@@ -592,7 +612,7 @@
                           weekData={activeWeekData}
                           userId={selectedMember.userId}
                           userName={selectedMember.userName}
-                          editable={true}
+                          editable={!readOnly}
                           showHeader={false}
                           variant="embedded"
                           onUpdateAllocation={effortScope.updateAllocation}

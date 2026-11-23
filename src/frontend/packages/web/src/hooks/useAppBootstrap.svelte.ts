@@ -19,6 +19,7 @@ import { getMyNotifications, setNotifications } from '@sddp/activities/runtime';
 import { initShortcuts } from '../lib/shortcuts';
 
 type ReferenceNavigateDetail = {
+  projectId?: string;
   type: 'spec' | 'conversation' | 'requirement' | 'glossary';
   id: string;
   label?: string;
@@ -115,6 +116,17 @@ export function useAppBootstrap(params: AppBootstrapParams) {
     const rawTitle = label || `${capitalize(type)} ${shortId}`;
     const title = `${rawTitle} (view)`;
     const readonlyProps = { additionalProps: { readonly: true } };
+    if (detail.projectId) {
+      RouterService.navigate(
+        '/' +
+          type +
+          '/' +
+          encodeURIComponent(id) +
+          '?' +
+          new URLSearchParams({ projectId: detail.projectId })
+      );
+      return;
+    }
 
     switch (type) {
       case 'spec':

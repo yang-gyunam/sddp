@@ -142,6 +142,9 @@ export const activityComponents = {
   ProjectGlossaryPage: lazyComponent('ProjectGlossaryPage', async () =>
     import('@sddp/activities/projects/pages/glossary').then(({ default: page }) => page)
   ),
+  ProjectSearchPage: lazyComponent('ProjectSearchPage', async () =>
+    import('@sddp/activities/projects/pages/search').then(({ default: page }) => page)
+  ),
   ProjectKnowledgePage: lazyComponent('ProjectKnowledgePage', async () =>
     import('@sddp/activities/projects/pages/knowledge').then(({ default: page }) => page)
   ),

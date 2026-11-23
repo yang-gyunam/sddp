@@ -33,6 +33,9 @@
 
   interface Props {
     topic: Topic;
+    readonly?: boolean;
+    referenceMessage?: string;
+    referenceTime?: string;
     tenantId?: string;
     projectId?: string;
     onBack?: () => void;
@@ -43,6 +46,9 @@
 
   let {
     topic,
+    readonly: readOnly = false,
+    referenceMessage,
+    referenceTime,
     tenantId: propTenantId = '',
     projectId = '',
     onBack,
@@ -69,7 +75,7 @@
       projectId,
       containerType: 'topic',
       containerId: topic.id,
-      readonly: topic.status !== 'Open',
+      readonly: readOnly || topic.status !== 'Open',
     }),
     async (isCurrent, passiveOutputId) => {
       await loadMessages(isCurrent, true, passiveOutputId);
@@ -106,7 +112,11 @@
     if (!propagateError) isLoadingMessages = true;
     try {
       const service = createConversationService(tenantId, projectId);
-      const result = await service.getTopicMessages(topic.forumId, topic.id);
+      const result = await service.getTopicMessages(
+        topic.forumId,
+        topic.id,
+        referenceTime ? { cursor: referenceTime, limit: 100 } : undefined
+      );
       if (!isCurrent()) return;
       const batch = result.messages.map(toMessage);
       if (passiveOutputId && !batch.some((message) => message.id === passiveOutputId)) return;
@@ -115,7 +125,11 @@
       // Scroll to bottom to show latest messages
       setTimeout(() => {
         if (!passiveOutputId && isCurrent() && messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          const target =
+            referenceMessage &&
+            messagesContainer.querySelector(`[data-message-id="${CSS.escape(referenceMessage)}"]`);
+          if (target) target.scrollIntoView({ block: 'center' });
+          else messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
       }, 0);
     } catch (err) {
@@ -269,7 +283,7 @@
       </span>
     </DetailTitle>
     {#snippet actions()}
-      {#if topic.status === 'Open'}
+      {#if topic.status === 'Open' && !readOnly}
         <IconButton
           icon="check-circle"
           size="sm"
@@ -310,13 +324,13 @@
             {messages}
             {viewMode}
             {projectId}
-            showToolbar={true}
+            showToolbar={!readOnly}
             isOwn={message.sender?.id === currentUserId}
             isLast={index === messages.length - 1}
             onAskAi={aiRun.canAsk ? aiRun.ask : undefined}
-            onEdit={handleEditMessage}
-            onDelete={handleDeleteMessage}
-            onReply={topic.status === 'Open' ? handleReplyMessage : undefined}
+            onEdit={readOnly ? undefined : handleEditMessage}
+            onDelete={readOnly ? undefined : handleDeleteMessage}
+            onReply={!readOnly && topic.status === 'Open' ? handleReplyMessage : undefined}
           />
         {/each}
       {/if}
@@ -325,7 +339,7 @@
     <ConversationAiRunPanel run={aiRun} />
 
     <!-- Message Input (only if topic is open) -->
-    {#if topic.status === 'Open'}
+    {#if topic.status === 'Open' && !readOnly}
       <div class="flex-shrink-0 bg-[var(--color-surface-50)]">
         <MessageInput
           onSubmit={handleSendMessage}
@@ -341,7 +355,9 @@
         class="px-4 py-3 text-center text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-200)] border-t border-[var(--color-border-primary)]"
       >
         <Icon name="lock" size="sm" class="inline mr-1" />
-        This topic is {topic.status.toLowerCase()}. No new replies allowed.
+        {readOnly
+          ? 'Read only'
+          : 'This topic is ' + topic.status.toLowerCase() + '. No new replies allowed.'}
       </div>
     {/if}
   </PageBody>

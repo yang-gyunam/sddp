@@ -39,6 +39,7 @@
     ProjectTasksPage,
     ProjectGlossaryPage,
     ProjectKnowledgePage,
+    ProjectSearchPage,
     ProjectArtifactsPage,
     ProjectDiagramsPage,
     ProjectFilesPage,
@@ -208,6 +209,8 @@
         <ProjectSpecsPage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'glossary'}
         <ProjectGlossaryPage projectId={selectedProjectId} project={currentProject ?? undefined} />
+      {:else if selectedPageType === 'search'}
+        <ProjectSearchPage projectId={selectedProjectId} projectName={currentProject?.name ?? ''} />
       {:else if selectedPageType === 'knowledge'}
         <ProjectKnowledgePage projectId={selectedProjectId} project={currentProject ?? undefined} />
       {:else if selectedPageType === 'files'}

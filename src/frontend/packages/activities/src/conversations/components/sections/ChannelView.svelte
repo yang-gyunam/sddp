@@ -62,6 +62,8 @@
     groupId?: string;
     channelStatus?: ChannelEntryStatus | null;
     readonly?: boolean;
+    referenceMessage?: string;
+    referenceTime?: string;
     hideParticipantPanel?: boolean;
     /** Hide internal header (for Pattern B layout where header is rendered externally) */
     showHeader?: boolean;
@@ -86,6 +88,8 @@
     groupId = '',
     channelStatus: propChannelStatus = null,
     readonly: isReadOnlyProp = false,
+    referenceMessage,
+    referenceTime,
     hideParticipantPanel = false,
     showHeader: showHeaderProp = true,
     onClose,
@@ -280,7 +284,8 @@
   );
 
   const canConclude = $derived(
-    hasStatusControls &&
+    !isReadOnlyProp &&
+      hasStatusControls &&
       channelStatus === 'Active' &&
       (isDirectMessage || currentUserRole.toLowerCase() === 'owner')
   );
@@ -298,6 +303,7 @@
   }
 
   async function handleConclude(): Promise<void> {
+    if (!canConclude) return;
     statusLoading = true;
     try {
       await ensureContext();
@@ -441,7 +447,7 @@
   }
 
   const canExtractRequirement = $derived(
-    allowRequirementExtract && sourceType === 'channel' && !!projectId
+    !isReadOnlyProp && allowRequirementExtract && sourceType === 'channel' && !!projectId
   );
 
   function generateRequirementCode(seed: string): string {
@@ -477,6 +483,7 @@
   }
 
   async function handleExtractSubmit(data: CreateRequirementRequest): Promise<void> {
+    if (!canExtractRequirement) return;
     extractLoading = true;
     extractError = null;
     try {
@@ -542,7 +549,7 @@
     }
     try {
       await ensureContext();
-      const cursor = reset ? undefined : (nextCursor ?? undefined);
+      const cursor = reset ? referenceTime : (nextCursor ?? undefined);
       if (sourceType === 'conversation') {
         const page = await service.getConversationMessages(targetConversationId, {
           cursor,
@@ -587,7 +594,11 @@
       // Scroll to bottom on initial load (channel selected)
       if (reset && !passiveOutputId) {
         requestAnimationFrame(() => {
-          messagesContainer?.scrollTo({ top: messagesContainer.scrollHeight });
+          const target =
+            referenceMessage &&
+            messagesContainer?.querySelector(`[data-message-id="${CSS.escape(referenceMessage)}"]`);
+          if (target) target.scrollIntoView({ block: 'center' });
+          else messagesContainer?.scrollTo({ top: messagesContainer.scrollHeight });
         });
       }
     } catch (err) {
@@ -896,7 +907,7 @@
         </div>
       {/if}
 
-      {#if extractingMessage}
+      {#if canExtractRequirement && extractingMessage}
         <div
           class="flex-shrink-0 border-b border-[var(--color-border-primary)] bg-[var(--color-surface-100)]"
         >
