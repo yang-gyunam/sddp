@@ -8,7 +8,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outl
 /**
  * Button component sizes
  */
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 /**
  * Input component types

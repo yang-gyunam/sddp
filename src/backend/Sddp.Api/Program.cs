@@ -53,6 +53,7 @@ try
     ProductionSecretGuard.EnsureSafe(builder.Environment, builder.Configuration);
 
     builder.Services.AddActiveUserProtection(builder.Environment);
+    builder.Services.AddSensitiveReadMonitoring(builder.Environment);
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddAuthorizationPolicies();
     builder.Services.AddDiagramServices();
@@ -82,6 +83,8 @@ try
     // to IProducesArtifactDescriptor, so DI skips it for every other request.
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ArtifactDescriptorBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
+    // After TransactionBehavior: the Spec reindex is recorded in the outbox inside the transaction.
+    builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(SpecReindexBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(RepositoryConfirmationBehavior<,>));
     builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
 

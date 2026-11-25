@@ -5,6 +5,7 @@ using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
+using Sddp.Api.Security;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.Conversations.Commands;
 using Sddp.Application.Features.Conversations.Queries;
@@ -15,6 +16,7 @@ namespace Sddp.Api.Controllers;
 /// <summary>
 /// Direct Messages controller
 /// </summary>
+[SensitiveRead("conversations")]
 [Route("api/conversations")]
 [Authorize]
 public class DirectMessagesController : BaseApiController

@@ -1,5 +1,8 @@
 <!-- Activity: Projects > Nav: Requirements (project-{id}-requirements) | Screen ID: PRJ-REQ-001 -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
   import { onMount, untrack } from 'svelte';
@@ -717,7 +720,16 @@
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   }
+  const detailChat = createDetailChat(() =>
+    viewMode === 'detail' && selectedRequirement
+      ? { projectId, entityType: 'Requirement', entityId: selectedRequirement.id }
+      : undefined
+  );
 </script>
+
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <PageShell class={className}>
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
@@ -754,6 +766,8 @@
       </div>
     {:else}
       <SidebarDetailLayout
+        auxiliaryPanel={detailChat.visible ? aiChatPanel : undefined}
+        showAuxiliaryPanel={detailChat.open}
         showRightPanel={!!selectedRequirement && viewMode === 'detail'}
         sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
         minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
@@ -1109,6 +1123,9 @@
                     title="Edit"
                     onclick={handleEditRequirement}
                   />
+                {/if}
+                {#if detailChat.visible}
+                  <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
                 {/if}
                 {#if transitions.length > 0 || selectedRequirement!.status === 'Approved'}
                   <Dropdown position="bottom-right">

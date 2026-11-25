@@ -13,13 +13,14 @@ using Sddp.Abstractions.ValueObjects;
 namespace Sddp.Infrastructure.Services;
 
 /// <summary>Reads Git objects, never working-tree files or symlink targets.</summary>
-public sealed class GitProjectFileRepository(IArtifactRepositoryService repositories, IOptions<GitRepositoryOptions> options)
+public sealed partial class GitProjectFileRepository(IArtifactRepositoryService repositories, IOptions<GitRepositoryOptions> options)
     : IProjectFileRepository
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> SyncLocks = new();
     private static readonly Regex Sha = new("\\A(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})\\z", RegexOptions.CultureInvariant);
     private const int PageSize = 30;
     private const int OutputLimit = 8 * 1024 * 1024;
+    private const int DirectoryHistoryConcurrency = 4;
 
     public async Task<ProjectFileSearchDto> SearchAsync(GlobalUniqueId tenantId, GlobalUniqueId projectId, string query, string? revision, int skip, CancellationToken ct)
     {
@@ -37,7 +38,8 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
             skip < matches.Count - entries.Count ? skip + entries.Count : null);
     }
 
-    public async Task<ProjectFileTreeDto> GetTreeAsync(GlobalUniqueId tenantId, GlobalUniqueId projectId, string path, string? revision, CancellationToken ct)
+    public async Task<ProjectFileTreeDto> GetTreeAsync(GlobalUniqueId tenantId, GlobalUniqueId projectId, string path, string? revision,
+        CancellationToken ct, bool includeLastChangedBy = false)
     {
         ValidatePath(path, allowRoot: true);
         var (context, commit) = await OpenAsync(tenantId, projectId, revision, ct).ConfigureAwait(false);
@@ -45,8 +47,34 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
         var result = await ReadTreeAsync(context, ["ls-tree", "-l", "-z", tree], ct).ConfigureAwait(false);
         var entries = result.Select(e => new ProjectFileEntryDto(e.Name,
             path.Length == 0 ? e.Name : $"{path}/{e.Name}", e.Kind, e.Size)).OrderBy(e => e.Kind != "directory")
-            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (includeLastChangedBy)
+        {
+            var parallel = new ParallelOptions { MaxDegreeOfParallelism = DirectoryHistoryConcurrency, CancellationToken = ct };
+            await Parallel.ForAsync(0, entries.Length, parallel, async (index, token) =>
+            {
+                var entry = entries[index];
+                if (entry.Kind != "directory")
+                {
+                    var (name, email) = await ReadLastAuthorAsync(context, commit, entry.Path, token).ConfigureAwait(false);
+                    entries[index] = entry with { LastChangedBy = name, GitAuthorEmail = email };
+                }
+            }).ConfigureAwait(false);
+        }
         return new(context.RepoBranch, commit, path, entries);
+    }
+
+    private static async Task<(string? Name, string? Email)> ReadLastAuthorAsync(ArtifactRepositoryContext context, string commit, string path, CancellationToken ct)
+    {
+        try
+        {
+            var output = await GitAsync(context, ["log", "--follow", "-1", "--format=%an%x00%ae", commit, "--", path], ct).ConfigureAwait(false);
+            var fields = output.TrimEnd('\r', '\n').Split('\0', 2);
+            return fields.Length == 2 && !string.IsNullOrWhiteSpace(fields[0]) ? (fields[0], fields[1]) : default;
+        }
+        // The directory remains usable when one entry's optional history is unavailable.
+        catch (SddpException) { return default; }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return default; }
     }
 
     public async Task<ProjectFileContentDto> GetContentAsync(GlobalUniqueId tenantId, GlobalUniqueId projectId, string path, string? revision, CancellationToken ct)
@@ -117,18 +145,19 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
     {
         // Read from the tip to preserve rename paths even when paging older commits.
         var output = await GitAsync(context, ["log", "--follow", $"--max-count={skip + count}",
-            "--format=%H%x00%an%x00%aI%x00%s", "--name-status", "-z", commit, "--", path], ct).ConfigureAwait(false);
+            "--format=%H%x00%an%x00%ae%x00%aI%x00%s", "--name-status", "-z", commit, "--", path], ct).ConfigureAwait(false);
         var tokens = output.Split('\0');
         var items = new List<ProjectFileCommitDto>();
         var historicalPath = path;
-        for (var i = 0; i + 3 < tokens.Length;)
+        for (var i = 0; i + 4 < tokens.Length;)
         {
             var sha = tokens[i++].TrimStart('\n');
             if (!Sha.IsMatch(sha)) break;
             var author = tokens[i++];
+            var email = tokens[i++];
             var date = DateTimeOffset.Parse(tokens[i++], CultureInfo.InvariantCulture);
             var message = tokens[i++];
-            items.Add(new(sha, author, date, message, historicalPath));
+            items.Add(new(sha, author, date, message, historicalPath) { GitAuthorEmail = email });
             while (i < tokens.Length)
             {
                 var status = tokens[i].TrimStart('\n');
@@ -187,10 +216,13 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
 
     public static void ValidatePath(string path, bool allowRoot = false)
     {
-        if ((path.Length == 0 && !allowRoot) || path.Length > 4096 || path.Contains('\0') || path.Contains('\\')
-            || path.StartsWith('/') || (path.Length > 0 && path.Split('/').Any(p => p is "" or "." or "..")))
+        if (!IsValidPath(path, allowRoot))
             throw Invalid("Use a repository-relative file path.");
     }
+
+    private static bool IsValidPath(string path, bool allowRoot = false) => path.Length == 0 ? allowRoot :
+        path.Length <= 4096 && !path.Contains('\0') && !path.Contains('\\') &&
+        !path.Split('/').Any(segment => segment is "" or "." or "..");
 
     private static SddpException Invalid(string message) => new("INVALID_FILE_REQUEST", message);
     private static async Task<string> GitAsync(ArtifactRepositoryContext context, string[] args, CancellationToken ct)
@@ -211,7 +243,7 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
         }, ct);
 
     private static async Task<T> ReadGitAsync<T>(ArtifactRepositoryContext context, string[] args,
-        Func<Process, CancellationToken, Task<T>> readOutput, CancellationToken ct)
+        Func<Process, CancellationToken, Task<T>> readOutput, CancellationToken ct, bool allowNoMatches = false)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
@@ -229,7 +261,8 @@ public sealed class GitProjectFileRepository(IArtifactRepositoryService reposito
             var output = await readOutput(process, timeout.Token).ConfigureAwait(false);
             await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
             await stderr.ConfigureAwait(false);
-            if (process.ExitCode != 0) throw Invalid("The requested file or revision is unavailable in the configured branch.");
+            if (process.ExitCode != 0 && !(allowNoMatches && process.ExitCode == 1))
+                throw Invalid("The requested file or revision is unavailable in the configured branch.");
             return output;
         }
         finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }

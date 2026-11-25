@@ -7,6 +7,7 @@ using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
 using Sddp.Api.Constants;
+using Sddp.Api.Security;
 using Sddp.Domain.Entities;
 using Sddp.Application.Features.Artifacts.Commands;
 using Sddp.Application.Features.Artifacts.Queries;
@@ -193,6 +194,8 @@ public class ArtifactsController : BaseApiController
     /// The artifact file's actual contents, for reviewing it against the descriptor.
     /// </summary>
     [HttpGet("{id}/content")]
+    // The same Git file bytes as Files, so reads through this route count toward the same limits.
+    [SensitiveRead("files")]
     [RequirePermission(PermissionCodes.ProjectRead)]
     [ResourceScope<ArtifactTracking>("id")]
     public async Task<IActionResult> GetArtifactContent(

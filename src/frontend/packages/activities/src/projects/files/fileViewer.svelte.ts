@@ -11,6 +11,7 @@ import type {
 
 export interface FileSelection {
   path: string;
+  kind?: 'directory';
   revision?: string;
   revisionPath?: string;
   line?: number;
@@ -27,6 +28,9 @@ export class FileViewer {
   directoryErrors = $state<Record<string, string>>({});
   directoryLoading = $state<Record<string, boolean>>({});
   selection = $state<FileSelection>({ path: '' });
+  folderEntries = $state<FileEntry[]>([]);
+  folderLoading = $state(false);
+  folderError = $state('');
   content = $state<FileContent | null>(null);
   history = $state<FileHistory | null>(null);
   relations = $state<FileRelations | null>(null);
@@ -65,6 +69,9 @@ export class FileViewer {
     this.content = null;
     this.history = null;
     this.relations = null;
+    this.folderEntries = [];
+    this.folderLoading = false;
+    this.folderError = '';
     try {
       const tree = await this.api.tree();
       if (generation !== this.generation) return;
@@ -77,10 +84,14 @@ export class FileViewer {
         parents.pop();
         for (let i = 1; i <= parents.length; i++) folders.add(parents.slice(0, i).join('/'));
       }
-      await Promise.all([...folders].filter(Boolean).map((path) => this.toggleDirectory(path)));
+      await Promise.all(
+        [...folders]
+          .filter((path) => path && !(saved.kind === 'directory' && path === saved.path))
+          .map((path) => this.toggleDirectory(path))
+      );
       if (generation !== this.generation) return;
       if (saved.path) {
-        await this.select(saved);
+        await this.select(saved, folders.has(saved.path));
       } else this.selection = { path: '' };
       if (this.searchQuery.trim()) await this.search();
     } catch (error) {
@@ -146,7 +157,13 @@ export class FileViewer {
 
   async toggleDirectory(path: string) {
     this.expanded[path] = !this.expanded[path];
-    if (!this.expanded[path] || this.directories[path] || this.directoryLoading[path]) return;
+    if (
+      !this.expanded[path] ||
+      this.directories[path] ||
+      this.directoryLoading[path] ||
+      (this.folderLoading && this.selection.path === path)
+    )
+      return;
     const generation = this.generation;
     this.directoryLoading[path] = true;
     delete this.directoryErrors[path];
@@ -160,20 +177,30 @@ export class FileViewer {
     }
   }
 
-  async select(selection: FileSelection) {
+  async select(selection: FileSelection, expandFolder = true) {
     const generation = ++this.selectionGeneration;
     this.selection = { ...selection };
     this.history = null;
     this.relations = null;
     this.historyError = '';
     this.relationsError = '';
-    if (!selection.path) {
+    this.folderEntries = [];
+    this.folderError = '';
+    this.folderLoading = false;
+    if (!selection.path || selection.kind === 'directory') {
       ++this.contentGeneration;
       this.content = null;
       this.contentError = '';
       this.contentLoading = false;
       this.historyLoading = false;
       this.relationsLoading = false;
+      if (selection.path) {
+        if (expandFolder) this.expanded[selection.path] = true;
+        await Promise.all([
+          this.loadFolder(selection.path, generation),
+          this.revealParents(selection.path),
+        ]);
+      }
       return;
     }
     this.historyLoading = true;
@@ -191,9 +218,27 @@ export class FileViewer {
     ]);
   }
 
+  private async loadFolder(path: string, selectionGeneration: number) {
+    const generation = this.generation;
+    this.folderLoading = true;
+    try {
+      const tree = await this.api.tree(path, this.tip, {
+        includeOwners: true,
+        includeLastChangedBy: true,
+      });
+      if (generation !== this.generation) return;
+      this.directories[path] ??= tree.entries;
+      delete this.directoryErrors[path];
+      if (selectionGeneration === this.selectionGeneration) this.folderEntries = tree.entries;
+    } catch (error) {
+      if (selectionGeneration === this.selectionGeneration) this.folderError = message(error);
+    } finally {
+      if (selectionGeneration === this.selectionGeneration) this.folderLoading = false;
+    }
+  }
+
   private async revealParents(path: string) {
-    // URL restoration selects a file after initialization, without saved tab state.
-    // Reveal its current path just as opening it through the tree would do.
+    // URL restoration can select a nested entry without saved tab state.
     const segments = path.split('/');
     segments.pop();
     const parents = segments.map((_, index) => segments.slice(0, index + 1).join('/'));

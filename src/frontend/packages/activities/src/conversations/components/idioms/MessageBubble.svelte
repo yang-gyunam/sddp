@@ -19,7 +19,10 @@
   } from '@sddp/shell';
   import AutomaticAnalysisBody from '../../../ai/components/idioms/AutomaticAnalysisBody.svelte';
   import { parseAutomaticAnalysis } from '../../../ai/utils/automatic-analysis-display';
-  import type { Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
+  import ReadAloudButton from '../../../shared/components/idioms/ReadAloudButton.svelte';
+  import { appSounds, stopReading } from '../../../shared/stores/app-sounds';
+  import { readableText } from '../../../shared/utils/read-aloud-text';
   import ConversationEvidence from '../../../ai/components/idioms/ConversationEvidence.svelte';
   import { parseEvidenceReferences } from '../../../ai/utils/conversation-evidence';
   import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
@@ -144,9 +147,14 @@
       !message.aiMemberId &&
       !AI_MESSAGE_TYPES.includes(message.type)
   );
+  const readAloudId = $props.id();
+  let messageBody = $state<HTMLDivElement>();
+  const canRead = $derived($appSounds.enabled && !!message.content.trim());
   const hasActions = $derived(
-    canEdit || canDelete || canReply || canAskAi || canRequestMemberReply
+    canEdit || canDelete || canReply || canAskAi || canRequestMemberReply || canRead
   );
+
+  onDestroy(() => stopReading(readAloudId));
 
   // Find the message being replied to
   const replyToMessage = $derived(
@@ -445,6 +453,51 @@
   {/if}
 {/snippet}
 
+{#snippet readableBody()}
+  <div class="contents" bind:this={messageBody}>
+    {#if automaticAnalysis}
+      <AutomaticAnalysisBody analysis={automaticAnalysis} />
+    {:else if message.type === 'AiReminder'}
+      <SurfaceCard padding="md" class="space-y-2">
+        <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+          <Icon name="bell" size="xs" />
+          <span>Past Decision Reminder</span>
+        </div>
+        <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          {@html renderMarkdown(message.content)}
+        </div>
+        {#if reminderReference}
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={handleReminderDetail}
+            class="text-[var(--color-accent-text)] hover:text-[var(--color-accent-text)]"
+          >
+            <Icon name="external-link" size="xs" />
+            View Details
+          </Button>
+        {/if}
+      </SurfaceCard>
+    {:else}
+      <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html renderMarkdown(message.content)}
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet readAloudAction()}
+  {#if canRead}
+    <ReadAloudButton
+      menuOwner={readAloudId}
+      getText={() => (messageBody ? readableText(messageBody) : '')}
+      onselect={handleCloseMenu}
+    />
+  {/if}
+{/snippet}
+
 {#snippet askAiAction()}
   {#if canAskAi}
     <Button
@@ -570,6 +623,7 @@
           bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
           rounded-md shadow-lg py-1 min-w-[120px]"
         >
+          {@render readAloudAction()}
           {@render askAiAction()}
           {@render memberReplyAction()}
           {#if canReply}
@@ -792,36 +846,7 @@
               Replying to a message...
             </div>
           {/if}
-          {#if automaticAnalysis}
-            <AutomaticAnalysisBody analysis={automaticAnalysis} />
-          {:else if message.type === 'AiReminder'}
-            <SurfaceCard padding="md" class="space-y-2">
-              <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-                <Icon name="bell" size="xs" />
-                <span>Past Decision Reminder</span>
-              </div>
-              <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-                {@html renderMarkdown(message.content)}
-              </div>
-              {#if reminderReference}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onclick={handleReminderDetail}
-                  class="text-[var(--color-accent-text)] hover:text-[var(--color-accent-text)]"
-                >
-                  <Icon name="external-link" size="xs" />
-                  View Details
-                </Button>
-              {/if}
-            </SurfaceCard>
-          {:else}
-            <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
-              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-              {@html renderMarkdown(message.content)}
-            </div>
-          {/if}
+          {@render readableBody()}
           {@render memberReplyContext()}
           {#if isAiMessage}
             {@render sourceEvidence({
@@ -922,6 +947,7 @@
           bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
           rounded-md shadow-lg py-1 min-w-[120px]"
         >
+          {@render readAloudAction()}
           {@render askAiAction()}
           {@render memberReplyAction()}
           {#if canReply}
@@ -1142,36 +1168,7 @@
           Replying to a message...
         </div>
       {/if}
-      {#if automaticAnalysis}
-        <AutomaticAnalysisBody analysis={automaticAnalysis} />
-      {:else if message.type === 'AiReminder'}
-        <SurfaceCard padding="md" class="space-y-2">
-          <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-            <Icon name="bell" size="xs" />
-            <span>Past Decision Reminder</span>
-          </div>
-          <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
-            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-            {@html renderMarkdown(message.content)}
-          </div>
-          {#if reminderReference}
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={handleReminderDetail}
-              class="text-[var(--color-accent-text)] hover:text-[var(--color-accent-text)]"
-            >
-              <Icon name="external-link" size="xs" />
-              View Details
-            </Button>
-          {/if}
-        </SurfaceCard>
-      {:else}
-        <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
-          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-          {@html renderMarkdown(message.content)}
-        </div>
-      {/if}
+      {@render readableBody()}
       {@render memberReplyContext()}
       {#if isAiMessage}
         {@render sourceEvidence({
@@ -1328,6 +1325,7 @@
                 bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
                 rounded-md shadow-lg py-1 min-w-[120px]"
                 >
+                  {@render readAloudAction()}
                   {@render askAiAction()}
                   {@render memberReplyAction()}
                   {#if canReply}
@@ -1542,36 +1540,7 @@
           {/if}
 
           <!-- Content -->
-          {#if automaticAnalysis}
-            <AutomaticAnalysisBody analysis={automaticAnalysis} />
-          {:else if message.type === 'AiReminder'}
-            <SurfaceCard padding="md" class="space-y-2">
-              <div class="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-                <Icon name="bell" size="xs" />
-                <span>Past Decision Reminder</span>
-              </div>
-              <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-                {@html renderMarkdown(message.content)}
-              </div>
-              {#if reminderReference}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onclick={handleReminderDetail}
-                  class="text-[var(--color-accent-text)] hover:text-[var(--color-accent-text)]"
-                >
-                  <Icon name="external-link" size="xs" />
-                  View Details
-                </Button>
-              {/if}
-            </SurfaceCard>
-          {:else}
-            <div class="text-sm text-[var(--color-text-primary)] break-words prose-message">
-              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-              {@html renderMarkdown(message.content)}
-            </div>
-          {/if}
+          {@render readableBody()}
 
           <!-- References -->
           {@render memberReplyContext()}

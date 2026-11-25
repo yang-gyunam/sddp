@@ -7,6 +7,7 @@
     PageHeader,
     PageBody,
     SidebarDetailLayout,
+    EmptyState,
     getTabState,
     setTabState,
     Dropdown,
@@ -318,13 +319,16 @@
                 </RichListItem>
               {/each}
               {#if visibleRows.length === 0}
-                <p class="p-4 text-sm text-[var(--color-text-tertiary)]">
-                  {search || kindFilter !== 'all'
-                    ? rows.length < total
-                      ? 'Load more diagrams to continue filtering.'
-                      : 'No matching diagrams'
-                    : 'No diagrams yet'}
-                </p>
+                <div class="p-4 text-center text-sm text-[var(--color-text-tertiary)]">
+                  <Icon name="inbox" size="lg" class="mx-auto mb-2 opacity-50" />
+                  <p>
+                    {search || kindFilter !== 'all'
+                      ? rows.length < total
+                        ? 'Load more diagrams to continue filtering.'
+                        : 'No matching diagrams'
+                      : 'No diagrams found'}
+                  </p>
+                </div>
               {/if}
               {#if rows.length < total}<div class="p-2">
                   <Button
@@ -363,13 +367,17 @@
             void load(true);
           }}
         />
-      {:else}
-        <div
-          class="flex h-full flex-col items-center justify-center gap-3 text-[var(--color-text-tertiary)]"
-        >
-          <Icon name="git-branch" size="lg" />
-          <p class="text-sm">Select a diagram to view details</p>
-        </div>
+      {:else if !loading && !error}
+        {#if !search && total === 0}
+          <EmptyState icon="git-branch" heading="No diagrams yet" />
+        {:else if visibleRows.length > 0}
+          <EmptyState
+            icon="mouse-pointer"
+            iconSize="lg"
+            heading="Select a diagram"
+            subtext="Choose a diagram from the sidebar to view details."
+          />
+        {/if}
       {/if}
     </SidebarDetailLayout>
   </PageBody>

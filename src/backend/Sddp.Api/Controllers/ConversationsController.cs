@@ -6,6 +6,7 @@ using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
+using Sddp.Api.Security;
 using Sddp.Api.Constants;
 using Sddp.Application.Features.Conversations.Commands;
 using Sddp.Application.Features.Conversations.Queries;
@@ -16,6 +17,7 @@ namespace Sddp.Api.Controllers;
 /// <summary>
 /// Conversations controller — Core CRUD, Search, Settings, Members
 /// </summary>
+[SensitiveRead("conversations")]
 [Route("api/conversations")]
 [Authorize]
 public class ConversationsController : BaseApiController

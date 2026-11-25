@@ -1,5 +1,6 @@
 <!-- Section: ForumView — Conversations > Forum/Global, Projects > Conversations -->
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { untrack } from 'svelte';
   import {
     Icon,
@@ -30,6 +31,8 @@
     readonly?: boolean;
     referenceMessage?: string;
     referenceTime?: string;
+    detailActions?: Snippet;
+    onActiveTopic?: (id: string | null) => void;
     class?: string;
   }
 
@@ -42,6 +45,8 @@
     readonly: readOnly = false,
     referenceMessage,
     referenceTime,
+    detailActions,
+    onActiveTopic,
     class: className = '',
   }: Props = $props();
 
@@ -150,6 +155,11 @@
 
   // Selected topic state
   let selectedTopic = $state<Topic | null>(null);
+  $effect(() => {
+    const id = selectedTopic?.id ?? null;
+    void showCreateForm;
+    untrack(() => onActiveTopic?.(id));
+  });
 
   // Forum statistics (derived)
   const stats = $derived({
@@ -629,6 +639,7 @@
     {:else if selectedTopic}
       {#key selectedTopic.id}
         <TopicView
+          {detailActions}
           readonly={readOnly}
           referenceMessage={selectedTopic.id === selectedTopicId ? referenceMessage : undefined}
           referenceTime={selectedTopic.id === selectedTopicId ? referenceTime : undefined}
@@ -644,6 +655,7 @@
       <PageShell class="h-full">
         <DetailHeader>
           <DetailTitle title="Forum Overview" />
+          {#snippet actions()}{@render detailActions?.()}{/snippet}
         </DetailHeader>
         <PageBody padded={false} class="p-3 space-y-3">
           {#if loading}

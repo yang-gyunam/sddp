@@ -1,5 +1,6 @@
 <!-- Section: TopicView — Conversations > Topic -->
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import ConversationEvidenceSection from '../../../ai/components/sections/ConversationEvidenceSection.svelte';
   import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
   import { untrack } from 'svelte';
@@ -41,6 +42,7 @@
     onBack?: () => void;
     onTopicClosed?: () => void;
     tabId?: string;
+    detailActions?: Snippet;
     class?: string;
   }
 
@@ -54,6 +56,7 @@
     onBack,
     onTopicClosed,
     tabId,
+    detailActions,
     class: className = '',
   }: Props = $props();
 
@@ -292,6 +295,7 @@
           title="Close Topic"
         />
       {/if}
+      {@render detailActions?.()}
       {#if onBack}
         <IconButton icon="x" size="sm" variant="ghost" onclick={onBack} title="Close" />
       {/if}

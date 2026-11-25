@@ -1,16 +1,29 @@
 import { fetchWithAuth, type FetchOptions } from '../../shared/api';
 
+interface FileOwner {
+  id: string;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
 export interface FileEntry {
   name: string;
   path: string;
   kind: 'directory' | 'file' | 'symlink' | 'submodule';
   sizeBytes: number | null;
+  owners?: FileOwner[];
+  lastChangedBy?: string;
+  lastChangedByProfile?: FileOwner;
 }
 export interface FileTree {
   branch: string;
   commit: string;
   path: string;
   entries: FileEntry[];
+}
+interface FileTreeOptions {
+  includeOwners?: boolean;
+  includeLastChangedBy?: boolean;
 }
 export interface FileSearch {
   branch: string;
@@ -25,6 +38,7 @@ export interface FileCommit {
   authoredAt: string;
   message: string;
   path: string;
+  authorProfile?: FileOwner;
 }
 export interface FileContent {
   branch: string;
@@ -50,7 +64,7 @@ export interface FileLink {
   code: string | null;
 }
 export interface FileRelations {
-  owners: { id: string; name: string | null; avatarUrl: string | null }[];
+  owners: FileOwner[];
   items: FileLink[];
 }
 
@@ -58,10 +72,14 @@ export function createProjectFilesService(
   projectId: string,
   scope: Pick<FetchOptions, 'tenantId' | 'beforeDispatch'> = {}
 ) {
-  const read = <T>(action: string, path: string, revision?: string, skip?: number) => {
-    const params = new URLSearchParams({ path });
+  const read = <T>(
+    action: string,
+    path: string,
+    revision?: string,
+    query: Record<string, string> = {}
+  ) => {
+    const params = new URLSearchParams({ path, ...query });
     if (revision) params.set('revision', revision);
-    if (skip !== undefined) params.set('skip', String(skip));
     return fetchWithAuth<T>(
       `/projects/${encodeURIComponent(projectId)}/files/${action}?${params}`,
       {
@@ -79,10 +97,15 @@ export function createProjectFilesService(
         { ...scope, projectId }
       );
     },
-    tree: (path = '', revision?: string) => read<FileTree>('tree', path, revision),
+    tree: (path = '', revision?: string, options: FileTreeOptions = {}) => {
+      const query: Record<string, string> = {};
+      if (options.includeOwners) query.includeOwners = 'true';
+      if (options.includeLastChangedBy) query.includeLastChangedBy = 'true';
+      return read<FileTree>('tree', path, revision, query);
+    },
     content: (path: string, revision?: string) => read<FileContent>('content', path, revision),
     history: (path: string, revision?: string, skip = 0) =>
-      read<FileHistory>('history', path, revision, skip),
+      read<FileHistory>('history', path, revision, { skip: String(skip) }),
     relations: (path: string) => read<FileRelations>('relations', path),
   };
 }

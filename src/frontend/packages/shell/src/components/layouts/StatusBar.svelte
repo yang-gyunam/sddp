@@ -91,14 +91,14 @@
           title={item.tooltip ?? item.text}
         >
           {#if item.icon}
-            <Icon name={item.icon} size="xs" style={statusIconStyle} />
+            <Icon name={item.icon} size="xs" style={statusIconStyle} class="shrink-0" />
           {/if}
           <span>{item.text}</span>
         </Button>
       {:else}
         <span class={getItemClass(false)} title={item.tooltip ?? item.text}>
           {#if item.icon}
-            <Icon name={item.icon} size="xs" style={statusIconStyle} />
+            <Icon name={item.icon} size="xs" style={statusIconStyle} class="shrink-0" />
           {/if}
           <span>{item.text}</span>
         </span>
@@ -118,7 +118,7 @@
                 title={item.tooltip ?? item.text}
               >
                 {#if item.icon}
-                  <Icon name={item.icon} size="xs" style={statusIconStyle} />
+                  <Icon name={item.icon} size="xs" style={statusIconStyle} class="shrink-0" />
                 {/if}
                 <span>{item.text}</span>
               </Button>
@@ -129,7 +129,7 @@
                 title={item.tooltip ?? item.text}
               >
                 {#if item.icon}
-                  <Icon name={item.icon} size="xs" style={statusIconStyle} />
+                  <Icon name={item.icon} size="xs" style={statusIconStyle} class="shrink-0" />
                 {/if}
                 <span>{item.text}</span>
               </span>
@@ -145,7 +145,7 @@
   </div>
 
   <!-- Right items -->
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-1">
     {#each rightItems as item (item.id)}
       {#if item.onClick}
         <Button
@@ -153,18 +153,24 @@
           onclick={item.onClick}
           class={getItemClass(true)}
           title={item.tooltip ?? item.text}
+          aria-label={item.text ? undefined : item.tooltip}
         >
           {#if item.icon}
-            <Icon name={item.icon} size="xs" style={statusIconStyle} />
+            <Icon name={item.icon} size="xs" style={statusIconStyle} class="shrink-0" />
           {/if}
-          <span>{item.text}</span>
+          {#if item.text}<span>{item.text}</span>{/if}
         </Button>
       {:else}
-        <span class={getItemClass(false)} title={item.tooltip ?? item.text}>
+        <span
+          class={getItemClass(false)}
+          title={item.tooltip ?? item.text}
+          role={item.text ? undefined : 'img'}
+          aria-label={item.text ? undefined : item.tooltip}
+        >
           {#if item.icon}
-            <Icon name={item.icon} size="xs" style={statusIconStyle} />
+            <Icon name={item.icon} size="xs" style={statusIconStyle} class="shrink-0" />
           {/if}
-          <span>{item.text}</span>
+          {#if item.text}<span>{item.text}</span>{/if}
         </span>
       {/if}
     {/each}

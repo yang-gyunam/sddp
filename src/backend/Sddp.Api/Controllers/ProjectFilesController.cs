@@ -5,12 +5,14 @@ using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
+using Sddp.Api.Security;
 using Sddp.Application.Features.Files.Queries;
 using Sddp.Domain.Entities;
 
 namespace Sddp.Api.Controllers;
 
 /// <summary>Read-only committed files and current SDDP relationships.</summary>
+[SensitiveRead("files")]
 [Route("api/projects/{projectId}/files")]
 [Authorize]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -33,16 +35,19 @@ public sealed class ProjectFilesController(ISender sender) : BaseApiController
         return Ok(ApiResponse<ProjectFileSearchDto>.Ok(await sender.Send(new SearchProjectFilesQuery(tenant, project, q, revision, skip), cancellationToken)));
     }
 
-    /// <summary>Lists one directory of the configured branch; an omitted revision selects its tip.</summary>
+    /// <summary>Lists one directory and optionally includes SDDP file owners and Git authors of the latest changes.</summary>
     [RequirePermission(PermissionCodes.ProjectRead)]
     [ResourceScope<Project>("projectId")]
     [HttpGet("tree")]
     [ProducesResponseType(typeof(ApiResponse<ProjectFileTreeDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Tree(string projectId, [FromQuery] string path = "", [FromQuery] string? revision = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Tree(string projectId, [FromQuery] string path = "", [FromQuery] string? revision = null,
+        CancellationToken cancellationToken = default, [FromQuery] bool includeOwners = false,
+        [FromQuery] bool includeLastChangedBy = false)
     {
         var error = Scope(projectId, out var tenant, out var project);
         if (error is not null) return error;
-        return Ok(ApiResponse<ProjectFileTreeDto>.Ok(await sender.Send(new GetProjectFileTreeQuery(tenant, project, path, revision), cancellationToken)));
+        return Ok(ApiResponse<ProjectFileTreeDto>.Ok(await sender.Send(
+            new GetProjectFileTreeQuery(tenant, project, path, revision, includeOwners, includeLastChangedBy), cancellationToken)));
     }
 
     /// <summary>Reads one complete file version; never returns a diff.</summary>

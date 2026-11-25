@@ -6,6 +6,7 @@ using Sddp.Abstractions.DTOs;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
+using Sddp.Api.Security;
 using Sddp.Api.Constants;
 using Sddp.Api.Hubs;
 using Sddp.Application.Features.Conversations.Commands;
@@ -17,6 +18,7 @@ namespace Sddp.Api.Controllers;
 /// <summary>
 /// Conversation Messages controller (Message CRUD + SignalR broadcast)
 /// </summary>
+[SensitiveRead("conversations")]
 [Route("api/conversations")]
 [Authorize]
 public class ConversationMessagesController : BaseApiController

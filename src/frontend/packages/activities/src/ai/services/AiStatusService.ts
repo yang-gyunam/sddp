@@ -10,6 +10,7 @@ export interface AiFeatureStatus {
   reason: string;
 }
 export interface AiStatus {
+  detailChatDefaultDepth?: number | null;
   distribution?: {
     contractVersion: 1;
     edition: 'free' | 'ai';

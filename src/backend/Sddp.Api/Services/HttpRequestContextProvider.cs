@@ -20,6 +20,13 @@ public class HttpRequestContextProvider : IRequestContextProvider
     public string? UserAgent =>
         _httpContextAccessor.HttpContext?.Request.Headers.UserAgent.ToString();
 
-    public string? CorrelationId =>
-        _httpContextAccessor.HttpContext?.TraceIdentifier;
+    public string? CorrelationId
+    {
+        get
+        {
+            var context = _httpContextAccessor.HttpContext;
+            return context?.Items.TryGetValue("CorrelationId", out var value) == true && value is string correlationId
+                ? correlationId : context?.TraceIdentifier;
+        }
+    }
 }

@@ -17,8 +17,11 @@ public sealed record TransitionSpecStatusCommand(
     GlobalUniqueId ProjectId,
     GlobalUniqueId SpecId,
     GlobalUniqueId UserId,
-    SpecStatus NewStatus) : ICommand<SpecDto?>, IAuditableRequest<SpecDto?>
+    SpecStatus NewStatus) : ICommand<SpecDto?>, IAuditableRequest<SpecDto?>, IReindexesSpecs<SpecDto?>
 {
+    // A status change moves updated_at and the version, which retires the current index.
+    public IReadOnlyList<Guid> GetReindexedSpecIds(SpecDto? response) => response is null ? [] : [SpecId.ToGuid()];
+
     public AuditLogRequest? AuditLog { get; set; }
 
     public AuditLogRequest? GetAuditLogRequest(SpecDto? response) => AuditLog;

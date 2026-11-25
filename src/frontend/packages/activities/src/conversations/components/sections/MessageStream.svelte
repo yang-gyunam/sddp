@@ -3,6 +3,7 @@
   import { getMessageAuthor } from '../../utils/message-author';
   import { Icon, Button, Badge, IconButton, Spinner, Textarea } from '@sddp/ui';
   import { formatTime } from '@sddp/shell';
+  import ComposerFooter from '../../../shared/components/idioms/ComposerFooter.svelte';
   import DetailHeader from '../../../shared/components/idioms/DetailHeader.svelte';
   import DetailTitle from '../../../shared/components/idioms/DetailTitle.svelte';
   import type { ChannelDetail, Message, MessageType, ConversationSummary } from '../../types';
@@ -226,51 +227,43 @@
     {/if}
 
     <!-- Message Input -->
-    <div class="flex-shrink-0 px-4 py-3 border-t border-[var(--color-border)]">
-      <!-- Message Type Selector -->
-      <div class="flex items-center gap-1 mb-2">
-        {#each MESSAGE_TYPES as type (type.value)}
-          <Button
-            variant="unstyled"
-            class="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors
-              {selectedMessageType === type.value
-              ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
-              : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-secondary)]'}"
-            onclick={() => (selectedMessageType = type.value)}
-            title={type.label}
-          >
-            <Icon name={type.icon} size="xs" />
-            <span class="hidden sm:inline">{type.label}</span>
-          </Button>
-        {/each}
-      </div>
-
-      <!-- Input Area -->
-      <div class="flex items-end gap-2">
+    <div class="shrink-0 border-t border-[var(--color-border)] px-4 py-3">
+      <div
+        class="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] focus-within:border-[var(--color-accent-primary)]"
+      >
         <Textarea
           unstyled
           bind:value={messageInput}
           placeholder="Type a message..."
           rows={1}
-          class="flex-1 px-3 py-2 text-sm rounded-lg resize-none
-            bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
+          class="block w-full resize-none bg-transparent px-3 py-2 text-sm
             text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]
-            focus:outline-none focus:border-[var(--color-accent-primary)]"
+            focus:outline-none"
           onkeydown={handleKeyDown}
         />
-        <Button
-          variant="primary"
-          size="sm"
-          onclick={handleSend}
+        <ComposerFooter
           disabled={!messageInput.trim() || sending}
-          class="px-0 w-9 h-9 flex-shrink-0"
+          loading={sending}
+          onsend={handleSend}
         >
-          {#if sending}
-            <Spinner size="lg" />
-          {:else}
-            <Icon name="send" size="sm" />
-          {/if}
-        </Button>
+          {#snippet controls()}
+            {#each MESSAGE_TYPES as type (type.value)}
+              <Button
+                variant="unstyled"
+                class="flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors
+                  {selectedMessageType === type.value
+                  ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-text)]'
+                  : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-primary)]'}"
+                aria-pressed={selectedMessageType === type.value}
+                onclick={() => (selectedMessageType = type.value)}
+                title={type.label}
+              >
+                <Icon name={type.icon} size="xs" />
+                <span class="hidden sm:inline">{type.label}</span>
+              </Button>
+            {/each}
+          {/snippet}
+        </ComposerFooter>
       </div>
     </div>
   {:else}

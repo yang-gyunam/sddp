@@ -63,7 +63,7 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (closeOnEscape && event.key === 'Escape') {
+    if (closeOnEscape && event.key === 'Escape' && !modalRef?.querySelector(':popover-open')) {
       handleClose();
     }
   }

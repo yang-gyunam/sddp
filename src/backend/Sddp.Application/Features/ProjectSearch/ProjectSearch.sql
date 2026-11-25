@@ -67,6 +67,8 @@ WITH conversations_in_scope AS NOT MATERIALIZED (
     FROM messages m LEFT JOIN topics t ON t.id=m.topic_id AND t.is_active JOIN conversations_in_scope c ON c.id=coalesce(m.conversation_id,t.forum_id)
     JOIN codes cd ON cd.id=m.type_code_id LEFT JOIN users u ON u.id=m.sender_id
     WHERE m.tenant_id=@Tenant AND m.project_id=@Project AND m.is_active
+      AND (@IncludeAiConversationMessages OR (m.topic_id IS NULL AND c.conversation_type <> 'Channel')
+           OR (u.is_ai IS FALSE AND m.type_code_id <> ALL(@AiMessageTypes)))
     UNION ALL
     SELECT 'files',f.path,f.path,'file',regexp_replace(f.path,'^.*/',''),'',f.content,f.path,'',left(@GitCommit,10),f.updated_at,@GitCommit FROM files_in_scope f
     UNION ALL
@@ -114,4 +116,7 @@ WITH conversations_in_scope AS NOT MATERIALIZED (
     FROM relationships r JOIN entities l ON l.entity_type=r.from_entity_type AND l.entity_id=r.from_entity_id
     JOIN entities h ON h.entity_type=r.to_entity_type AND h.entity_id=r.to_entity_id JOIN codes c ON c.id=r.type_code_id
     WHERE r.tenant_id=@Tenant AND r.project_id=@Project AND r.is_active AND r.valid_to IS NULL
+    UNION ALL
+    SELECT 'ai-chat',chat.key,chat.key,'ai-chat',chat.title,'',chat.body,chat.location,'','',chat."updatedAt",NULL
+    FROM jsonb_to_recordset(CAST(@Chats AS jsonb)) AS chat(key text,title text,body text,location text,"updatedAt" timestamptz)
 )

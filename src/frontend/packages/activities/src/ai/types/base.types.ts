@@ -263,6 +263,10 @@ export interface AiUsageTotals {
   knownInputTokens: number;
   knownOutputTokens: number;
   durationMs: number;
+  knownCachedInputTokens: number;
+  cacheReportedCalls: number;
+  cacheHitCalls: number;
+  cacheUnreportedCalls: number;
 }
 export interface AiUsageGroup {
   id: string | null;

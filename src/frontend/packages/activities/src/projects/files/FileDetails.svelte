@@ -1,11 +1,19 @@
 <script lang="ts">
-  import { CollapsibleGroup, Avatar, formatDateTime } from '@sddp/shell';
+  import { CollapsibleGroup, ProfileAvatar, formatDateTime } from '@sddp/shell';
   import { Button } from '@sddp/ui';
   import TraceEntityButton from '../../relationship/components/idioms/TraceEntityButton.svelte';
   import { navigateToEntity } from '../../shared/navigation/entityNavigation';
   import type { FileViewer } from './fileViewer.svelte';
   import { fileSize, type FileLink } from './projectFiles.service';
-  let { viewer, projectId }: { viewer: FileViewer; projectId: string } = $props();
+  let {
+    viewer,
+    projectId,
+    readonly: readOnly = false,
+  }: {
+    viewer: FileViewer;
+    projectId: string;
+    readonly?: boolean;
+  } = $props();
   let collapsed = $state<Record<string, boolean>>({});
   const groups: { type: FileLink['type']; label: string }[] = [
     { type: 'Artifact', label: 'Artifacts' },
@@ -37,13 +45,7 @@
         {:else if viewer.relationsError}Unavailable
         {:else if viewer.relations?.owners.length}
           {#each viewer.relations.owners as owner (owner.id)}
-            <span class="inline-flex items-center gap-1.5 text-sm font-medium"
-              ><Avatar
-                name={owner.name ?? owner.id}
-                avatarUrl={owner.avatarUrl}
-                size="xs"
-              />{owner.name ?? owner.id}</span
-            >
+            <ProfileAvatar name={owner.name ?? owner.id} profile={owner} showName />
           {/each}
         {:else}Unassigned{/if}
       </dd>
@@ -62,43 +64,54 @@
         {viewer.content?.commit.slice(0, 8) ?? '—'}
       </dd>
       <dt>Last changed by</dt>
-      <dd>{viewer.content?.lastChange?.author ?? '—'}</dd>
+      <dd>
+        <ProfileAvatar
+          name={viewer.content?.lastChange?.author ?? '—'}
+          profile={viewer.content?.lastChange?.authorProfile}
+          showName
+        />
+      </dd>
     </dl>
-    <div class="history-heading">File history <span>on {viewer.branch}</span></div>
-    {#if viewer.historyError}<div class="hint" role="alert">
-        {viewer.historyError}<Button
-          variant="unstyled"
-          class="text-action"
-          onclick={() => viewer.loadHistory()}>Retry history</Button
-        >
-      </div>{/if}
-    <div class="history" aria-label="File change history">
-      {#each viewer.history?.items ?? [] as commit (commit.commit)}
+    {#if !readOnly}
+      <div class="history-heading">File history <span>on {viewer.branch}</span></div>
+      {#if viewer.historyError}<div class="hint" role="alert">
+          {viewer.historyError}<Button
+            variant="unstyled"
+            class="text-action"
+            onclick={() => viewer.loadHistory()}>Retry history</Button
+          >
+        </div>{/if}
+      <div class="history" aria-label="File change history">
+        {#each viewer.history?.items ?? [] as commit (commit.commit)}
+          <div class="commit" class:chosen={viewer.selection.revision === commit.commit}>
+            <Button
+              variant="unstyled"
+              class="commit-open"
+              aria-pressed={viewer.selection.revision === commit.commit}
+              title={`View file at ${commit.commit}`}
+              onclick={() => viewer.showVersion(commit)}
+            >
+              <span class="commit-message">{commit.message}</span>
+              <span class="commit-meta mono">{commit.commit.slice(0, 8)}</span>
+              <time datetime={commit.authoredAt}>{date(commit.authoredAt)}</time>
+            </Button>
+            <div class="commit-author">
+              <ProfileAvatar name={commit.author} profile={commit.authorProfile} />
+            </div>
+          </div>
+        {/each}
+      </div>
+      {#if viewer.historyLoading}<p class="hint" role="status">Loading history…</p>
+      {:else if viewer.history?.nextSkip !== null && viewer.history?.nextSkip !== undefined}
         <Button
           variant="unstyled"
-          class={`commit ${viewer.selection.revision === commit.commit ? 'chosen' : ''}`}
-          aria-pressed={viewer.selection.revision === commit.commit}
-          title={`View file at ${commit.commit}`}
-          onclick={() => viewer.showVersion(commit)}
+          class="text-action more"
+          onclick={() => viewer.loadHistory(undefined, true)}>Load older changes</Button
         >
-          <span class="commit-message">{commit.message}</span>
-          <span class="commit-meta"
-            ><span class="mono">{commit.commit.slice(0, 8)}</span><span>{commit.author}</span></span
-          >
-          <time datetime={commit.authoredAt}>{date(commit.authoredAt)}</time>
-        </Button>
-      {/each}
-    </div>
-    {#if viewer.historyLoading}<p class="hint" role="status">Loading history…</p>
-    {:else if viewer.history?.nextSkip !== null && viewer.history?.nextSkip !== undefined}
-      <Button
-        variant="unstyled"
-        class="text-action more"
-        onclick={() => viewer.loadHistory(undefined, true)}>Load older changes</Button
-      >
-    {:else if viewer.history && !viewer.history.items.length}<p class="hint">
-        No changes found.
-      </p>{/if}
+      {:else if viewer.history && !viewer.history.items.length}<p class="hint">
+          No changes found.
+        </p>{/if}
+    {/if}
   </CollapsibleGroup>
   <p class="context-note">SDDP relationships · current</p>
   {#if viewer.relationsError}<div class="hint" role="alert">
@@ -177,20 +190,25 @@
     max-height: 280px;
     overflow: auto;
   }
-  .file-details :global(.commit) {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    text-align: left;
-    width: 100%;
-    padding: 9px 12px;
+  .commit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: center;
+    gap: 8px;
     border-left: 2px solid transparent;
     border-top: 1px solid var(--color-border-primary);
   }
-  .file-details :global(.commit:hover) {
+  .commit :global(.commit-open) {
+    display: grid;
+    gap: 4px;
+    text-align: left;
+    min-width: 0;
+    padding: 9px 12px;
+  }
+  .commit:hover {
     background: var(--color-bg-tertiary);
   }
-  .file-details :global(.commit.chosen) {
+  .commit.chosen {
     border-left-color: var(--color-primary-500);
     background: var(--color-bg-tertiary);
   }
@@ -198,11 +216,15 @@
     font-size: 12px;
     overflow-wrap: anywhere;
   }
-  .commit-meta {
-    display: flex;
-    gap: 8px;
+  .commit-meta,
+  .commit-author {
     font-size: 10px;
     color: var(--color-text-secondary);
+  }
+  .commit-author {
+    min-width: 0;
+    max-width: 7.5rem;
+    padding-right: 12px;
   }
   time {
     font-size: 10px;

@@ -16,7 +16,8 @@
     formatDateTime,
     formatSmartTime,
   } from '@sddp/shell';
-  import { IconButton, Button, Spinner, RadioGroup } from '@sddp/ui';
+  import { IconButton, Button, Spinner, RadioGroup, Switch } from '@sddp/ui';
+  import { appSounds, setAppSoundsEnabled } from '../../../shared/stores/app-sounds';
   import SettingsService from '../../services/SettingsService';
   import type {
     UserPreferences,
@@ -266,6 +267,19 @@
         <!-- Behavior -->
         <!-- ================================================================ -->
         <SettingGroupHeader title="Behavior" />
+
+        <SettingItem
+          category="Behavior"
+          title="App Sounds"
+          description="Enable button sounds and read aloud in this browser. Use the status bar to toggle button sounds."
+        >
+          <Switch
+            label="App Sounds"
+            class="[&_label]:sr-only"
+            checked={$appSounds.enabled}
+            onchange={setAppSoundsEnabled}
+          />
+        </SettingItem>
 
         <SettingItem
           category="Behavior"

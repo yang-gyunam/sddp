@@ -93,7 +93,7 @@
   <!-- Header -->
   <Button
     variant="unstyled"
-    class="group-header flex items-center gap-1 h-[26px] cursor-pointer transition-colors w-full
+    class="group-header flex items-center gap-1 h-[var(--sidebar-section-header-height,26px)] cursor-pointer transition-colors w-full
            {variant === 'plain'
       ? 'px-0 hover:bg-[var(--color-bg-tertiary)]/50'
       : 'px-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border-primary)]'}"

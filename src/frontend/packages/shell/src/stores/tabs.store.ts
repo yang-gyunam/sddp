@@ -604,9 +604,6 @@ function createTabsModule(
       }));
     },
     splitGroup: (direction, sourceGroupId) => {
-      let sourceTabId: string | null = null;
-      let newTabId: string | null = null;
-
       store.update((state) => {
         const sourceGroup = state.groups.find((group) => group.id === sourceGroupId);
         if (!sourceGroup || sourceGroup.tabs.length === 0) return state;
@@ -615,8 +612,7 @@ function createTabsModule(
         const activeTab = sourceGroup.tabs.find((tab) => tab.id === sourceGroup.activeTab);
         if (!activeTab) return state;
 
-        sourceTabId = activeTab.id;
-        newTabId = idFactory.createCopiedTabId(activeTab.id);
+        const newTabId = idFactory.createCopiedTabId(activeTab.id);
 
         const newGroup: EditorGroupData = {
           id: newGroupId,
@@ -652,20 +648,16 @@ function createTabsModule(
           group.id === sourceGroupId ? updatedSourceGroup : group
         );
 
+        // The router synchronizes the new active tab as soon as the store publishes it.
+        effects.copyTabState(activeTab.id, newTabId);
         return {
           ...state,
           groups: [...groups, newGroup],
           activeGroupId: newGroupId,
         };
       });
-
-      if (sourceTabId && newTabId) {
-        effects.copyTabState(sourceTabId, newTabId);
-      }
     },
     splitRight: (tabId, sourceGroupId) => {
-      let newTabId: string | null = null;
-
       store.update((state) => {
         const sourceGroup = state.groups.find((group) => group.id === sourceGroupId);
         if (!sourceGroup) return state;
@@ -674,7 +666,7 @@ function createTabsModule(
         if (!tab) return state;
 
         const newGroupId = idFactory.createGroupId();
-        newTabId = idFactory.createCopiedTabId(tab.id);
+        const newTabId = idFactory.createCopiedTabId(tab.id);
 
         const newGroup: EditorGroupData = {
           id: newGroupId,
@@ -699,16 +691,13 @@ function createTabsModule(
           group.id === sourceGroupId ? updatedSourceGroup : group
         );
 
+        effects.copyTabState(tabId, newTabId);
         return {
           ...state,
           groups: [...groups, newGroup],
           activeGroupId: newGroupId,
         };
       });
-
-      if (newTabId) {
-        effects.copyTabState(tabId, newTabId);
-      }
     },
     closeGroup: (groupId) => {
       let removedIds: string[] = [];
@@ -866,7 +855,6 @@ function createTabsModule(
       }));
     },
     copyTabToGroup: (tabId, targetGroupId, sourceGroupId, insertIndex) => {
-      let newTabId: string | null = null;
       store.update((state) => {
         const sourceGroup = state.groups.find((group) => group.id === sourceGroupId);
         const targetGroup = state.groups.find((group) => group.id === targetGroupId);
@@ -889,7 +877,7 @@ function createTabsModule(
           return { ...state, groups, activeGroupId: targetGroupId };
         }
 
-        newTabId = idFactory.createCopiedTabId(tab.id);
+        const newTabId = idFactory.createCopiedTabId(tab.id);
         const newTab: Tab = { ...tab, id: newTabId };
 
         const newTargetTabs = [...targetGroup.tabs];
@@ -906,12 +894,9 @@ function createTabsModule(
           return group;
         });
 
+        effects.copyTabState(tabId, newTabId);
         return { ...state, groups, activeGroupId: targetGroupId };
       });
-
-      if (newTabId) {
-        effects.copyTabState(tabId, newTabId);
-      }
     },
     openByPath: (path, tabData, groupId) => {
       const state = store.get();

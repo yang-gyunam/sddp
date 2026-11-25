@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.8.0] - 2026-11-25
+
+### Git File Viewer
+
+- List immediate files and subfolders when a folder is selected.
+- Show the full folder path, entry type and size, SDDP ownership, and the Git author of the last change at the selected revision.
+- Open matching SDDP profiles through avatars. Keep the Git author name visible when no profile matches.
+
+### Conversations and preferences
+
+- Put Send below the text field in Channel and direct message composers.
+- Add a sound preference and a status-bar speaker control.
+- Play or stop browser read-aloud on supported content, including conversation messages.
+
+### Security and upgrades
+
+- Measure successful authenticated reads of Files, Artifact source content, Specs, Conversations, and project search by response bytes and request count.
+- Record a warning when a user crosses a configured per-project or overall threshold. Warnings omit response content, file paths, and search terms.
+- Report the same 0.8.0 version in the API and web application.
+- Free 0.7.0 databases require no new migration. For older versions, apply outstanding Free migrations through [V027](scripts/db/README.md#project-search). [Upgrade precautions](RELEASE.md#upgrade-precautions)
+
 ## [v0.7.0] - 2026-11-23
 
 Project Search and Service Health are included by default in Free and Pro.

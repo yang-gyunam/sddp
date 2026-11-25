@@ -47,6 +47,9 @@
     loadGlobalConversationsSidebar,
     setSelectedConversation,
     getSidebarState,
+    appSounds,
+    setAppSoundUser,
+    toggleClickSounds,
     type ConversationEntry,
   } from '@sddp/activities/runtime';
   // Router & Navigation
@@ -96,6 +99,7 @@
   import { resetAppState, resetAppStatePreserveLayout } from './lib/resetAppState';
   import type { TreeNode } from './types';
   import { activityItems, activityBottomItems, activityPanels } from './config/activity.config';
+  import { openSavedChatTab } from './config/open-saved-chat-tab';
   import { activityComponents } from './config/activity-loaders';
   import { resolveMenuComponent, type MenuContext } from './config/menu-registry';
   import { appVersionLabel, appVersionTooltip } from './config/app-version';
@@ -125,6 +129,11 @@
   });
   let authUnsubscribe: (() => void) | null = null;
   let capabilityUnsubscribe: (() => void) | null = null;
+
+  $effect(() => {
+    const user = authState.isAuthenticated ? authState.user : null;
+    setAppSoundUser(user ? `${user.tenantId}/${user.id}` : undefined);
+  });
 
   // App initialization state (prevents Welcome screen flicker during tab restoration)
   let appInitializing = $state(true);
@@ -431,6 +440,7 @@
   });
 
   onDestroy(() => {
+    setAppSoundUser(undefined);
     cleanupLifecycle?.();
     cleanupBootstrap?.();
     cleanupToastRouting?.();
@@ -695,6 +705,14 @@
   async function openTabFromPath(path: string): Promise<boolean> {
     const canonicalPath = navigationService.normalizePath(path);
 
+    if (
+      openSavedChatTab(
+        canonicalPath,
+        (id) => projectState.projects.some((project) => project.id === id),
+        openAccessDeniedTab
+      )
+    ) return true;
+
     const reference = canonicalPath.match(/^\/project\/([^/]+)\/view\/([a-z]+)\/([^/]+)$/);
     if (reference) {
       const [, pid, menu, key] = reference;
@@ -714,6 +732,7 @@
       const id = args.get('id') || decodeURIComponent(key);
       const kind = args.get('kind') || '';
       const revision = args.get('revision') || '';
+      const line = Number(args.get('line'));
       const query = {
         projectId: pid,
         projectName: project.name,
@@ -721,6 +740,8 @@
         referenceKind: kind,
         referenceId: id,
         referenceRevision: revision,
+        referenceLine:
+          menu === 'files' && Number.isSafeInteger(line) && line > 0 ? line : undefined,
         referencePath: canonicalPath,
       };
       const entityTypes: Record<string, string> = { artifacts: 'Artifact', diagrams: 'Diagram' };
@@ -1265,6 +1286,18 @@
           },
         ]
       : []),
+    {
+      id: 'app-sounds',
+      text: '',
+      icon: $appSounds.clicks ? 'volume-2' : 'volume-x',
+      position: 'right' as const,
+      tooltip: $appSounds.enabled
+        ? $appSounds.clicks
+          ? 'Mute button sounds'
+          : 'Unmute button sounds'
+        : 'App Sounds are off in Preferences',
+      onClick: $appSounds.enabled ? toggleClickSounds : undefined,
+    },
     {
       id: 'theme',
       text: theme.current === 'dark' ? 'Dark' : 'Light',

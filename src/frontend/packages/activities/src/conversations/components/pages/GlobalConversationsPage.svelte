@@ -1,5 +1,8 @@
 <!-- Activity: Conversations > Nav: Global (ACT-CONV-001) -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import {
@@ -663,7 +666,27 @@
       toast.error(err instanceof Error ? err.message : 'Failed to remove member');
     }
   }
+  let chatTopic = $state<{ forumId: string; entityId: string }>();
+  const detailChat = createDetailChat(() => {
+    const projectId = selectedConversation?.projectId;
+    if (!projectId || !selectedConversation) return undefined;
+    if (isForumSelected && chatTopic?.forumId === selectedConversation.id) {
+      return { projectId, entityType: 'Topic', entityId: chatTopic.entityId };
+    }
+    return { projectId, entityType: 'Conversation', entityId: selectedConversation.id };
+  });
+  const useChatDetailLayout = $derived(detailChat.visible && !isForumSelected);
 </script>
+
+{#snippet aiChatAction()}
+  {#if detailChat.visible}
+    <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
+  {/if}
+{/snippet}
+
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <PageShell class="h-full {className}">
   <PageHeader title="Conversations" {loading}>
@@ -772,7 +795,9 @@
       </div>
     {:else}
       <SidebarDetailLayout
-        showRightPanel
+        auxiliaryPanel={detailChat.visible && !useChatDetailLayout ? aiChatPanel : undefined}
+        showAuxiliaryPanel={detailChat.open}
+        showRightPanel={!useChatDetailLayout}
         sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
         minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
         maxSidebarWidth={SIDEBAR_DETAIL_LAYOUT.maxSidebarWidth}
@@ -820,6 +845,15 @@
           />
         {:else if selectedConversation && isForumSelected}
           <ForumView
+            detailActions={aiChatAction}
+            onActiveTopic={(entityId) => {
+              detailChat.close();
+              chatTopic =
+                entityId && selectedConversation
+                  ? { forumId: selectedConversation.id, entityId }
+                  : undefined;
+            }}
+            projectId={selectedConversation.projectId ?? undefined}
             {tenantId}
             conversationId={selectedConversation.id}
             conversationName={selectedConversation.name}
@@ -827,6 +861,11 @@
           />
         {:else if selectedConversation}
           <ChannelView
+            detailActions={aiChatAction}
+            bodyRightPanel={useChatDetailLayout && true ? rightPanel : undefined}
+            bodyRightWidth={SIDEBAR_DETAIL_LAYOUT.rightPanelWidth}
+            auxiliaryPanel={useChatDetailLayout ? aiChatPanel : undefined}
+            auxiliaryOpen={detailChat.open}
             conversationId={selectedConversation.id}
             conversationName={selectedConversation.name}
             headerIcon={selectedConversation.type === 'dm'

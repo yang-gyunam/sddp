@@ -1,5 +1,8 @@
 <!-- Activity: Projects > Nav: Artifacts (project-{id}-artifacts) | Screen ID: PRJ-ART-001 -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
   import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { untrack } from 'svelte';
@@ -717,7 +720,16 @@
     },
   });
   const { confirmAction } = createConfirmation(() => `${projectId}/${selectedArtifact?.id}`);
+  const detailChat = createDetailChat(() =>
+    viewMode === 'detail' && selectedArtifact
+      ? { projectId, entityType: 'Artifact', entityId: selectedArtifact.id }
+      : undefined
+  );
 </script>
+
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <PageShell class={className}>
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
@@ -750,6 +762,8 @@
       </div>
     {:else}
       <SidebarDetailLayout
+        auxiliaryPanel={detailChat.visible ? aiChatPanel : undefined}
+        showAuxiliaryPanel={detailChat.open}
         showRightPanel={!!selectedArtifact && (viewMode === 'detail' || viewMode === 'edit')}
         sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
         minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
@@ -882,6 +896,9 @@
                   title="Edit"
                   onclick={handleEditArtifact}
                 />
+                {#if detailChat.visible}
+                  <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
+                {/if}
                 <Dropdown position="bottom-right">
                   {#snippet trigger({ toggle, open })}
                     <IconButton

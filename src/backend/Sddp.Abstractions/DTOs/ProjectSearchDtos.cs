@@ -6,4 +6,7 @@ public sealed record ProjectSearchHit(string Menu, string Key, string Target, st
 
 /// <summary>Ten globally ordered hits and counts before the menu filter.</summary>
 public sealed record ProjectSearchPage(IReadOnlyList<ProjectSearchHit> Items, IReadOnlyDictionary<string, int> Counts,
-    int? NextOffset, string? NextCursor, string[] Terms, bool FilesUnavailable);
+    int? NextOffset, string? NextCursor, string[] Terms, bool FilesUnavailable, bool AiChatsAvailable = false);
+
+/// <summary>A private saved chat with its currently readable search text.</summary>
+public sealed record ProjectSearchChatDocument(string Key, string Title, string Body, string Location, DateTimeOffset UpdatedAt);

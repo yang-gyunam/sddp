@@ -28,5 +28,11 @@ public enum EntityType
     Task = 6,
 
     /// <summary>Project diagram</summary>
-    Diagram = 7
+    Diagram = 7,
+
+    /// <summary>Knowledge page in a project.</summary>
+    KnowledgePage = 8,
+
+    /// <summary>Committed repository file in a project.</summary>
+    ProjectFile = 9
 }

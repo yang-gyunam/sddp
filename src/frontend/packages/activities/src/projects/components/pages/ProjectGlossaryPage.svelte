@@ -1,5 +1,8 @@
 <!-- Activity: Projects > Nav: Glossary (project-{id}-glossary) | Screen ID: PRJ-GLO-001 -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
   import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
   import { tick, untrack } from 'svelte';
@@ -831,7 +834,16 @@
       else handleCloseTerm();
     },
   });
+  const detailChat = createDetailChat(() =>
+    viewMode === 'detail' && selectedTerm
+      ? { projectId, entityType: 'GlossaryTerm', entityId: selectedTerm.id }
+      : undefined
+  );
 </script>
+
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <PageShell class={className}>
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
@@ -868,6 +880,8 @@
       </div>
     {:else}
       <SidebarDetailLayout
+        auxiliaryPanel={detailChat.visible ? aiChatPanel : undefined}
+        showAuxiliaryPanel={detailChat.open}
         showRightPanel={!!selectedTerm && viewMode === 'detail'}
         sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
         minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
@@ -1023,6 +1037,9 @@
                   title="Edit"
                   onclick={handleEditTerm}
                 />
+                {#if detailChat.visible}
+                  <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
+                {/if}
                 {#if selectedTerm.status === 'Draft' || selectedTerm.status === 'Active'}
                   <Dropdown position="bottom-right">
                     {#snippet trigger({ toggle, open })}

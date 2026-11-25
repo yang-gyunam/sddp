@@ -1,13 +1,13 @@
 /** URL history belongs to the router; tabs retain pathname identity. */
 import { get } from 'svelte/store';
-import { tabActions, tabsStore, globalActiveTab, activeGroupId } from '../stores/tabs.store';
+import { getTabRouteSearch, setTabRouteSearch } from '../stores/tab-state.store';
+import { tabActions, tabsStore, globalActiveTab } from '../stores/tabs.store';
 
 export class RouterService {
   private static initialized = false;
   private static unsubscribeTab: (() => void) | null = null;
   private static isNavigating = false;
   private static onNavigateToPath: ((path: string) => void) | null = null;
-  private static searches = new Map<string, string>();
   private static pending: { path: string; search: string } | null = null;
 
   static setNavigateHandler(handler: (path: string) => void): void {
@@ -23,16 +23,24 @@ export class RouterService {
     this.isNavigating = true;
     try {
       let previousIdentity = '';
+      let previousGroupId = '';
       this.unsubscribeTab = globalActiveTab.subscribe((tab) => {
         const identity = tab ? `${tab.id}:${tab.path || '/'}` : '';
+        const groupId = tabsStore.get().activeGroupId;
         const changed = identity !== previousIdentity;
+        const groupChanged = groupId !== previousGroupId;
         previousIdentity = identity;
+        previousGroupId = groupId;
         // Content/read-state updates are not navigation. In particular, they must
         // not cancel an async destination lookup by restoring the source URL.
-        if (!tab || this.isNavigating || !changed) return;
+        if (!tab || this.isNavigating) return;
+        if (!changed) {
+          if (groupChanged) this.stampLocation();
+          return;
+        }
         const path = tab.path || '/';
         const search =
-          this.pending?.path === path ? this.pending.search : this.searches.get(tab.id) || '';
+          this.pending?.path === path ? this.pending.search : getTabRouteSearch(tab.id, path);
         this.pending = null;
         this.writeUrl(path + search, false);
       });
@@ -54,7 +62,7 @@ export class RouterService {
   private static rememberLocation(): void {
     const tab = get(globalActiveTab);
     if (tab?.path === window.location.pathname) {
-      this.searches.set(tab.id, window.location.search);
+      setTabRouteSearch(tab.id, window.location.pathname, window.location.search);
       this.pending = null;
     } else {
       this.pending = { path: window.location.pathname, search: window.location.search };
@@ -65,7 +73,7 @@ export class RouterService {
     const tab = get(globalActiveTab);
     if (tab?.path !== window.location.pathname) return;
     window.history.replaceState(
-      { ...window.history.state, tabId: tab.id, groupId: get(activeGroupId) },
+      { ...window.history.state, tabId: tab.id, groupId: tabsStore.get().activeGroupId },
       '',
       window.location.href
     );
@@ -81,7 +89,7 @@ export class RouterService {
     const originalGroup = state.groups.find((g) =>
       g.tabs.some((t) => t.id === owner?.tabId && t.path === path)
     );
-    const group = originalGroup || state.groups.find((g) => g.id === get(activeGroupId));
+    const group = originalGroup || state.groups.find((g) => g.id === state.activeGroupId);
     const tab =
       originalGroup?.tabs.find((t) => t.id === owner?.tabId) ||
       group?.tabs.find((t) => t.path === path);
@@ -149,7 +157,9 @@ export class RouterService {
       (!window.history.state?.tabId || window.history.state.tabId === tab?.id) &&
         window.location.pathname === path
         ? window.location.search
-        : this.searches.get(tab?.id || '') || ''
+        : tab
+          ? getTabRouteSearch(tab.id, path)
+          : ''
     );
     if (id) query.set('id', id);
     else query.delete('id');
@@ -168,7 +178,7 @@ export class RouterService {
       this.pending?.path === path
         ? this.pending.search
         : tab?.path === path
-          ? this.searches.get(tab.id) || ''
+          ? getTabRouteSearch(tab.id, path)
           : '';
     const target = path.includes('?') ? path : path + search;
     this.writeUrl(target, true);
@@ -190,7 +200,6 @@ export class RouterService {
     this.unsubscribeTab = null;
     this.initialized = false;
     this.isNavigating = false;
-    this.searches.clear();
     this.pending = null;
     this.onNavigateToPath = null;
   }

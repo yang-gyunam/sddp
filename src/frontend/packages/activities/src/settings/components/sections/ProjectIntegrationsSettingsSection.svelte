@@ -210,7 +210,7 @@
               <div>
                 <div class="integration-name">Git Repository</div>
                 <div class="integration-desc">
-                  Connect a Git repository for version control and Spec Drift detection.
+                  Connect a Git repository for version control.
                 </div>
               </div>
             </div>

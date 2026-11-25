@@ -1,7 +1,24 @@
+using System.Text.Json.Serialization;
+
 namespace Sddp.Abstractions.DTOs;
 
 /// <summary>A committed repository entry. Kind is directory, file, symlink or submodule.</summary>
-public sealed record ProjectFileEntryDto(string Name, string Path, string Kind, long? SizeBytes);
+public sealed record ProjectFileEntryDto(string Name, string Path, string Kind, long? SizeBytes)
+{
+    /// <summary>Current SDDP owners, when requested for a file in a directory listing.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<UserRefDto>? Owners { get; init; }
+
+    /// <summary>Git author of the latest change at the resolved revision, when requested and available.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LastChangedBy { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public UserRefDto? LastChangedByProfile { get; init; }
+
+    [JsonIgnore]
+    public string? GitAuthorEmail { get; init; }
+}
 
 /// <summary>One directory at an immutable revision of the configured branch.</summary>
 public sealed record ProjectFileTreeDto(string Branch, string Commit, string Path, IReadOnlyList<ProjectFileEntryDto> Entries);
@@ -11,7 +28,14 @@ public sealed record ProjectFileSearchDto(string Branch, string Commit, IReadOnl
     int TotalCount, int? NextSkip);
 
 /// <summary>A file change, including its path at that commit (before later renames).</summary>
-public sealed record ProjectFileCommitDto(string Commit, string Author, DateTimeOffset AuthoredAt, string Message, string Path);
+public sealed record ProjectFileCommitDto(string Commit, string Author, DateTimeOffset AuthoredAt, string Message, string Path)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public UserRefDto? AuthorProfile { get; init; }
+
+    [JsonIgnore]
+    public string? GitAuthorEmail { get; init; }
+}
 
 /// <summary>Bounded, newest-first file history.</summary>
 public sealed record ProjectFileHistoryDto(string Commit, IReadOnlyList<ProjectFileCommitDto> Items, int? NextSkip);

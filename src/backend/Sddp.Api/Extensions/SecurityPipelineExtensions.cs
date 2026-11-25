@@ -30,6 +30,7 @@ public static class SecurityPipelineExtensions
         app.UseResourceScope();
         app.UseProjectMembership();
         app.UseAuthorization();
+        app.UseMiddleware<SensitiveReadMiddleware>();
 
         return app;
     }

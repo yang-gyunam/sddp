@@ -47,6 +47,7 @@ export { default as PriorityBadge } from './PriorityBadge.svelte';
 
 // Avatar
 export { default as Avatar } from './Avatar.svelte';
+export { default as ProfileAvatar } from './ProfileAvatar.svelte';
 
 // User List Item
 export { default as UserListItem } from './UserListItem.svelte';

@@ -114,6 +114,10 @@
     aria-label={depth === 0 ? 'Repository file tree' : undefined}
   >
     {#each viewer.directories[path] ?? [] as entry (entry.path)}
+      {@const selected = viewer.selection.path === entry.path}
+      {@const loading =
+        viewer.directoryLoading[entry.path] ||
+        (selected && viewer.folderLoading && !viewer.directories[entry.path])}
       <li role="none">
         <TreeItem
           node={{
@@ -127,15 +131,19 @@
           indentStep={14}
           expanded={!!viewer.expanded[entry.path]}
           expandable={entry.kind === 'directory'}
-          selected={viewer.selection.path === entry.path}
-          toggleOnClick
+          {selected}
           draggable={false}
           tabindex={entry.path === tabStop ? 0 : -1}
           onfocus={() => (focusedPath = entry.path)}
           onkeydown={(event) => treeKey(event, entry)}
           title={entry.path}
           onToggle={() => viewer.toggleDirectory(entry.path)}
-          onSelect={() => viewer.select({ path: entry.path })}
+          onSelect={() =>
+            viewer.select(
+              entry.kind === 'directory'
+                ? { path: entry.path, kind: 'directory' }
+                : { path: entry.path }
+            )}
         >
           {#snippet leading()}<FileIcon path={entry.path} kind={entry.kind} />{/snippet}
           {#snippet label()}{@render fileName(entry.name)}{/snippet}
@@ -143,7 +151,7 @@
               >{/if}{/snippet}
         </TreeItem>
         {#if entry.kind === 'directory' && viewer.expanded[entry.path]}
-          {#if viewer.directoryLoading[entry.path]}<p class="tree-hint" role="status">Loading…</p>
+          {#if loading}<p class="tree-hint" role="status">Loading…</p>
           {:else if viewer.directoryErrors[entry.path]}
             <p class="tree-hint" role="alert">
               {viewer.directoryErrors[entry.path]}

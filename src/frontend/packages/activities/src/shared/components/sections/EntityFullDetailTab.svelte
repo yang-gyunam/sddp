@@ -1,8 +1,12 @@
 <!-- Section: EntityFullDetailTab — Projects > Traceability -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import { onDestroy, untrack } from 'svelte';
   import { navigateToEntity } from '../../navigation/entityNavigation';
-  import { Icon, IconButton, Spinner, ResizeHandle } from '@sddp/ui';
+  import { Icon, IconButton, Spinner } from '@sddp/ui';
+  import { SidebarDetailLayout } from '@sddp/shell';
   import { getAuthState } from '@sddp/shell/auth';
   import { AccessDeniedError, ApiRequestError } from '../../api/fetchWithAuth';
   import DetailHeader from '../idioms/DetailHeader.svelte';
@@ -89,48 +93,6 @@
   }
   async function refreshDiagram() {
     if (await confirmLeave()) await loadEntity();
-  }
-
-  // Right panel resize state
-  let rightPanelWidth = $state(300);
-  const minRightPanelWidth = 200;
-  const maxRightPanelWidth = 480;
-  let isResizing = $state(false);
-  let resizeRafId: number | null = null;
-
-  function handleResizeStart(e: PointerEvent) {
-    e.preventDefault();
-    isResizing = true;
-    const startX = e.clientX;
-    const startWidth = rightPanelWidth;
-
-    function onPointerMove(moveEvent: PointerEvent) {
-      if (resizeRafId !== null) {
-        cancelAnimationFrame(resizeRafId);
-      }
-      resizeRafId = requestAnimationFrame(() => {
-        // Drag left = increase right panel width
-        const delta = startX - moveEvent.clientX;
-        rightPanelWidth = Math.min(
-          maxRightPanelWidth,
-          Math.max(minRightPanelWidth, startWidth + delta)
-        );
-        resizeRafId = null;
-      });
-    }
-
-    function onPointerUp() {
-      if (resizeRafId !== null) {
-        cancelAnimationFrame(resizeRafId);
-        resizeRafId = null;
-      }
-      isResizing = false;
-      document.removeEventListener('pointermove', onPointerMove);
-      document.removeEventListener('pointerup', onPointerUp);
-    }
-
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
   }
 
   $effect(() => {
@@ -283,7 +245,25 @@
       glossaryData !== null ||
       artifactData !== null
   );
+  const detailChat = createDetailChat(() =>
+    !readOnly &&
+    !loading &&
+    hasData &&
+    projectId &&
+    (entityType === 'Diagram' ||
+      entityType === 'Spec' ||
+      entityType === 'Requirement' ||
+      entityType === 'GlossaryTerm' ||
+      entityType === 'Artifact' ||
+      entityType === 'Conversation')
+      ? { projectId, entityType, entityId }
+      : undefined
+  );
 </script>
+
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <div class="flex flex-col h-full {className}">
   {#if loading}
@@ -323,11 +303,19 @@
             title="Refresh diagram"
             onclick={refreshDiagram}
           />{/if}
+        {#if detailChat.visible}
+          <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
+        {/if}
       {/snippet}
     </DetailHeader>
 
-    <!-- 2-Column Body -->
-    <div class="flex flex-1 min-h-0">
+    <SidebarDetailLayout
+      showRightPanel
+      rightPanelWidth={300}
+      maxRightPanelWidth={480}
+      auxiliaryPanel={detailChat.visible ? aiChatPanel : undefined}
+      showAuxiliaryPanel={detailChat.open}
+    >
       <!-- Left: Detail Content (flex-1, flexible) -->
       <div class="flex-1 min-w-0 overflow-auto">
         {#if entityType === 'Diagram' && diagramData}
@@ -397,22 +385,7 @@
         {/if}
       </div>
 
-      <!-- Resize Handle (z-10 wrapper to stay above content) -->
-      <div class="relative z-10 flex-shrink-0">
-        <ResizeHandle
-          orientation="vertical"
-          {isResizing}
-          onpointerdown={handleResizeStart}
-          ariaLabel="Resize trace graph panel"
-        />
-      </div>
-
-      <!-- Right: TraceGraphSection (fixed width, resizable) -->
-      <div
-        class="flex-shrink-0 border-l border-[var(--color-border-primary)] overflow-hidden"
-        class:right-panel-resizing={isResizing}
-        style="width: {rightPanelWidth}px"
-      >
+      {#snippet rightPanel()}
         {#key JSON.stringify([projectId, entityType, entityId])}
           <TraceGraphSection
             readonly={readOnly}
@@ -422,8 +395,8 @@
             hidePrimaryFlow={entityType === 'Diagram'}
           />
         {/key}
-      </div>
-    </div>
+      {/snippet}
+    </SidebarDetailLayout>
   {:else}
     <div class="flex-1 flex flex-col items-center justify-center gap-3 px-6">
       <Icon
@@ -435,11 +408,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  .right-panel-resizing {
-    will-change: width;
-    pointer-events: none;
-    user-select: none;
-  }
-</style>

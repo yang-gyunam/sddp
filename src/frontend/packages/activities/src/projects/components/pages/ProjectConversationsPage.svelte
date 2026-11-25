@@ -1,5 +1,8 @@
 <!-- Activity: Projects > Nav: Conversations (project-{id}-conversations) | Screen ID: PRJ-DISC-001 -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import MemberHistoryIndicator from '../../../conversations/components/idioms/MemberHistoryIndicator.svelte';
   import MemberParticipantActions from '../../../conversations/components/idioms/MemberParticipantActions.svelte';
   import ConversationCandidateModal from '../../../ai/components/sections/ConversationCandidateModal.svelte';
@@ -1215,7 +1218,35 @@
       else pendingSelectionId = id;
     },
   });
+  let forumTopic = $state<{ forumId: string; topicId: string }>();
+  const detailChat = createDetailChat(() => {
+    if (createMode) return undefined;
+    if (selectedConversation?.type === 'Forum') {
+      return forumTopic?.forumId === selectedConversation.id
+        ? { projectId, entityType: 'Topic', entityId: forumTopic.topicId }
+        : { projectId, entityType: 'Conversation', entityId: selectedConversation.id };
+    }
+    const conversation = selectedConversation ?? selectedDm;
+    return conversation
+      ? { projectId, entityType: 'Conversation', entityId: conversation.id }
+      : undefined;
+  });
+  const useChatDetailLayout = $derived(
+    detailChat.visible &&
+      !createMode &&
+      selectedConversation?.type !== 'Forum' &&
+      !!(selectedConversation || selectedDm)
+  );
 </script>
+
+{#snippet aiChatAction()}
+  {#if detailChat.visible}
+    <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
+  {/if}
+{/snippet}
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <PageShell class="h-full {className}">
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
@@ -1236,7 +1267,9 @@
   <PageBody class="p-0" scrollable={false}>
     <div class="h-full min-h-0" bind:clientWidth={conversationLayoutWidth}>
       <SidebarDetailLayout
-        showRightPanel={shouldShowRightPanel}
+        auxiliaryPanel={detailChat.visible && !useChatDetailLayout ? aiChatPanel : undefined}
+        showAuxiliaryPanel={detailChat.open}
+        showRightPanel={shouldShowRightPanel && !useChatDetailLayout}
         onSidebarWidthChange={(width) => {
           conversationSidebarWidth = width;
         }}
@@ -1579,6 +1612,11 @@
         {:else if selectedConversation && selectedConversation.type === 'Forum'}
           {#each [selectedConversation] as displayed (displayed.id)}
             <ForumView
+              detailActions={aiChatAction}
+              onActiveTopic={(topicId) => {
+                detailChat.close();
+                forumTopic = topicId ? { forumId: displayed.id, topicId } : undefined;
+              }}
               tenantId={tenantId ?? ''}
               {projectId}
               conversationId={displayed.id}
@@ -1589,6 +1627,12 @@
         {:else if selectedConversation}
           {#each [selectedConversation] as displayed (displayed.id)}
             <ChannelView
+              detailActions={aiChatAction}
+              bodyRightPanel={useChatDetailLayout && shouldShowRightPanel ? rightPanel : undefined}
+              bodyRightWidth={conversationRightWidth}
+              onBodyRightWidthChange={(width) => (conversationRightWidth = width)}
+              auxiliaryPanel={useChatDetailLayout ? aiChatPanel : undefined}
+              auxiliaryOpen={detailChat.open}
               conversationId={displayed.id}
               conversationName={displayed.name}
               conversationDescription={displayed.description}
@@ -1615,6 +1659,12 @@
         {:else if selectedDm}
           {#each [selectedDm] as displayed (displayed.id)}
             <ChannelView
+              detailActions={aiChatAction}
+              bodyRightPanel={useChatDetailLayout && shouldShowRightPanel ? rightPanel : undefined}
+              bodyRightWidth={conversationRightWidth}
+              onBodyRightWidthChange={(width) => (conversationRightWidth = width)}
+              auxiliaryPanel={useChatDetailLayout ? aiChatPanel : undefined}
+              auxiliaryOpen={detailChat.open}
               conversationId={displayed.id}
               conversationName={displayed.name}
               headerIcon="message-circle"

@@ -7,6 +7,8 @@ using Sddp.Abstractions.Exceptions;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
+using Sddp.Api.Configuration;
+using Sddp.Api.Security;
 using Sddp.Application.Features.ProjectSearch;
 using Sddp.Domain.Entities;
 
@@ -14,10 +16,11 @@ namespace Sddp.Api.Controllers;
 
 /// <summary>Full-text search within the currently authorized project.</summary>
 [Authorize]
+[SensitiveRead("project-search")]
 [Route("api/projects/{projectId:guid}/search")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class ProjectSearchController(ISender sender, IScopedAuthorizationService authorization,
-    IProjectSearchFileIndex files, ILogger<ProjectSearchController> logger) : BaseApiController
+    IProjectSearchFileIndex files, DistributionInfo distribution, ILogger<ProjectSearchController> logger) : BaseApiController
 {
     [HttpGet]
     [ResourceScope<Project>("projectId")]
@@ -49,7 +52,8 @@ public sealed class ProjectSearchController(ISender sender, IScopedAuthorization
         {
             logger.LogInformation("Project {Project} repository could not be included in search ({ErrorType})", project, e.GetType().Name);
         }
-        var result = await sender.Send(new ProjectSearchQuery(tenant, project, user, permissions, expression, menu, sort, offset, commit, commit is null, fingerprint, position), ct);
+        var result = await sender.Send(new ProjectSearchQuery(tenant, project, user, permissions, expression, menu, sort, offset, commit, commit is null, fingerprint, position,
+            IncludeAiConversationMessages: distribution.Edition == "ai"), ct);
         return Ok(ApiResponse<ProjectSearchPage>.Ok(result));
     }
 }

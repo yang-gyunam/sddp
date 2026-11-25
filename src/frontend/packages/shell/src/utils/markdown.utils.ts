@@ -24,6 +24,20 @@ function renderSafeLink(_match: string, label: string, rawUrl: string): string {
   return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="md-link">${label}</a>`;
 }
 
+type MarkdownReference = { label: string; href: string };
+type ReferenceResolver = (key: string) => MarkdownReference | undefined;
+const guidPattern = '[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}';
+const referencePattern = new RegExp(
+  `\\[\\[((?:[a-z]+:)?${guidPattern})\\]\\]|(?<![\\w:/-])(?:[a-z]+:)?${guidPattern}(?![\\w:/-])`,
+  'gi'
+);
+
+function renderReference(key: string, resolve: ReferenceResolver): string | undefined {
+  const reference = resolve(key);
+  if (!reference || !/^\/(?![\\/])[^\\\r\n]*$/.test(reference.href)) return;
+  return `<a href="${escapeHtml(reference.href)}" data-markdown-reference class="md-link">${escapeHtml(reference.label)}</a>`;
+}
+
 /**
  * Convert a markdown string to sanitised HTML.
  *
@@ -35,10 +49,12 @@ function renderSafeLink(_match: string, label: string, rawUrl: string): string {
  * 5. Convert remaining newlines to `<br>`.
  * 6. Restore code block placeholders.
  */
-export function renderMarkdown(text: string): string {
+export function renderMarkdown(text: string, resolveReference?: ReferenceResolver): string {
   if (!text) return '';
 
-  let html = escapeHtml(text);
+  // Keep placeholder delimiters out of the input.
+  // eslint-disable-next-line no-control-regex
+  let html = escapeHtml(text).replace(/\x00/g, '&#0;');
 
   // --- 1. Extract fenced code blocks ----------------------------------------
   const codeBlocks: string[] = [];
@@ -109,6 +125,18 @@ export function renderMarkdown(text: string): string {
   html = output.join('\n');
 
   // --- 3. Inline transforms ---------------------------------------------------
+  const inlineCode: string[] = [];
+  if (resolveReference) {
+    // Older answers sometimes put a standalone source ID in backticks.
+    html = html.replace(/`(.+?)`/g, (_match, code: string) => {
+      const reference = code.replace(/^\[\[(.+)\]\]$/, '$1');
+      const rendered = renderReference(reference, resolveReference);
+      const index = inlineCode.push(rendered ?? `<code class="md-inline-code">${code}</code>`) - 1;
+      return `\x00IC${index}\x00`;
+    });
+    // Source links in this view come from the resolver. Keep the label of ordinary Markdown links.
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+  }
   // Bold **text**
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // Italic *text* (but not inside a word like a*b*c)
@@ -118,7 +146,12 @@ export function renderMarkdown(text: string): string {
   // Inline code `code`
   html = html.replace(/`(.+?)`/g, '<code class="md-inline-code">$1</code>');
   // Links [text](url)
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, renderSafeLink);
+  html = resolveReference
+    ? html.replace(
+        referencePattern,
+        (token, key?: string) => renderReference(key ?? token, resolveReference) ?? token
+      )
+    : html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, renderSafeLink);
 
   // --- 4. Newlines → <br> (skip after block elements) ------------------------
   html = html.replace(/\n/g, '<br>');
@@ -128,6 +161,8 @@ export function renderMarkdown(text: string): string {
   html = html.replace(/<br>(<(?:h[1-6]|blockquote|ul|ol|pre)[ >])/g, '$1');
 
   // --- 5. Restore code block placeholders ------------------------------------
+  // eslint-disable-next-line no-control-regex -- \x00 delimits the inline placeholders.
+  html = html.replace(/\x00IC(\d+)\x00/g, (_m, idx: string) => inlineCode[Number(idx)] ?? '');
   // eslint-disable-next-line no-control-regex -- \x00 used intentionally as code block placeholder
   html = html.replace(/\x00CB(\d+)\x00/g, (_m, idx: string) => codeBlocks[Number(idx)] ?? '');
 

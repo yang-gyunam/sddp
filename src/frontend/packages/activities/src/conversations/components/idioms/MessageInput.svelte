@@ -8,6 +8,8 @@
   import { Icon, Button, IconButton, Spinner, Textarea } from '@sddp/ui';
   import { ContextMenu, renderMarkdown, toast } from '@sddp/shell';
   import type { ContextMenuItem } from '@sddp/shell';
+  import ComposerFooter from '../../../shared/components/idioms/ComposerFooter.svelte';
+  import ComposerModeSwitch from '../../../shared/components/idioms/ComposerModeSwitch.svelte';
   import MessageTypeIcon from './MessageTypeIcon.svelte';
   import {
     HUMAN_MESSAGE_TYPES,
@@ -489,10 +491,47 @@
       </div>
     {/if}
 
+    <!-- Textarea / Preview area -->
+    <div bind:this={contentAreaEl} class="flex min-w-0 items-start" style:min-height={lockedHeight}>
+      {#if inputMode === 'write'}
+        <Textarea
+          unstyled
+          bind:element={textareaEl}
+          bind:value={content}
+          oninput={handleInput}
+          onkeydown={handleKeyDown}
+          oncontextmenu={handleContextMenu}
+          onfocus={() => (isFocused = true)}
+          onblur={() => (isFocused = false)}
+          {placeholder}
+          rows={1}
+          class="min-w-0 flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] bg-transparent resize-none focus:outline-none {showToolbar
+            ? 'min-h-[9.75rem] max-h-[20rem]'
+            : 'min-h-[5rem] max-h-[10rem] overflow-y-hidden'}"
+          {disabled}
+        />
+      {:else}
+        <div
+          class="min-w-0 flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] overflow-y-auto prose-message {showToolbar
+            ? 'min-h-[9.75rem] max-h-[20rem]'
+            : 'min-h-[5rem]'}"
+          role="region"
+          aria-label="Markdown preview"
+        >
+          {#if content.trim()}
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+            {@html renderMarkdown(content)}
+          {:else}
+            <span class="text-[var(--color-text-muted)]">{placeholder}</span>
+          {/if}
+        </div>
+      {/if}
+    </div>
+
     <!-- Recording / transcribing bar (speech-to-text) -->
     {#if recState !== 'idle'}
       <div
-        class="flex items-center gap-2 px-3 py-1.5 rounded-t-[11px] border-b border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
+        class="flex items-center gap-2 px-3 py-1.5 border-t border-[var(--color-border-secondary)] bg-[var(--color-surface-50)]"
       >
         {#if recState === 'recording'}
           <span class="rec-dot flex-shrink-0" aria-hidden="true"></span>
@@ -537,9 +576,7 @@
 
     <!-- Markdown formatting toolbar (topic mode only) -->
     {#if showToolbar && inputMode === 'write'}
-      <div
-        class="md-toolbar flex items-center gap-0.5 px-2 pt-1.5 pb-0.5 border-b border-[var(--color-border-secondary)]"
-      >
+      <div class="md-toolbar flex flex-wrap items-center gap-0.5 px-2 pb-1.5">
         <!-- Text formatting -->
         <Button
           variant="unstyled"
@@ -632,138 +669,56 @@
       </div>
     {/if}
 
-    <!-- Textarea / Preview area + Send button -->
-    <div
-      bind:this={contentAreaEl}
-      class="relative flex items-start pr-10"
-      style:min-height={lockedHeight}
-    >
-      {#if inputMode === 'write'}
-        <Textarea
-          unstyled
-          bind:element={textareaEl}
-          bind:value={content}
-          oninput={handleInput}
-          onkeydown={handleKeyDown}
-          oncontextmenu={handleContextMenu}
-          onfocus={() => (isFocused = true)}
-          onblur={() => (isFocused = false)}
-          {placeholder}
-          rows={1}
-          class="flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] bg-transparent resize-none focus:outline-none {showToolbar
-            ? 'min-h-[9.75rem] max-h-[20rem]'
-            : 'min-h-[5rem] max-h-[10rem] overflow-y-hidden'}"
-          {disabled}
-        />
-      {:else}
-        <div
-          class="flex-1 px-3.5 pt-3 pb-2 text-sm text-[var(--color-text-primary)] overflow-y-auto prose-message {showToolbar
-            ? 'min-h-[9.75rem] max-h-[20rem]'
-            : 'min-h-[5rem]'}"
-          role="region"
-          aria-label="Markdown preview"
-        >
-          {#if content.trim()}
-            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-            {@html renderMarkdown(content)}
-          {:else}
-            <span class="text-[var(--color-text-muted)]">{placeholder}</span>
+    <ComposerFooter disabled={!canSubmit} onsend={handleSubmit}>
+      {#snippet controls()}
+        <!-- Message Type selector -->
+        <div class="relative">
+          <Button
+            variant="unstyled"
+            onclick={() => (showTypeSelector = !showTypeSelector)}
+            class="flex items-center gap-1.5 px-2 h-6 text-[0.6875rem] rounded-md hover:bg-[var(--color-surface-200)] transition-colors text-[var(--color-text-secondary)]"
+            {disabled}
+          >
+            <MessageTypeIcon type={selectedType} size="sm" />
+            <span>{typeLabels[selectedType]}</span>
+            <Icon name="chevron-down" size="xs" />
+          </Button>
+
+          {#if showTypeSelector}
+            <div
+              class="absolute bottom-full left-0 mb-1 bg-[var(--color-surface-100)] border border-[var(--color-border-primary)] rounded-lg shadow-lg py-1 min-w-[160px] z-20"
+            >
+              {#each HUMAN_MESSAGE_TYPES as type (type)}
+                <Button
+                  variant="unstyled"
+                  onclick={() => selectType(type)}
+                  class="flex items-center gap-2 w-full px-3 py-1.5 hover:bg-[var(--color-surface-200)] transition-colors
+                    {selectedType === type ? 'bg-[var(--color-surface-200)]' : ''}"
+                >
+                  <MessageTypeIcon {type} size="sm" />
+                  <span class="text-xs text-[var(--color-text-primary)]">{typeLabels[type]}</span>
+                </Button>
+              {/each}
+            </div>
           {/if}
         </div>
-      {/if}
 
-      <!-- Send button (top-right, inside container) -->
-      <div class="absolute top-2 right-2">
-        <Button
-          variant="unstyled"
-          disabled={!canSubmit}
-          onclick={handleSubmit}
-          class="flex items-center justify-center w-7 h-7 rounded-lg transition-colors {canSubmit
-            ? 'bg-[var(--color-accent-primary)] text-white hover:opacity-90 cursor-pointer'
-            : 'bg-[var(--color-surface-200)] text-[var(--color-text-muted)] cursor-not-allowed'}"
-          title="Send (Enter)"
-        >
-          <Icon name="arrow-up" size="sm" />
-        </Button>
-      </div>
-    </div>
+        <ComposerModeSwitch mode={inputMode} onchange={setInputMode} />
 
-    <!-- Bottom toolbar (no divider, distinguished by typography) -->
-    <div class="flex items-center gap-2 px-2 pb-2 pt-0">
-      <!-- Message Type selector -->
-      <div class="relative">
-        <Button
-          variant="unstyled"
-          onclick={() => (showTypeSelector = !showTypeSelector)}
-          class="flex items-center gap-1.5 px-2 h-6 text-[0.6875rem] rounded-md hover:bg-[var(--color-surface-200)] transition-colors text-[var(--color-text-secondary)]"
-          {disabled}
-        >
-          <MessageTypeIcon type={selectedType} size="sm" />
-          <span>{typeLabels[selectedType]}</span>
-          <Icon name="chevron-down" size="xs" />
-        </Button>
-
-        {#if showTypeSelector}
-          <div
-            class="absolute bottom-full left-0 mb-1 bg-[var(--color-surface-100)] border border-[var(--color-border-primary)] rounded-lg shadow-lg py-1 min-w-[160px] z-20"
-          >
-            {#each HUMAN_MESSAGE_TYPES as type (type)}
-              <Button
-                variant="unstyled"
-                onclick={() => selectType(type)}
-                class="flex items-center gap-2 w-full px-3 py-1.5 hover:bg-[var(--color-surface-200)] transition-colors
-                  {selectedType === type ? 'bg-[var(--color-surface-200)]' : ''}"
-              >
-                <MessageTypeIcon {type} size="sm" />
-                <span class="text-xs text-[var(--color-text-primary)]">{typeLabels[type]}</span>
-              </Button>
-            {/each}
-          </div>
+        <!-- Speech-to-text mic button -->
+        {#if micAvailable}
+          <IconButton
+            icon="mic"
+            size="sm"
+            variant="ghost"
+            loading={recState === 'transcribing'}
+            disabled={disabled || recState !== 'idle'}
+            title="Dictate message (max 60s)"
+            onclick={() => void startRecording()}
+          />
         {/if}
-      </div>
-
-      <!-- Write / Preview toggle -->
-      <div class="flex items-center h-6 rounded-md overflow-hidden">
-        <Button
-          variant="unstyled"
-          onclick={() => setInputMode('write')}
-          class="px-2 h-full text-[0.6875rem] font-medium rounded-l-md transition-colors {inputMode ===
-          'write'
-            ? 'bg-[var(--color-surface-200)] text-[var(--color-text-primary)]'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-100)]'}"
-        >
-          Write
-        </Button>
-        <Button
-          variant="unstyled"
-          onclick={() => setInputMode('preview')}
-          class="px-2 h-full text-[0.6875rem] font-medium rounded-r-md transition-colors {inputMode ===
-          'preview'
-            ? 'bg-[var(--color-surface-200)] text-[var(--color-text-primary)]'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-100)]'}"
-        >
-          Preview
-        </Button>
-      </div>
-
-      <!-- Speech-to-text mic button -->
-      {#if micAvailable}
-        <IconButton
-          icon="mic"
-          size="sm"
-          variant="ghost"
-          loading={recState === 'transcribing'}
-          disabled={disabled || recState !== 'idle'}
-          title="Dictate message (max 60s)"
-          onclick={() => void startRecording()}
-        />
-      {/if}
-
-      <!-- Spacer + keyboard hint -->
-      <span class="ml-auto text-[0.625rem] text-[var(--color-text-muted)] select-none">
-        Enter &middot; Shift+Enter
-      </span>
-    </div>
+      {/snippet}
+    </ComposerFooter>
   </div>
 </div>
 

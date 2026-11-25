@@ -5,6 +5,8 @@
   import { onMount, tick } from 'svelte';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { generateHTML, mergeAttributes, Node, type Editor, type JSONContent } from '@tiptap/core';
+  import ReadAloudButton from '../../shared/components/idioms/ReadAloudButton.svelte';
+  import { readableHtml } from '../../shared/utils/read-aloud-text';
   import StarterKit from '@tiptap/starter-kit';
   import { Table } from '@tiptap/extension-table';
   import { TableRow } from '@tiptap/extension-table-row';
@@ -27,6 +29,9 @@
   import { subscribeAuth } from '@sddp/shell/auth/stores';
   import { createProjectCapabilityStore } from '../../shared/state/projectCapabilities';
   import DetailHeader from '../../shared/components/idioms/DetailHeader.svelte';
+  import DetailChatToggle from '../../ai/components/idioms/DetailChatToggle.svelte';
+  import DetailChatPanel from '../../ai/components/sections/DetailChatPanel.svelte';
+  import { createDetailChat } from '../../ai/stores/detail-chat.svelte';
   import DetailTitle from '../../shared/components/idioms/DetailTitle.svelte';
   import { StatCard } from '../../shared/components/idioms';
   import { ApiRequestError } from '../../shared/api/fetchWithAuth';
@@ -1156,7 +1161,14 @@
   const { confirmAction, chooseAction } = createConfirmation(
     () => `${projectId}/${selectedPage?.id}/${selectedPage?.revision}`
   );
+  const detailChat = createDetailChat(() =>
+    !readOnly && !creating && !editing && !loadingPage && selectedPage
+      ? { projectId, entityType: 'KnowledgePage', entityId: selectedPage.id }
+      : undefined
+  );
 </script>
+
+{#snippet aiChatPanel()}<DetailChatPanel chat={detailChat} />{/snippet}
 
 <PageShell class={className}>
   <PageHeader title="Knowledge" meta={pageMeta} loading={loadingTree || loadingPage || saving}>
@@ -1185,6 +1197,8 @@
       sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
       minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
       maxSidebarWidth={SIDEBAR_DETAIL_LAYOUT.maxSidebarWidth}
+      auxiliaryPanel={detailChat.visible ? aiChatPanel : undefined}
+      showAuxiliaryPanel={detailChat.open}
     >
       {#snippet sidebar()}
         <ProjectListLayout lines={2}>
@@ -1259,6 +1273,14 @@
                   onclick={cancelEdit}
                 />
               {:else}
+                {#if selectedPage && !loadingPage}
+                  {@const page = selectedPage}
+                  {#key page.id + '/' + page.revision}
+                    <ReadAloudButton
+                      getText={() => [page.title, readableHtml(editorHtml)].join('. ')}
+                    />
+                  {/key}
+                {/if}
                 {#if selectedPage!.status !== 'Archived' && canUpdate}
                   <IconButton
                     icon="edit"
@@ -1269,6 +1291,9 @@
                   />
                 {/if}
 
+                {#if detailChat.visible}
+                  <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
+                {/if}
                 <Dropdown position="bottom-right">
                   {#snippet trigger({ toggle, open })}
                     <IconButton

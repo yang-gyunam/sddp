@@ -3,6 +3,7 @@ using Dapper;
 using MediatR;
 using Sddp.Abstractions.Constants;
 using Sddp.Abstractions.DTOs;
+using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Application.Features.Relationships.Queries;
@@ -12,13 +13,16 @@ namespace Sddp.Application.Features.ProjectSearch;
 
 public sealed record ProjectSearchQuery(GlobalUniqueId Tenant, GlobalUniqueId Project, GlobalUniqueId User,
     IReadOnlyList<string> Permissions, ProjectSearchExpression Expression, string Menu, string Sort, int Offset,
-    string? GitCommit, bool FilesUnavailable, string Fingerprint, ProjectSearchCursor? Cursor) : IQuery<ProjectSearchPage>, IRelationshipReadQuery;
+    string? GitCommit, bool FilesUnavailable, string Fingerprint, ProjectSearchCursor? Cursor, bool IncludeAiConversationMessages) : IQuery<ProjectSearchPage>, IRelationshipReadQuery;
 
 public sealed class ProjectSearchQueryHandler(IProjectSearchSession session, IDiagramListReader diagrams,
-    IDiagramOriginAccess origins) : IRequestHandler<ProjectSearchQuery, ProjectSearchPage>
+    IDiagramOriginAccess origins, IProjectSearchChatSource? chats = null) : IRequestHandler<ProjectSearchQuery, ProjectSearchPage>
 {
     public static readonly IReadOnlySet<string> Menus = new HashSet<string>(StringComparer.Ordinal)
-    { "dashboard","specs","requirements","conversations","knowledge","glossary","files","diagrams","artifacts","tasks","effort","traceability" };
+    { "dashboard","specs","requirements","conversations","knowledge","glossary","files","diagrams","artifacts","tasks","effort","traceability","ai-chat" };
+    private static readonly Guid[] AiMessageTypes = WellKnownCodes.MessageTypeToId
+        .Where(pair => pair.Key.IsAiGenerated()).Select(pair => pair.Value).ToArray();
+
     private static readonly string Sources = LoadSources();
     private static string LoadSources()
     {
@@ -40,6 +44,7 @@ public sealed class ProjectSearchQueryHandler(IProjectSearchSession session, IDi
         }
         var parameters = request.Expression.Parameters;
         var terms = request.Expression.Terms;
+        var chatDocuments = chats is null ? null : await chats.ReadAsync(session, request.Tenant, request.Project, request.User, terms, ct);
         parameters.AddDynamicParams(new
         {
             Tenant = request.Tenant.ToGuid(),
@@ -56,6 +61,8 @@ public sealed class ProjectSearchQueryHandler(IProjectSearchSession session, IDi
             Phrase = string.Join(" ", terms),
             Specs = Can(PermissionCodes.SpecRead),
             Requirements = Can(PermissionCodes.RequirementRead),
+            request.IncludeAiConversationMessages,
+            AiMessageTypes,
             Conversations = Can(PermissionCodes.ConversationRead),
             Tasks = Can(PermissionCodes.TaskRead),
             Glossary = Can(PermissionCodes.GlossaryRead),
@@ -63,7 +70,8 @@ public sealed class ProjectSearchQueryHandler(IProjectSearchSession session, IDi
             AllDrafts = Can(PermissionCodes.KnowledgePublish) || Can(PermissionCodes.KnowledgeAdmin),
             Archived = Can(PermissionCodes.KnowledgeAdmin),
             Audit = Can(PermissionCodes.AuditRead),
-            Diagrams = diagramIds
+            Diagrams = diagramIds,
+            Chats = JsonSerializer.Serialize(chatDocuments ?? [], JsonSerializerOptions.Web)
         });
         var order = request.Sort == "date" ? "updated_at DESC,menu,key" : "score DESC,updated_at DESC,menu,key";
         var after = request.Cursor is null ? "TRUE" :
@@ -98,6 +106,7 @@ public sealed class ProjectSearchQueryHandler(IProjectSearchSession session, IDi
         var last = rows.LastOrDefault();
         var cursor = hasMore && last is not null ? new ProjectSearchCursor(request.Fingerprint,
             items.RootElement[rows.Length - 1].GetProperty("score").GetInt32(), last.UpdatedAt, last.Menu, last.Key).Encode() : null;
-        return new(rows, counts, hasMore ? checked(request.Offset + rows.Length) : null, cursor, terms, request.FilesUnavailable);
+        return new(rows, counts, hasMore ? checked(request.Offset + rows.Length) : null, cursor, terms, request.FilesUnavailable,
+            AiChatsAvailable: chatDocuments is not null);
     }
 }

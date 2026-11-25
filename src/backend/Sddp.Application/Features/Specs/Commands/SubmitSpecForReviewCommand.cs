@@ -15,8 +15,11 @@ public sealed record SubmitSpecForReviewCommand(
     GlobalUniqueId TenantId,
     GlobalUniqueId ProjectId,
     GlobalUniqueId SpecId,
-    GlobalUniqueId UserId) : ICommand<SpecDto?>, IAuditableRequest<SpecDto?>
+    GlobalUniqueId UserId) : ICommand<SpecDto?>, IAuditableRequest<SpecDto?>, IReindexesSpecs<SpecDto?>
 {
+    // A status change moves updated_at and the version, which retires the current index.
+    public IReadOnlyList<Guid> GetReindexedSpecIds(SpecDto? response) => response is null ? [] : [SpecId.ToGuid()];
+
     public AuditLogRequest? AuditLog { get; set; }
 
     public AuditLogRequest? GetAuditLogRequest(SpecDto? response) => AuditLog;

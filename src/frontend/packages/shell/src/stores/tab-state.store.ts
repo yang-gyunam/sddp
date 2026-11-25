@@ -262,6 +262,18 @@ export const __internal = {
 
 export const tabStateStore = createStore();
 
+// The router owns this query. Page components may replace their own tab state independently.
+const tabRoutes = new Map<string, { path: string; search: string }>();
+
+export function getTabRouteSearch(tabId: string, path: string): string {
+  const route = tabRoutes.get(tabId);
+  return route?.path === path ? route.search : '';
+}
+
+export function setTabRouteSearch(tabId: string, path: string, search: string): void {
+  tabRoutes.set(tabId, { path, search });
+}
+
 export const getTabState = <T extends object>(tabId: string): T | undefined =>
   tabStateStore.getState<T>(tabId);
 
@@ -271,11 +283,23 @@ export const setTabState = <T extends object>(tabId: string, state: T): void =>
 export const updateTabState = <T extends object>(tabId: string, patch: Partial<T>): void =>
   tabStateStore.updateState<T>(tabId, patch);
 
-export const clearTabState = (tabId: string): void => tabStateStore.clearState(tabId);
+export function clearTabState(tabId: string): void {
+  tabRoutes.delete(tabId);
+  tabStateStore.clearState(tabId);
+}
 
-export const clearTabStates = (tabIds: string[]): void => tabStateStore.clearStates(tabIds);
+export function clearTabStates(tabIds: string[]): void {
+  for (const id of tabIds) tabRoutes.delete(id);
+  tabStateStore.clearStates(tabIds);
+}
 
-export const copyTabState = (sourceTabId: string, targetTabId: string): void =>
+export function copyTabState(sourceTabId: string, targetTabId: string): void {
+  const route = tabRoutes.get(sourceTabId);
+  if (route && targetTabId) tabRoutes.set(targetTabId, route);
   tabStateStore.copyState(sourceTabId, targetTabId);
+}
 
-export const resetTabStateStore = (): void => tabStateStore.reset();
+export function resetTabStateStore(): void {
+  tabRoutes.clear();
+  tabStateStore.reset();
+}

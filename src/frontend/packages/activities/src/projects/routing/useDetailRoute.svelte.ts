@@ -8,7 +8,6 @@ export function useDetailRoute(options: {
   path: () => string;
   selection: () => string | null;
   query?: () => Record<string, string | null>;
-  keepInitialTabSelection?: boolean;
   ready?: () => boolean;
   restore: (id: string | null, query?: URLSearchParams) => void | boolean | Promise<void | boolean>;
 }) {
@@ -36,7 +35,6 @@ export function useDetailRoute(options: {
       options.ready?.() === false
     )
       return;
-    const firstRestore = !initialized;
     initialized = true;
     const params = new SvelteURLSearchParams(window.location.search);
     const id = params.get('id');
@@ -46,12 +44,6 @@ export function useDetailRoute(options: {
     const key = selectionKey(id, query);
     last = key;
     if (key === selectionKey(options.selection())) return;
-    // A newly split tab inherits its selection before its first URL has any detail query.
-    if (firstRestore && options.keepInitialTabSelection && !id && options.selection()) {
-      last = selectionKey(options.selection());
-      replaceWithSelection();
-      return;
-    }
     const request = ++generation;
     applying = true;
     let accepted: void | boolean = undefined;

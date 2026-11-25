@@ -8,6 +8,7 @@ using Sddp.Abstractions.Enums;
 using Sddp.Abstractions.Interfaces;
 using Sddp.Abstractions.ValueObjects;
 using Sddp.Api.Authorization;
+using Sddp.Api.Security;
 using Sddp.Api.Constants;
 using Sddp.Domain.Entities;
 using Sddp.Application.Features.Conversations;
@@ -19,6 +20,7 @@ namespace Sddp.Api.Controllers;
 /// <summary>
 /// Topics controller
 /// </summary>
+[SensitiveRead("conversations")]
 [Route("api/conversations")]
 [Authorize]
 public class ConversationTopicsController : BaseApiController, IAsyncActionFilter

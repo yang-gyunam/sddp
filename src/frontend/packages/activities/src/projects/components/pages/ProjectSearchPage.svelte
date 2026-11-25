@@ -34,7 +34,13 @@
     tabId = '',
   }: { projectId: string; projectName?: string; tabId?: string } = $props();
   const instance = $props.id();
-  const menus = Object.entries(PROJECT_PAGE_CONFIG).filter(([id]) => id !== 'search');
+  const menuConfig = { ...PROJECT_PAGE_CONFIG, 'ai-chat': { label: 'AI Chat', icon: 'sparkles' } };
+  let aiChatsAvailable = $state(false);
+  const menus = $derived(
+    Object.entries(menuConfig).filter(
+      ([id]) => id !== 'search' && (id !== 'ai-chat' || aiChatsAvailable)
+    )
+  );
   const areas = { all: '모든 필드', title: '제목·코드', body: '본문', path: '위치·메타데이터' };
   const sortLabels = { relevance: '관련도순', date: '최근 수정순' };
   const quick = ['all', 'specs', 'requirements', 'conversations', 'files'] as const;
@@ -141,6 +147,7 @@
       if (restored === identity) return;
       const saved = getTabState<Saved>(tabKey);
       const state = saved?.owner === owner ? saved : undefined;
+      aiChatsAvailable = false;
       options = state?.options ?? { ...defaults };
       selected = state?.selected ?? '';
       wanted = state?.shown ?? 10;
@@ -188,6 +195,7 @@
     if (
       offset &&
       (page.filesUnavailable !== unavailable ||
+        Boolean(page.aiChatsAvailable) !== aiChatsAvailable ||
         menus.some(([menu]) => (page.counts[menu as SearchMenu] ?? 0) < (counts[menu] ?? 0)))
     ) {
       selected = '';
@@ -207,6 +215,7 @@
     nextOffset = page.nextOffset;
     nextCursor = page.nextCursor;
     unavailable = page.filesUnavailable;
+    aiChatsAvailable = Boolean(page.aiChatsAvailable);
   }
   function clearResults() {
     rows = [];
@@ -433,7 +442,7 @@
                 ? '메뉴 전체'
                 : scope === 'all'
                   ? '전체'
-                  : PROJECT_PAGE_CONFIG[scope].label}<Icon name="chevron-down" size="xs" /></Button
+                  : menuConfig[scope].label}<Icon name="chevron-down" size="xs" /></Button
             >
           {/snippet}
           {@render choice(
@@ -464,7 +473,7 @@
             <h3>
               {scope === 'all'
                 ? '검색 결과'
-                : (menuTitles[scope] || PROJECT_PAGE_CONFIG[scope].label) + ' 검색 결과'}
+                : (menuTitles[scope] || menuConfig[scope].label) + ' 검색 결과'}
             </h3>
             <strong>{loading ? '…' : total}</strong>{#if !error && rows.length}<span
                 class="page-range">1–{shown} 표시</span
@@ -506,7 +515,7 @@
                     (style?.bgColor || 'bg-[var(--color-bg-secondary)]')}
                 >
                   {#if row.menu === 'files'}<FileIcon path={row.location} size="sm" />{:else}<Icon
-                      name={PROJECT_PAGE_CONFIG[row.menu].icon}
+                      name={menuConfig[row.menu].icon}
                       size="sm"
                     />{/if}
                 </span>
@@ -528,7 +537,7 @@
                 <div class="row-lines">
                   <span class="excerpt">{@render highlight(row.snippet)}</span>
                   <span class="origin"
-                    ><b>{PROJECT_PAGE_CONFIG[row.menu].label}</b><i>›</i>{#if row.location}<span
+                    ><b>{menuConfig[row.menu].label}</b><i>›</i>{#if row.location}<span
                         class="truncate">{@render highlight(row.location)}</span
                       ><i>›</i>{/if}<span class="truncate"
                       >{@render highlight(row.line ? row.line + '행' : row.code || row.kind)}</span

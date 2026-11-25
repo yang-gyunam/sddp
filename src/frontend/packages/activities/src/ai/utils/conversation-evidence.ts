@@ -9,14 +9,19 @@ export function parseEvidenceReferences(references: string[]): Reference[] {
       /^(spec|glossary|decision|artifact):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
         raw
       );
-    const normalized = match ? raw.toLowerCase() : raw;
+    const entity =
+      /^(spec|task|requirement):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})@[0-9a-f]{64}$/i.exec(
+        raw
+      );
+    const typed = match ?? entity;
+    const normalized = typed ? raw.toLowerCase() : raw;
     if (result.some((item) => item.raw === normalized)) continue;
     result.push(
-      match
+      typed
         ? {
             raw: normalized,
-            type: match[1]!.toLowerCase(),
-            id: match[2]!.toLowerCase(),
+            type: typed[1]!.toLowerCase(),
+            id: typed[2]!.toLowerCase(),
           }
         : { raw }
     );

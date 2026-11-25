@@ -24,7 +24,7 @@ public sealed class GetProjectFileRelationsQueryHandler(IUnitOfWork unitOfWork)
 
         var artifacts = await unitOfWork.Repository<ArtifactTracking>().FindAsync(
             a => a.TenantId == request.TenantId && a.ProjectId == request.ProjectId && a.IsActive, cancellationToken).ConfigureAwait(false);
-        var matched = artifacts.Where(a => RepositoryPath(project.ArtifactRootPath, a.ArtifactPath) == request.Path).ToList();
+        var matched = artifacts.Where(a => ProjectFileOwnership.RepositoryPath(project.ArtifactRootPath, a.ArtifactPath) == request.Path).ToList();
         var mappings = await unitOfWork.Repository<ArtifactToSpecMapping>().FindAsync(
             m => m.TenantId == request.TenantId && m.ProjectId == request.ProjectId && m.IsActive && m.ArtifactPath == request.Path,
             cancellationToken).ConfigureAwait(false);
@@ -99,13 +99,9 @@ public sealed class GetProjectFileRelationsQueryHandler(IUnitOfWork unitOfWork)
             cancellationToken).ConfigureAwait(false);
         items.AddRange(tasks.Select(t => new ProjectFileLinkDto(t.Id.ToString(), "Task", t.Title)));
 
-        var ownerIds = matched.Where(a => a.OwnerUserId.HasValue).Select(a => a.OwnerUserId!.Value).Distinct().ToList();
-        var owners = await unitOfWork.Repository<User>().FindAsync(u => u.IsActive && ownerIds.Contains(u.Id), cancellationToken).ConfigureAwait(false);
-        return new(owners.Select(u => new UserRefDto(u.Id.ToString(), u.DisplayName, u.AvatarUrl)).ToList(),
+        var ownerIds = matched.Where(a => a.OwnerUserId.HasValue).Select(a => a.OwnerUserId!.Value);
+        var owners = await ProjectFileOwnership.ReadOwnersAsync(unitOfWork, ownerIds, cancellationToken).ConfigureAwait(false);
+        return new(owners.Values.ToList(),
             items.DistinctBy(i => (i.Type, i.Id)).OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase).ToList());
     }
-
-    private static string RepositoryPath(string? root, string path)
-        => string.Join('/', new[] { root?.Replace('\\', '/').Trim('/'), path.Replace('\\', '/').TrimStart('/') }
-            .Where(p => !string.IsNullOrEmpty(p) && p != "."));
 }

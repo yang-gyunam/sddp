@@ -19,6 +19,9 @@
     onkeydown?: KeyboardEventHandler<HTMLDivElement>;
     isResizing?: boolean;
     ariaLabel?: string;
+    ariaValueNow?: number;
+    ariaValueMin?: number;
+    ariaValueMax?: number;
 
     // --- Common ---
     class?: string;
@@ -41,6 +44,9 @@
     onkeydown: externalKeyDown,
     isResizing = false,
     ariaLabel,
+    ariaValueNow = 50,
+    ariaValueMin = 0,
+    ariaValueMax = 100,
 
     // Common
     class: className = '',
@@ -187,9 +193,9 @@
       : ''} {className}"
     role="separator"
     aria-orientation={orientation}
-    aria-valuenow={50}
-    aria-valuemin={0}
-    aria-valuemax={100}
+    aria-valuenow={ariaValueNow}
+    aria-valuemin={ariaValueMin}
+    aria-valuemax={ariaValueMax}
     aria-label={ariaLabel ?? 'Resize panel'}
     tabindex="0"
   ></div>

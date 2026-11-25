@@ -1,5 +1,8 @@
 <!-- Activity: Projects > Nav: Specs (project-{id}-specs) | Screen ID: PRJ-SPEC-001 -->
 <script lang="ts">
+  import { createDetailChat } from '../../../ai/stores/detail-chat.svelte';
+  import DetailChatPanel from '../../../ai/components/sections/DetailChatPanel.svelte';
+  import DetailChatToggle from '../../../ai/components/idioms/DetailChatToggle.svelte';
   import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import ProjectListLayout from '../../../shared/components/sections/ProjectListLayout.svelte';
   import { useDetailRoute } from '../../routing/useDetailRoute.svelte';
@@ -714,7 +717,16 @@
     },
   });
   const { confirmAction } = createConfirmation(() => `${projectId}/${selectedSpec?.id}`);
+  const detailChat = createDetailChat(() =>
+    viewMode === 'detail' && selectedSpec
+      ? { projectId, entityType: 'Spec', entityId: selectedSpec.id }
+      : undefined
+  );
 </script>
+
+{#snippet aiChatPanel()}
+  <DetailChatPanel chat={detailChat} />
+{/snippet}
 
 <PageShell class={className}>
   <PageHeader title={pageTitle} meta={pageMeta} {loading}>
@@ -751,6 +763,8 @@
       </div>
     {:else}
       <SidebarDetailLayout
+        auxiliaryPanel={detailChat.visible ? aiChatPanel : undefined}
+        showAuxiliaryPanel={detailChat.open}
         showRightPanel={!!selectedSpec && viewMode === 'detail'}
         sidebarWidth={SIDEBAR_DETAIL_LAYOUT.sidebarWidth}
         minSidebarWidth={SIDEBAR_DETAIL_LAYOUT.minSidebarWidth}
@@ -1041,6 +1055,9 @@
                     title="Edit"
                     onclick={handleEditSpec}
                   />
+                {/if}
+                {#if detailChat.visible}
+                  <DetailChatToggle open={detailChat.open} onclick={detailChat.toggle} />
                 {/if}
                 {#if selectedSpec!.status !== 'Locked'}
                   <Dropdown position="bottom-right">

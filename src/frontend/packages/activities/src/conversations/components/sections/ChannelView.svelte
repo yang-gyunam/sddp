@@ -1,12 +1,13 @@
 <!-- Section: ChannelView — Conversations > Channel/DM/Global, Projects > Conversations -->
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import ConversationEvidenceSection from '../../../ai/components/sections/ConversationEvidenceSection.svelte';
   import type { ConversationEvidenceContext } from '../../../ai/types/evidence.types';
   import { navigateToEntity } from '../../../shared/navigation/entityNavigation';
   import { untrack } from 'svelte';
   import { keepMessageBottomVisible } from '../../actions/keepMessageBottomVisible';
   import { Icon, Button, IconButton, Spinner, ResizeHandle } from '@sddp/ui';
-  import { PageBody, PageShell, toast } from '@sddp/shell';
+  import { PageBody, PageShell, SidebarDetailLayout, toast } from '@sddp/shell';
   import { tabActions } from '@sddp/shell/stores';
   import { getConversationHubService } from '../../services';
   import MessageBubble from '../idioms/MessageBubble.svelte';
@@ -71,6 +72,12 @@
     onStatusChange?: (status: ChannelEntryStatus) => void;
     onMembersChanged?: (conversationId: string, members: ConversationMember[]) => void;
     onSendInvitation?: (userId: string, displayName: string) => Promise<void>;
+    detailActions?: Snippet;
+    bodyRightPanel?: Snippet;
+    bodyRightWidth?: number;
+    onBodyRightWidthChange?: (width: number) => void;
+    auxiliaryPanel?: Snippet;
+    auxiliaryOpen?: boolean;
     class?: string;
   }
 
@@ -96,6 +103,12 @@
     onStatusChange,
     onMembersChanged,
     onSendInvitation,
+    detailActions,
+    bodyRightPanel,
+    bodyRightWidth,
+    onBodyRightWidthChange,
+    auxiliaryPanel,
+    auxiliaryOpen = false,
     class: className = '',
   }: Props = $props();
 
@@ -875,6 +888,7 @@
       title="Conclude"
     />
   {/if}
+  {@render detailActions?.()}
   {#if canCloseFromHeader}
     <IconButton icon="x" size="sm" variant="ghost" title="Close" onclick={handleHeaderClose} />
   {/if}
@@ -893,226 +907,241 @@
   {/if}
 
   <PageBody padded={false} scrollable={false} class="flex min-h-0">
-    <!-- Chat area (messages + input) -->
-    <div class="flex-1 flex flex-col min-w-0 min-h-0">
-      <!-- Channel Status Banner -->
-      {#if channelStatus === 'Concluded'}
-        <div
-          class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-[var(--color-warning-50)] border-b border-[var(--color-warning-200)] text-[var(--color-warning-700)]"
-        >
-          <Icon name="check-circle" size="sm" />
-          <span class="text-sm"
-            >This channel has been concluded. No new messages can be posted.</span
-          >
-        </div>
-      {/if}
-
-      {#if canExtractRequirement && extractingMessage}
-        <div
-          class="flex-shrink-0 border-b border-[var(--color-border-primary)] bg-[var(--color-surface-100)]"
-        >
-          <div class="flex items-center justify-between px-3 py-2">
-            <div>
-              <div class="text-sm font-medium text-[var(--color-text-primary)]">
-                Extract Requirement
-              </div>
-              <div class="text-xs text-[var(--color-text-tertiary)]">
-                Drafted from a decision in {displayName}
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onclick={handleCancelExtract}>
-              <Icon name="x" size="sm" />
-            </Button>
-          </div>
-          {#if extractError}
-            <div class="px-3 pb-2 text-xs text-[var(--color-error-600)]">
-              {extractError}
-            </div>
-          {/if}
-          <div class="px-3 pb-4">
-            <RequirementForm
-              mode="create"
-              loading={extractLoading}
-              initialData={extractInitialData ?? {}}
-              onSubmit={handleExtractSubmit}
-            />
-          </div>
-        </div>
-      {/if}
-      <!-- Messages Area -->
-      <div
-        bind:this={messagesContainer}
-        use:keepMessageBottomVisible
-        class="flex-1 overflow-y-auto p-3 space-y-3 bg-[var(--color-surface-50)]"
+    {#if auxiliaryPanel}
+      <SidebarDetailLayout
+        rightPanel={bodyRightPanel}
+        showRightPanel={!!bodyRightPanel}
+        rightPanelWidth={bodyRightWidth}
+        onRightPanelWidthChange={onBodyRightWidthChange}
+        {auxiliaryPanel}
+        showAuxiliaryPanel={auxiliaryOpen}
       >
-        {#if loading && uniqueMessages.length === 0}
-          <div class="flex-1 flex items-center justify-center">
-            <Spinner size="lg" />
-          </div>
-        {:else if error && uniqueMessages.length === 0}
-          <div class="flex flex-col items-center justify-center h-full text-center">
-            <Icon name="alert-circle" size="xl" class="text-[var(--color-text-muted)] mb-3" />
-            <p class="text-sm text-[var(--color-text-muted)]">{error}</p>
-          </div>
-        {:else if hubError && uniqueMessages.length === 0}
-          <div class="flex flex-col items-center justify-center h-full text-center">
-            <Icon name="wifi-off" size="xl" class="text-[var(--color-text-muted)] mb-3" />
-            <p class="text-sm text-[var(--color-text-muted)]">{hubError}</p>
-          </div>
-        {:else}
-          {#if hasMore}
-            <Button
-              variant="unstyled"
-              class="w-full py-2 text-sm text-[var(--color-accent-text)]
-                hover:bg-[var(--color-surface-200)] rounded transition-colors"
-              onclick={handleLoadMore}
-            >
-              Load earlier messages
-            </Button>
-          {/if}
-
-          {#each uniqueMessages as message, index (message.id)}
-            <MessageBubble
-              {evidence}
-              {tenantId}
-              {message}
-              messages={uniqueMessages}
-              {viewMode}
-              {projectId}
-              isOwn={currentUserId ? message.sender?.id === currentUserId : false}
-              isLast={index === uniqueMessages.length - 1}
-              onExtractRequirement={canExtractRequirement ? handleExtractRequirement : undefined}
-              onAskAi={aiRun.canAsk ? aiRun.ask : undefined}
-              onRequestMemberReply={memberReplies.canRequest(message)
-                ? memberReplies.requestSaved
-                : undefined}
-              onEdit={!isChannelReadOnly ? handleEditMessage : undefined}
-              onDelete={!isChannelReadOnly ? handleDeleteMessage : undefined}
-              {currentUserRole}
-            />
-          {/each}
-
-          {#if uniqueMessages.length === 0}
-            <div class="flex flex-col items-center justify-center h-full text-center">
-              <Icon name="message-circle" size="xl" class="text-[var(--color-text-muted)] mb-3" />
-              <p class="text-sm text-[var(--color-text-muted)]">
-                No messages yet. Start the conversation!
-              </p>
-            </div>
-          {/if}
-        {/if}
-      </div>
-
-      <ConversationAiRunPanel run={aiRun} />
-      {#if memberReplies.status}<p
-          role="status"
-          class="px-4 py-2 text-xs text-[var(--color-text-secondary)]"
-        >
-          {memberReplies.status}
-        </p>{/if}
-      {#if memberReplies.statusItems.length}
-        <details class="px-4 py-2 text-xs text-[var(--color-text-secondary)]">
-          <summary>AI reply status</summary>
-          <p>
-            Recent and tracked requests. Completed means generation finished, not verified accuracy.
-          </p>
-          <ul aria-label="AI reply statuses">
-            {#each memberReplies.statusItems as reply (reply.id)}
-              <li class="py-1">
-                <span>{reply.displayName}: {reply.label}</span>
-                {#if reply.delivery}<span> {reply.delivery}</span>{/if}
-                {#if reply.errorCode}<span> ({reply.errorCode})</span>{/if}
-              </li>
-            {/each}
-          </ul>
-        </details>
-      {/if}
-      {#each memberReplies.cancellableReplies as reply (reply.id)}
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={memberReplies.isCancelling(reply.id)}
-          onclick={() => memberReplies.cancel(reply.id)}
-        >
-          {memberReplies.isCancelling(reply.id) ? 'Cancelling' : 'Cancel'}
-          {reply.displayName} reply
-        </Button>
-      {/each}
-      {#if memberReplies.error}<p
-          role="alert"
-          class="px-4 py-2 text-xs text-[var(--color-error-600)]"
-        >
-          {memberReplies.error}
-        </p>{/if}
-      {#if memberReplies.canRetryRequest}
-        <Button variant="ghost" size="sm" onclick={memberReplies.retryRequest}
-          >Retry AI request</Button
-        >
-      {/if}
-      {#if memberReplies.canRetryDelivery}
-        <Button variant="ghost" size="sm" onclick={memberReplies.retryDelivery}>
-          Reload AI member replies
-        </Button>
-      {/if}
-
-      <!-- Message Input (hidden for concluded/readonly channels) -->
-      {#if !isChannelReadOnly}
-        <div class="flex-shrink-0 bg-[var(--color-surface-50)]">
-          <MessageInput
-            onSubmit={handleSendMessage}
-            onTypingStart={handleTypingStart}
-            onTypingStop={handleTypingStop}
-            placeholder="Message #{displayName}"
-            {draftKey}
-            disabled={sending}
-          />
-        </div>
-      {:else if isReadOnlyProp}
-        <div
-          class="border-t border-[var(--color-border-primary)] bg-[var(--color-surface-100)] px-4 py-2"
-        >
-          <p class="text-xs text-[var(--color-text-muted)] text-center">
-            <Icon name="eye" size="xs" class="inline-block mr-1 align-text-bottom" />
-            Read-only view
-          </p>
-        </div>
-      {/if}
-    </div>
-
-    <!-- Participants Panel (right side, resizable) — hidden when external right panel is used -->
-    {#if !hideParticipantPanel}
-      <div class="relative z-10 flex-shrink-0">
-        <ResizeHandle
-          orientation="vertical"
-          isResizing={isParticipantsResizing}
-          onpointerdown={handleParticipantsResizeStart}
-          ariaLabel="Resize participants panel"
-        />
-      </div>
-      <div
-        class="flex-shrink-0 border-l border-[var(--color-border-primary)]"
-        class:participants-resizing={isParticipantsResizing}
-        style="width: {participantsPanelWidth}px"
-      >
-        <ParticipantsPanel
-          channel={channelDetail}
-          {currentUserId}
-          tenantId={tenantId ?? ''}
-          projectId={projectId ?? ''}
-          {memberExtension}
-          {conversationId}
-          {linkedRequirements}
-          {isDirectMessage}
-          readonly={isReadOnlyProp}
-          {onSendInvitation}
-          onRemoveMember={isReadOnlyProp ? undefined : handleRemoveMember}
-          onLinkedRequirementClick={handleLinkedRequirementClick}
-          class="h-full"
-        />
-      </div>
+        {@render channelMessages()}
+      </SidebarDetailLayout>
+    {:else}
+      {@render channelMessages()}
     {/if}
   </PageBody>
 </PageShell>
+
+{#snippet channelMessages()}
+  <!-- Chat area (messages + input) -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-0">
+    <!-- Channel Status Banner -->
+    {#if channelStatus === 'Concluded'}
+      <div
+        class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-[var(--color-warning-50)] border-b border-[var(--color-warning-200)] text-[var(--color-warning-700)]"
+      >
+        <Icon name="check-circle" size="sm" />
+        <span class="text-sm">This channel has been concluded. No new messages can be posted.</span>
+      </div>
+    {/if}
+
+    {#if canExtractRequirement && extractingMessage}
+      <div
+        class="flex-shrink-0 border-b border-[var(--color-border-primary)] bg-[var(--color-surface-100)]"
+      >
+        <div class="flex items-center justify-between px-3 py-2">
+          <div>
+            <div class="text-sm font-medium text-[var(--color-text-primary)]">
+              Extract Requirement
+            </div>
+            <div class="text-xs text-[var(--color-text-tertiary)]">
+              Drafted from a decision in {displayName}
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onclick={handleCancelExtract}>
+            <Icon name="x" size="sm" />
+          </Button>
+        </div>
+        {#if extractError}
+          <div class="px-3 pb-2 text-xs text-[var(--color-error-600)]">
+            {extractError}
+          </div>
+        {/if}
+        <div class="px-3 pb-4">
+          <RequirementForm
+            mode="create"
+            loading={extractLoading}
+            initialData={extractInitialData ?? {}}
+            onSubmit={handleExtractSubmit}
+          />
+        </div>
+      </div>
+    {/if}
+    <!-- Messages Area -->
+    <div
+      bind:this={messagesContainer}
+      use:keepMessageBottomVisible
+      class="flex-1 overflow-y-auto p-3 space-y-3 bg-[var(--color-surface-50)]"
+    >
+      {#if loading && uniqueMessages.length === 0}
+        <div class="flex-1 flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      {:else if error && uniqueMessages.length === 0}
+        <div class="flex flex-col items-center justify-center h-full text-center">
+          <Icon name="alert-circle" size="xl" class="text-[var(--color-text-muted)] mb-3" />
+          <p class="text-sm text-[var(--color-text-muted)]">{error}</p>
+        </div>
+      {:else if hubError && uniqueMessages.length === 0}
+        <div class="flex flex-col items-center justify-center h-full text-center">
+          <Icon name="wifi-off" size="xl" class="text-[var(--color-text-muted)] mb-3" />
+          <p class="text-sm text-[var(--color-text-muted)]">{hubError}</p>
+        </div>
+      {:else}
+        {#if hasMore}
+          <Button
+            variant="unstyled"
+            class="w-full py-2 text-sm text-[var(--color-accent-text)]
+                hover:bg-[var(--color-surface-200)] rounded transition-colors"
+            onclick={handleLoadMore}
+          >
+            Load earlier messages
+          </Button>
+        {/if}
+
+        {#each uniqueMessages as message, index (message.id)}
+          <MessageBubble
+            {evidence}
+            {tenantId}
+            {message}
+            messages={uniqueMessages}
+            {viewMode}
+            {projectId}
+            isOwn={currentUserId ? message.sender?.id === currentUserId : false}
+            isLast={index === uniqueMessages.length - 1}
+            onExtractRequirement={canExtractRequirement ? handleExtractRequirement : undefined}
+            onAskAi={aiRun.canAsk ? aiRun.ask : undefined}
+            onRequestMemberReply={memberReplies.canRequest(message)
+              ? memberReplies.requestSaved
+              : undefined}
+            onEdit={!isChannelReadOnly ? handleEditMessage : undefined}
+            onDelete={!isChannelReadOnly ? handleDeleteMessage : undefined}
+            {currentUserRole}
+          />
+        {/each}
+
+        {#if uniqueMessages.length === 0}
+          <div class="flex flex-col items-center justify-center h-full text-center">
+            <Icon name="message-circle" size="xl" class="text-[var(--color-text-muted)] mb-3" />
+            <p class="text-sm text-[var(--color-text-muted)]">
+              No messages yet. Start the conversation!
+            </p>
+          </div>
+        {/if}
+      {/if}
+    </div>
+
+    <ConversationAiRunPanel run={aiRun} />
+    {#if memberReplies.status}<p
+        role="status"
+        class="px-4 py-2 text-xs text-[var(--color-text-secondary)]"
+      >
+        {memberReplies.status}
+      </p>{/if}
+    {#if memberReplies.statusItems.length}
+      <details class="px-4 py-2 text-xs text-[var(--color-text-secondary)]">
+        <summary>AI reply status</summary>
+        <p>
+          Recent and tracked requests. Completed means generation finished, not verified accuracy.
+        </p>
+        <ul aria-label="AI reply statuses">
+          {#each memberReplies.statusItems as reply (reply.id)}
+            <li class="py-1">
+              <span>{reply.displayName}: {reply.label}</span>
+              {#if reply.delivery}<span> {reply.delivery}</span>{/if}
+              {#if reply.errorCode}<span> ({reply.errorCode})</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </details>
+    {/if}
+    {#each memberReplies.cancellableReplies as reply (reply.id)}
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={memberReplies.isCancelling(reply.id)}
+        onclick={() => memberReplies.cancel(reply.id)}
+      >
+        {memberReplies.isCancelling(reply.id) ? 'Cancelling' : 'Cancel'}
+        {reply.displayName} reply
+      </Button>
+    {/each}
+    {#if memberReplies.error}<p
+        role="alert"
+        class="px-4 py-2 text-xs text-[var(--color-error-600)]"
+      >
+        {memberReplies.error}
+      </p>{/if}
+    {#if memberReplies.canRetryRequest}
+      <Button variant="ghost" size="sm" onclick={memberReplies.retryRequest}
+        >Retry AI request</Button
+      >
+    {/if}
+    {#if memberReplies.canRetryDelivery}
+      <Button variant="ghost" size="sm" onclick={memberReplies.retryDelivery}>
+        Reload AI member replies
+      </Button>
+    {/if}
+
+    <!-- Message Input (hidden for concluded/readonly channels) -->
+    {#if !isChannelReadOnly}
+      <div class="flex-shrink-0 bg-[var(--color-surface-50)]">
+        <MessageInput
+          onSubmit={handleSendMessage}
+          onTypingStart={handleTypingStart}
+          onTypingStop={handleTypingStop}
+          placeholder="Message #{displayName}"
+          {draftKey}
+          disabled={sending}
+        />
+      </div>
+    {:else if isReadOnlyProp}
+      <div
+        class="border-t border-[var(--color-border-primary)] bg-[var(--color-surface-100)] px-4 py-2"
+      >
+        <p class="text-xs text-[var(--color-text-muted)] text-center">
+          <Icon name="eye" size="xs" class="inline-block mr-1 align-text-bottom" />
+          Read-only view
+        </p>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Participants Panel (right side, resizable) — hidden when external right panel is used -->
+  {#if !hideParticipantPanel}
+    <div class="relative z-10 flex-shrink-0">
+      <ResizeHandle
+        orientation="vertical"
+        isResizing={isParticipantsResizing}
+        onpointerdown={handleParticipantsResizeStart}
+        ariaLabel="Resize participants panel"
+      />
+    </div>
+    <div
+      class="flex-shrink-0 border-l border-[var(--color-border-primary)]"
+      class:participants-resizing={isParticipantsResizing}
+      style="width: {participantsPanelWidth}px"
+    >
+      <ParticipantsPanel
+        channel={channelDetail}
+        {currentUserId}
+        tenantId={tenantId ?? ''}
+        projectId={projectId ?? ''}
+        {memberExtension}
+        {conversationId}
+        {linkedRequirements}
+        {isDirectMessage}
+        readonly={isReadOnlyProp}
+        {onSendInvitation}
+        onRemoveMember={isReadOnlyProp ? undefined : handleRemoveMember}
+        onLinkedRequirementClick={handleLinkedRequirementClick}
+        class="h-full"
+      />
+    </div>
+  {/if}
+{/snippet}
 
 <style>
   .participants-resizing {

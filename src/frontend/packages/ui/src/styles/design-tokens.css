@@ -310,6 +310,7 @@
   --sidebar-max-width: 500px;
   --sidebar-default-width: 300px;
   --status-bar-height: 22px;
+  --sidebar-section-header-height: 26px;
   --tab-height: 36px;
   --editor-line-height: 20px;
 }

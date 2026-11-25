@@ -1,103 +1,18 @@
-/**
- * AiAnalysisService - API Client for AI analysis reports
- */
-
-import { fetchWithAuth } from '../../shared/api';
 import type { AiAnalysisType, AiReport, AiReportSummary, TriggerAnalysisRequest } from '../types';
 
-// ============================================
-// AI Analysis API
-// ============================================
-
-export async function triggerAnalysis(
-  tenantId: string,
-  projectId: string,
-  request: TriggerAnalysisRequest
-): Promise<AiReport> {
-  return fetchWithAuth<AiReport>('/ai/analyze', {
-    method: 'POST',
-    body: request,
-    tenantId,
-    projectId,
-  });
+// SpecDetailView shares the service contract across editions.
+export function createAiAnalysisService(_tenantId: string, _projectId: string) {
+  return {
+    async getReportsByTarget(_targetId: string, _type?: AiAnalysisType): Promise<AiReportSummary[]> {
+      return [];
+    },
+    async getReportById(_reportId: string): Promise<AiReport> {
+      throw new Error('AI reports are unavailable in this edition.');
+    },
+    async triggerAnalysis(_request: TriggerAnalysisRequest): Promise<AiReport> {
+      throw new Error('AI analysis is unavailable in this edition.');
+    },
+  };
 }
 
-export async function getReportsByTarget(
-  tenantId: string,
-  projectId: string,
-  targetId: string,
-  analysisType?: AiAnalysisType
-): Promise<AiReportSummary[]> {
-  const params = new URLSearchParams();
-  if (analysisType) params.set('analysisType', analysisType);
-
-  const queryString = params.toString();
-  const endpoint = `/ai/reports/by-target/${targetId}${queryString ? `?${queryString}` : ''}`;
-
-  return fetchWithAuth<AiReportSummary[]>(endpoint, {
-    tenantId,
-    projectId,
-  });
-}
-
-export async function getReportById(
-  tenantId: string,
-  projectId: string,
-  reportId: string
-): Promise<AiReport> {
-  return fetchWithAuth<AiReport>(`/ai/reports/${reportId}`, {
-    tenantId,
-    projectId,
-  });
-}
-
-// ============================================
-// Service Wrapper
-// ============================================
-
-export class AiAnalysisService {
-  private tenantId = '';
-  private projectId = '';
-
-  constructor(tenantId: string = '', projectId: string = '') {
-    this.tenantId = tenantId;
-    this.projectId = projectId;
-  }
-
-  setContext(tenantId: string, projectId: string): void {
-    this.tenantId = tenantId;
-    this.projectId = projectId;
-  }
-
-  async triggerAnalysis(request: TriggerAnalysisRequest): Promise<AiReport> {
-    return triggerAnalysis(this.tenantId, this.projectId, request);
-  }
-
-  async getReportsByTarget(
-    targetId: string,
-    analysisType?: AiAnalysisType
-  ): Promise<AiReportSummary[]> {
-    return getReportsByTarget(this.tenantId, this.projectId, targetId, analysisType);
-  }
-
-  async getReportById(reportId: string): Promise<AiReport> {
-    return getReportById(this.tenantId, this.projectId, reportId);
-  }
-}
-
-export function createAiAnalysisService(tenantId: string, projectId: string): AiAnalysisService {
-  return new AiAnalysisService(tenantId, projectId);
-}
-
-let aiAnalysisServiceInstance: AiAnalysisService | null = null;
-
-export function getAiAnalysisService(): AiAnalysisService {
-  if (!aiAnalysisServiceInstance) {
-    aiAnalysisServiceInstance = new AiAnalysisService();
-  }
-  return aiAnalysisServiceInstance;
-}
-
-export function resetAiAnalysisService(): void {
-  aiAnalysisServiceInstance = null;
-}
+export function resetAiAnalysisService() {}

@@ -3,6 +3,7 @@ import type { ProjectSearchHit } from '../services/ProjectSearchService';
 
 /** Reuse the reference tab contract. Project-only viewers carry the source in their URL for reload/back. */
 export function openProjectSearchHit(projectId: string, hit: ProjectSearchHit): void {
+  const base = '/project/' + encodeURIComponent(projectId);
   if (['spec', 'requirement', 'glossary', 'conversation'].includes(hit.kind)) {
     window.dispatchEvent(
       new CustomEvent('sddp:navigate', {
@@ -13,7 +14,6 @@ export function openProjectSearchHit(projectId: string, hit: ProjectSearchHit): 
   }
   const params = new URLSearchParams({ id: hit.target });
   if (hit.revision) params.set('revision', hit.revision);
-  const base = '/project/' + encodeURIComponent(projectId);
   if (hit.menu === 'files') {
     params.set('revisionPath', hit.target);
     if (hit.line) params.set('line', String(hit.line));

@@ -1,7 +1,7 @@
 import { fetchWithAuth } from '../../shared/api';
 import type { ProjectPageType } from '../types';
 
-export type SearchMenu = Exclude<ProjectPageType, 'search'>;
+export type SearchMenu = Exclude<ProjectPageType, 'search'> | 'ai-chat';
 export interface ProjectSearchHit {
   menu: SearchMenu;
   key: string;
@@ -25,6 +25,7 @@ export interface ProjectSearchPage {
   nextCursor: string | null;
   terms: string[];
   filesUnavailable: boolean;
+  aiChatsAvailable?: boolean;
 }
 export interface ProjectSearchOptions {
   q: string;

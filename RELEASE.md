@@ -1,23 +1,25 @@
-# v0.7.0 ( Free Edition)
+# v0.8.0 (Free Edition)
 
-Project Search and Service Health are included by default in Free and Pro.
+## Git File Viewer
 
-## Project Search
+- Select a folder to see its immediate files and subfolders, with their type, size, ownership, and last Git author.
+- Open an owner's or author's profile from their avatar when SDDP can match the person to a profile.
+- Read the folder's full repository path next to its name.
 
-- Search all 12 menus in a project. Results and menu counts reflect your read permissions.
-- Use **AND** or **OR**, quoted phrases and parentheses. Narrow results by menu or field and sort by relevance or last update.
-- Load 10 matches at a time and open them in their read-only views. File content matches open the corresponding Git revision and line.
+## Sound and read-aloud
 
-## Service Health
+- Enable sound in Preferences and mute or unmute it from the status bar.
+- Play or stop read-aloud on supported content, including conversation messages, in browsers that provide speech synthesis.
 
-- Administrators can open **Settings → System → Health** or the system dashboard. **Overview** shows the latest status for each configured service and highlights failures.
-- **Timeline** shows up to 12 checks collected while the page is open. Filter by service or status change to see when a failure or recovery was observed.
+## Monitoring high-volume reads
 
-## Installation and upgrade
+- The API records a warning when a user's successful Files, Artifact source content, Specs, Conversations, or project search reads cross a configured volume or request threshold.
+- Operators can route `SDDP_SENSITIVE_READ_THRESHOLD` from API logs to their alerting service. Event records contain aggregate counts and verified IDs.
 
-- **New installations** create search storage during database provisioning. [Docker quick start](docs/public-guide.md#quick-start-docker-only)
-- **Upgrading from Free 0.6.1** requires V027. Stop writers, back up the database and API files together, and rehearse on a restored copy. Apply V027 with the migration role before starting the updated API and web app. [Project search migration](scripts/db/README.md#project-search)
-- **Earlier versions** must complete outstanding migrations before V027. [Upgrade guide](docs/public-guide.md#preserve-files-when-upgrading)
-- **Restoring a backup** requires replaying recorded deletions and clearing restored statistics consent before reopening the installation. [Safe restore procedure](docs/deploy/api-data.md#restore-a-backup-safely)
+## Upgrade precautions
+
+- For a new installation, follow the [Docker quick start](docs/public-guide.md#quick-start-docker-only).
+- Upgrading from Free 0.7.0 requires no new database migration. Earlier installations must apply outstanding Free migrations through [V027](scripts/db/README.md#project-search) before starting the updated API.
+- Stop writers, back up the database and API files together, and rehearse on a restored copy. Follow the [upgrade guide](docs/public-guide.md#preserve-files-when-upgrading) and [safe restore procedure](docs/deploy/api-data.md#restore-a-backup-safely).
 
 See the [changelog](CHANGELOG.md) for details and the [Free edition guide](docs/public-guide.md#free-edition-support-scope) for edition scope.
